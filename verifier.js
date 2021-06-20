@@ -9,7 +9,7 @@ const ethers = require('ethers')
 const DEBUG = false
 
 //This should be a commandline argument for specifying the title of the page which should be verified 
-let title = 'PioImport'
+let title = 'Main Page'
 //let title = 'Tp3'
 
 function formatMwTimestamp(ts) {
