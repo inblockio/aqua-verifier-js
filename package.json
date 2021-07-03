@@ -1,0 +1,24 @@
+{
+  "name": "data-accounting-external-verifier",
+  "version": "1.0.0",
+  "description": "JS Client for external verifier.  Goal: A shared library supports a commandline execution and a chrome-extension which is implementation independent. So the verifier.js will support not only the mediawiki integration but potentially other third party integrations of the verification procedure.",
+  "main": "verifier.js",
+  "dependencies": {
+    "ethers": "^5.4.1",
+    "js-sha3": "^0.8.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FantasticoFox/data-accounting-external-verifier.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/FantasticoFox/data-accounting-external-verifier/issues"
+  },
+  "homepage": "https://github.com/FantasticoFox/data-accounting-external-verifier#readme"
+}
