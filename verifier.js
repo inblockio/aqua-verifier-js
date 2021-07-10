@@ -30,7 +30,7 @@ function calculateMetadataHash(timestamp, previousVerificationHash = "", signatu
 }
 
 async function getBackendVerificationHash(revid) {
-  http.get(`http://localhost:9352/rest.php/data_accounting/v1/request_hash?var1=${revid}`, (resp) => {
+  http.get(`http://localhost:9352/rest.php/data_accounting/v1/standard/request_hash?var1=${revid}`, (resp) => {
     resp.on('data', (data) => {
       obj = JSON.parse(data.toString()).value
     })
