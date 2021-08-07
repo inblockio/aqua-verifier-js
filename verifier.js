@@ -6,6 +6,8 @@ const sha3 = require('js-sha3')
 // utilities for verifying signatures
 const ethers = require('ethers')
 
+const cES = require('./checkEtherScan.js')
+
 //This should be a commandline argument for specifying the title of the page which should be verified 
 if (process.argv.length < 3) {
   console.log("You must specify the page title")
@@ -84,9 +86,24 @@ async function verifyWitness(witness_event_id) {
     )
 
     console.log(`  Witness event ${witness_event_id} detected`)
-    console.log(`    Witness event has not been verified against ${witnessData.witness_network}`)
     console.log(`    Transaction hash: ${witnessData.witness_event_transaction_hash}`)
-    console.log(`    Verify manually: ${actual_witness_event_verification_hash}`)
+    // Do online lookup of transaction hash
+    const etherScanResult = await cES.checkEtherScan(
+      witnessData.witness_network,
+      witnessData.witness_event_transaction_hash,
+      actual_witness_event_verification_hash
+    )
+    const suffix = `${witnessData.witness_network} via etherscan.io`
+    if (etherScanResult == 'true') {
+      console.log(`    witness_verification_hash has been verified on ${suffix}`)
+    } else if (etherScanResult == 'false') {
+      console.log(`    ${FgRed}witness_verification_hash does not match on ${suffix}${Reset}`)
+    } else {
+      console.log(FgRed)
+      console.log(`    Online lookup failed on ${suffix}`)
+      console.log(`    Verify manually: ${actual_witness_event_verification_hash}`)
+      console.log(Reset)
+    }
     if (actual_witness_event_verification_hash != witnessData.witness_event_verification_hash) {
       console.log("    Witness event verification hash doesn't match")
       console.log(`    Page manifest verification hash: ${witnessData.page_manifest_verification_hash}`)
