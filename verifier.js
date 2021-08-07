@@ -9,8 +9,11 @@ const ethers = require('ethers')
 const DEBUG = false
 
 //This should be a commandline argument for specifying the title of the page which should be verified 
-let title = 'Personal Knowledge Container'
-//let title = 'Tp3'
+if (process.argv.length < 3) {
+  console.log("You must specify the page title")
+  exit(1)
+}
+let title = process.argv[2]
 
 function formatMwTimestamp(ts) {
   // Format timestamp into the timestamp format found in Mediawiki outputs
@@ -153,5 +156,5 @@ function verifyPage(title) {
   })
 }
 
-//verifyRevision(328)
+console.log(`Verifying ${title}`)
 verifyPage(title)
