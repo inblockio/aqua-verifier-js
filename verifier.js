@@ -6,16 +6,20 @@ const sha3 = require('js-sha3')
 // utilities for verifying signatures
 const ethers = require('ethers')
 
-const DEBUG = false
-
 //This should be a commandline argument for specifying the title of the page which should be verified 
 if (process.argv.length < 3) {
   console.log("You must specify the page title")
   exit(1)
 }
-let title = process.argv[2]
+let title = process.argv[2] !== '-v' ? process.argv[2]: process.argv[3]
+
+const VERBOSE = process.argv.includes('-v')
 
 const apiURL = 'http://localhost:9352/rest.php/data_accounting/v1/standard'
+
+// https://stackoverflow.com/questions/9781218/how-to-change-node-jss-console-font-color
+Reset = "\x1b[0m"
+FgRed = "\x1b[31m"
 
 function formatMwTimestamp(ts) {
   // Format timestamp into the timestamp format found in Mediawiki outputs
@@ -53,66 +57,123 @@ async function getBackendVerificationHash(revid) {
   })
 }
 
+async function getWitnessHash(witness_event_id) {
+  if (witness_event_id === null) {
+    return ''
+  }
+  const witnessResponse = await synchronousGet(`${apiURL}/get_witness_data?var1=${witness_event_id}`)
+  if (witnessResponse !== '{"value":""}') {
+    witnessData = JSON.parse(witnessResponse)
+    witnessHash = calculateWitnessHash(
+      witnessData.witness_event_verification_hash,
+      witnessData.merkle_root,
+      witnessData.witness_network,
+      witnessData.witness_event_transaction_hash,
+    )
+    return witnessHash
+  }
+  return ''
+}
+
+async function verifyWitness(witness_event_id) {
+  const witnessResponse = await synchronousGet(`${apiURL}/get_witness_data?var1=${witness_event_id}`)
+  if (witnessResponse !== '{"value":""}') {
+    witnessData = JSON.parse(witnessResponse)
+    actual_witness_event_verification_hash = getHashSum(
+      witnessData.page_manifest_verification_hash + witnessData.merkle_root
+    )
+
+    console.log(`  Witness event ${witness_event_id} detected`)
+    console.log(`    Witness event has not been verified against ${witnessData.witness_network}`)
+    console.log(`    Transaction hash: ${witnessData.witness_event_transaction_hash}`)
+    console.log(`    Verify manually: ${actual_witness_event_verification_hash}`)
+    if (actual_witness_event_verification_hash != witnessData.witness_event_verification_hash) {
+      console.log("    Witness event verification hash doesn't match")
+      console.log(`    Page manifest verification hash: ${witnessData.page_manifest_verification_hash}`)
+      console.log(`    Merkle root: ${witnessData.merkle_root}`)
+      console.log(`    Expected: ${witnessData.witness_event_verification_hash}`)
+      console.log(`    Actual: ${actual_witness_event_verification_hash}`)
+      return 'INCONSISTENT'
+    }
+    return 'MATCHES'
+  }
+  return 'NO_WITNESS'
+}
+
 async function verifyRevision(revid, prevRevId, previousVerificationHash, contentHash) {
-  const data = await synchronousGet(`${apiURL}/verify_page?var1=${revid}`)
-  if (data === '[]') {
+  const response = await synchronousGet(`${apiURL}/verify_page?var1=${revid}`)
+  if (response === '[]') {
     console.log('  no verification hash')
     return [null, false]
   }
-  let obj = JSON.parse(data)
+  let data = JSON.parse(response)
 
   // TODO do sanity check on domain id
-  const domainId = obj.domain_id
+  const domainId = data.domain_id
 
-  const metadataHash = calculateMetadataHash(domainId, obj.time_stamp, previousVerificationHash)
+  const metadataHash = calculateMetadataHash(domainId, data.time_stamp, previousVerificationHash)
 
+  // SIGNATURE DATA HASH CALCULATOR
   let prevSignature = ''
   let prevPublicKey = ''
+  let prevWitnessHash = ''
   if (prevRevId !== '') {
-    const dataPrevious = await synchronousGet(`${apiURL}/verify_page?var1=${prevRevId}`)
-    const objPrevious = JSON.parse(dataPrevious)
+    const responsePrevious = await synchronousGet(`${apiURL}/verify_page?var1=${prevRevId}`)
+    const dataPrevious = JSON.parse(responsePrevious)
     // TODO just use signature and public key from previous element in the loop inside verifyPage
     // We have to do these ternary operations because sometimes the signature
     // and public key are nulls, not empty strings.
-    const prevSignature = !!objPrevious.signature ? objPrevious.signature: ''
-    const prevPublicKey = !!objPrevious.public_key ? objPrevious.public_key: ''
+    prevSignature = !!dataPrevious.signature ? dataPrevious.signature: ''
+    prevPublicKey = !!dataPrevious.public_key ? dataPrevious.public_key: ''
+    prevWitnessHash = await getWitnessHash(dataPrevious.witness_event_id)
   }
-
   const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
 
-  const calculatedVerificationHash = calculateVerificationHash(contentHash, metadataHash, signatureHash, '')
+  // WITNESS DATA HASH CALCULATOR
+  const witnessStatus = await verifyWitness(data.witness_event_id)
 
-  if (calculatedVerificationHash !== obj.verification_hash) {
+  const calculatedVerificationHash = calculateVerificationHash(
+    contentHash, metadataHash, signatureHash, prevWitnessHash)
+
+  if (calculatedVerificationHash !== data.verification_hash) {
+    console.log(FgRed)
     console.log("  verification hash doesn't match")
-    if (DEBUG) {
+    if (VERBOSE) {
       console.log(`  Actual content hash: ${contentHash}`)
       console.log(`  Actual metadata hash: ${metadataHash}`)
       console.log(`  Actual signature hash: ${signatureHash}`)
-      console.log(`  Expected verification hash: ${obj.verification_hash}`)
+      console.log(`  Witness event id: ${data.witness_event_id}`)
+      console.log(`  Actual previous witness hash: ${prevWitnessHash}`)
+      console.log(`  Expected verification hash: ${data.verification_hash}`)
       console.log(`  Actual verification hash: ${calculatedVerificationHash}`)
     }
+    console.log(Reset)
     return [null, false]
   } else {
     console.log('  Verification hash matches')
   }
-  if (obj.signature === '') {
+  if (data.signature === '') {
     console.log('  * has not been signed')
   }
 
-  if (obj.signature === '' || obj.signature === null) {
-    return [obj.verification_hash, true]
+  if (witnessStatus === 'NO_WITNESS') {
+    console.log('  * has not been witnessed')
   }
 
-  if (DEBUG) {
-    console.log('DEBUG backend', revid, obj)
+  if (data.signature === '' || data.signature === null) {
+    return [data.verification_hash, true]
+  }
+
+  if (VERBOSE) {
+    console.log('VERBOSE backend', revid, data)
   }
   // The padded message is required
-  const paddedMessage = 'I sign the following page verification_hash: [0x' + obj.verification_hash + ']'
-  const recoveredAddress = ethers.utils.recoverAddress(ethers.utils.hashMessage(paddedMessage), obj.signature)
-  if (recoveredAddress.toLowerCase() === obj.wallet_address.toLowerCase()) {
+  const paddedMessage = 'I sign the following page verification_hash: [0x' + data.verification_hash + ']'
+  const recoveredAddress = ethers.utils.recoverAddress(ethers.utils.hashMessage(paddedMessage), data.signature)
+  if (recoveredAddress.toLowerCase() === data.wallet_address.toLowerCase()) {
     console.log('  signature is valid')
   }
-  return [obj.verification_hash, true]
+  return [data.verification_hash, true]
 }
 
 async function synchronousGet(url) {
