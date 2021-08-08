@@ -8,14 +8,7 @@ const ethers = require('ethers')
 
 const cES = require('./checkEtherScan.js')
 
-//This should be a commandline argument for specifying the title of the page which should be verified 
-if (process.argv.length < 3) {
-  console.log("You must specify the page title")
-  exit(1)
-}
-let title = process.argv[2] !== '-v' ? process.argv[2]: process.argv[3]
-
-const VERBOSE = process.argv.includes('-v')
+let VERBOSE = undefined
 
 const apiURL = 'http://localhost:9352/rest.php/data_accounting/v1/standard'
 
@@ -272,5 +265,20 @@ function verifyPage(title) {
   })
 }
 
-console.log(`Verifying ${title}`)
-verifyPage(title)
+if (require.main === module) {
+  //This should be a commandline argument for specifying the title of the page which should be verified 
+  if (process.argv.length < 3) {
+    console.log("You must specify the page title")
+    exit(1)
+  }
+  let title = process.argv[2] !== '-v' ? process.argv[2]: process.argv[3]
+
+  VERBOSE = process.argv.includes('-v')
+
+  console.log(`Verifying ${title}`)
+  verifyPage(title)
+}
+
+module.exports = {
+  verifyPage: verifyPage
+}
