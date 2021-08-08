@@ -58,14 +58,6 @@ function calculateVerificationHash(contentHash, metadataHash, signature_hash, wi
     return getHashSum(contentHash + metadataHash + signature_hash + witness_hash)
 }
 
-async function getBackendVerificationHash(revid) {
-  http.get(`${apiURL}/request_hash?var1=${revid}`, (resp) => {
-    resp.on('data', (data) => {
-      obj = JSON.parse(data.toString()).value
-    })
-  })
-}
-
 async function getWitnessHash(witness_event_id) {
   if (witness_event_id === null) {
     return ''
