@@ -39,10 +39,9 @@ async function checkEtherScan(witnessNetwork, txHash, witnessVerificationHash) {
           }
           resolve(status)
         })
-        resp.on('error', (error) => {
-          // promise rejected on error
-          reject(error)
-        });
+        resp.on('error', reject)
+      }).on('error', (error) => {
+        reject(error.message)
       })
     })
     const out = await promise
@@ -52,7 +51,7 @@ async function checkEtherScan(witnessNetwork, txHash, witnessVerificationHash) {
   }
 	catch(e) {
 		// if the Promise is rejected
-		console.error(e)
+    return e
 	}
 }
 
