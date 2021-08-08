@@ -251,7 +251,7 @@ function verifyPage(title) {
       let count = 0
       for (const idx in verifiedRevIds) {
         const revid = verifiedRevIds[idx]
-        console.log(`${parseInt(idx) + 1}. Verification of Revision ${revid}. Chain height: N`)
+        console.log(`${parseInt(idx) + 1}. Verification of Revision ${revid}.`)
 
         // CONTENT DATA HASH CALCULATOR
         const bodyRevid = await synchronousGet(`http://localhost:9352/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`)
