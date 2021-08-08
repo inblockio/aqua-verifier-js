@@ -20,8 +20,22 @@ const VERBOSE = process.argv.includes('-v')
 const apiURL = 'http://localhost:9352/rest.php/data_accounting/v1/standard'
 
 // https://stackoverflow.com/questions/9781218/how-to-change-node-jss-console-font-color
-Reset = "\x1b[0m"
-FgRed = "\x1b[31m"
+const Reset = "\x1b[0m"
+const Dim = "\x1b[2m"
+const FgRed = "\x1b[31m"
+const FgWhite = "\x1b[37m"
+const BgGreen = "\x1b[42m"
+const OK = `${FgWhite}${BgGreen}OK${Reset}`
+const WARN = '⚠️'
+const CROSSMARK = '❌'
+
+function log_red(content) {
+  console.log(FgRed + content + Reset)
+}
+
+function log_dim(content) {
+  console.log(Dim + content + Reset)
+}
 
 function formatMwTimestamp(ts) {
   // Format timestamp into the timestamp format found in Mediawiki outputs
@@ -95,14 +109,13 @@ async function verifyWitness(witness_event_id) {
     )
     const suffix = `${witnessData.witness_network} via etherscan.io`
     if (etherScanResult == 'true') {
-      console.log(`    witness_verification_hash has been verified on ${suffix}`)
+      console.log(`    ✅ witness_verification_hash has been verified on ${suffix}`)
     } else if (etherScanResult == 'false') {
-      console.log(`    ${FgRed}witness_verification_hash does not match on ${suffix}${Reset}`)
+      log_red(`    witness_verification_hash does not match on ${suffix}`)
     } else {
-      console.log(FgRed)
-      console.log(`    Online lookup failed on ${suffix}`)
-      console.log(`    Verify manually: ${actual_witness_event_verification_hash}`)
-      console.log(Reset)
+      log_red(`    Online lookup failed on ${suffix}`)
+      log_red(`    Error code: ${etherScanResult}`)
+      log_red(`    Verify manually: ${actual_witness_event_verification_hash}`)
     }
     if (actual_witness_event_verification_hash != witnessData.witness_event_verification_hash) {
       console.log("    Witness event verification hash doesn't match")
@@ -153,28 +166,26 @@ async function verifyRevision(revid, prevRevId, previousVerificationHash, conten
     contentHash, metadataHash, signatureHash, prevWitnessHash)
 
   if (calculatedVerificationHash !== data.verification_hash) {
-    console.log(FgRed)
-    console.log("  verification hash doesn't match")
+    log_red(`  ${CROSSMARK}` + " verification hash doesn't match")
     if (VERBOSE) {
-      console.log(`  Actual content hash: ${contentHash}`)
-      console.log(`  Actual metadata hash: ${metadataHash}`)
-      console.log(`  Actual signature hash: ${signatureHash}`)
-      console.log(`  Witness event id: ${data.witness_event_id}`)
-      console.log(`  Actual previous witness hash: ${prevWitnessHash}`)
-      console.log(`  Expected verification hash: ${data.verification_hash}`)
-      console.log(`  Actual verification hash: ${calculatedVerificationHash}`)
+      log_red(`  Actual content hash: ${contentHash}`)
+      log_red(`  Actual metadata hash: ${metadataHash}`)
+      log_red(`  Actual signature hash: ${signatureHash}`)
+      log_red(`  Witness event id: ${data.witness_event_id}`)
+      log_red(`  Actual previous witness hash: ${prevWitnessHash}`)
+      log_red(`  Expected verification hash: ${data.verification_hash}`)
+      log_red(`  Actual verification hash: ${calculatedVerificationHash}`)
     }
-    console.log(Reset)
     return [null, false]
   } else {
-    console.log('  Verification hash matches')
+    console.log(`  ✅${OK} Verification hash matches`)
   }
   if (data.signature === '') {
-    console.log('  * has not been signed')
+    log_dim(`    ${WARN} Not signed`)
   }
 
   if (witnessStatus === 'NO_WITNESS') {
-    console.log('  * has not been witnessed')
+    log_dim(`    ${WARN} Not witnessed`)
   }
 
   if (data.signature === '' || data.signature === null) {
@@ -233,14 +244,14 @@ function verifyPage(title) {
     resp.on('end', async () => {
       allRevInfo = JSON.parse(body)
       verifiedRevIds = allRevInfo.map(x => x.rev_id)
-      console.log('verified ids', verifiedRevIds)
+      console.log('Verified IDs:', verifiedRevIds)
 
       let previousVerificationHash = ''
       let previousRevId = ''
       let count = 0
       for (const idx in verifiedRevIds) {
         const revid = verifiedRevIds[idx]
-        console.log(revid)
+        console.log(`${parseInt(idx) + 1}. Verification of Revision ${revid}. Chain height: N`)
 
         // CONTENT DATA HASH CALCULATOR
         const bodyRevid = await synchronousGet(`http://localhost:9352/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`)
@@ -251,7 +262,7 @@ function verifyPage(title) {
         if (isCorrect) {
           count += 1
         }
-        console.log(`  ${(100 * count / verifiedRevIds.length).toFixed(1)}% page validation`)
+        console.log(`  Validated revisions: ${count} / ${verifiedRevIds.length} (${(100 * count / verifiedRevIds.length).toFixed(1)}%)`)
         previousVerificationHash = verificationHash
         previousRevId = revid
       }
