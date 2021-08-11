@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 const https = require( 'https' )
 
 const re = /<span id='rawinput'.*<\/span>/
