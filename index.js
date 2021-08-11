@@ -162,6 +162,9 @@ async function verifyRevision(revid, prevRevId, previousVerificationHash, conten
     return [null, false]
   } else {
     console.log(`  ${CHECKMARK} Verification hash matches`)
+    if (VERBOSE) {
+      console.log(`  ${calculatedVerificationHash}`)
+    }
   }
   if (witnessStatus === 'NO_WITNESS') {
     log_dim(`    ${WARN} Not witnessed`)
