@@ -216,7 +216,8 @@ async function synchronousGet(url) {
 	}
 }
 
-async function verifyPage(title) {
+async function verifyPage(title, verbose = false) {
+  VERBOSE = verbose
   try {
     http_promise = new Promise((resolve, reject) => {
       http.get(`${apiURL}/page_all_rev?var1=${title}`, (resp) => {

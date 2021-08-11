@@ -12,4 +12,4 @@ let title = process.argv[2] !== '-v' ? process.argv[2]: process.argv[3]
 VERBOSE = process.argv.includes('-v')
 
 console.log(`Verifying ${title}`)
-main.verifyPage(title)
+main.verifyPage(title, VERBOSE)
