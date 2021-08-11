@@ -20,6 +20,7 @@ const FgWhite = "\x1b[37m"
 const BgGreen = "\x1b[42m"
 const WARN = '⚠️'
 const CROSSMARK = '❌'
+const CHECKMARK = '✅'
 
 function log_red(content) {
   console.log(FgRed + content + Reset)
@@ -93,7 +94,7 @@ async function verifyWitness(witness_event_id) {
     )
     const suffix = `${witnessData.witness_network} via etherscan.io`
     if (etherScanResult == 'true') {
-      console.log(`    ✅ witness_verification_hash has been verified on ${suffix}`)
+      console.log(`    ${CHECKMARK} witness_verification_hash has been verified on ${suffix}`)
     } else if (etherScanResult == 'false') {
       log_red(`    witness_verification_hash does not match on ${suffix}`)
     } else {
@@ -162,7 +163,7 @@ async function verifyRevision(revid, prevRevId, previousVerificationHash, conten
     }
     return [null, false]
   } else {
-    console.log(`  ✅ Verification hash matches`)
+    console.log(`  ${CHECKMARK} Verification hash matches`)
   }
   if (data.signature === '') {
     log_dim(`    ${WARN} Not signed`)
@@ -183,7 +184,7 @@ async function verifyRevision(revid, prevRevId, previousVerificationHash, conten
   const paddedMessage = 'I sign the following page verification_hash: [0x' + data.verification_hash + ']'
   const recoveredAddress = ethers.utils.recoverAddress(ethers.utils.hashMessage(paddedMessage), data.signature)
   if (recoveredAddress.toLowerCase() === data.wallet_address.toLowerCase()) {
-    console.log('  signature is valid')
+    console.log(`    ${CHECKMARK} signature is valid`)
   }
   return [data.verification_hash, true]
 }
