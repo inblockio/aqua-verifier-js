@@ -18,7 +18,6 @@ const Dim = "\x1b[2m"
 const FgRed = "\x1b[31m"
 const FgWhite = "\x1b[37m"
 const BgGreen = "\x1b[42m"
-const OK = `${FgWhite}${BgGreen}OK${Reset}`
 const WARN = '⚠️'
 const CROSSMARK = '❌'
 
@@ -163,7 +162,7 @@ async function verifyRevision(revid, prevRevId, previousVerificationHash, conten
     }
     return [null, false]
   } else {
-    console.log(`  ✅${OK} Verification hash matches`)
+    console.log(`  ✅ Verification hash matches`)
   }
   if (data.signature === '') {
     log_dim(`    ${WARN} Not signed`)
