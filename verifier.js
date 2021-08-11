@@ -165,21 +165,19 @@ async function verifyRevision(revid, prevRevId, previousVerificationHash, conten
   } else {
     console.log(`  ${CHECKMARK} Verification hash matches`)
   }
-  if (data.signature === '') {
-    log_dim(`    ${WARN} Not signed`)
-  }
-
   if (witnessStatus === 'NO_WITNESS') {
     log_dim(`    ${WARN} Not witnessed`)
   }
 
   if (data.signature === '' || data.signature === null) {
+    log_dim(`    ${WARN} Not signed`)
     return [data.verification_hash, true]
   }
 
   if (VERBOSE) {
     console.log('VERBOSE backend', revid, data)
   }
+
   // The padded message is required
   const paddedMessage = 'I sign the following page verification_hash: [0x' + data.verification_hash + ']'
   const recoveredAddress = ethers.utils.recoverAddress(ethers.utils.hashMessage(paddedMessage), data.signature)
