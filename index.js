@@ -216,41 +216,53 @@ async function synchronousGet(url) {
 	}
 }
 
-function verifyPage(title) {
-  http.get(`${apiURL}/page_all_rev?var1=${title}`, (resp) => {
-    let body = ""
-    resp.on('data', (chunk) => {
-      body += chunk
+async function verifyPage(title) {
+  try {
+    http_promise = new Promise((resolve, reject) => {
+      http.get(`${apiURL}/page_all_rev?var1=${title}`, (resp) => {
+        let body = ""
+        resp.on('data', (chunk) => {
+          body += chunk
+        })
+        resp.on('end', async () => {
+          allRevInfo = JSON.parse(body)
+          verifiedRevIds = allRevInfo.map(x => x.rev_id)
+          console.log('Verified IDs:', verifiedRevIds)
+
+          let previousVerificationHash = ''
+          let previousRevId = ''
+          let count = 0
+          for (const idx in verifiedRevIds) {
+            const revid = verifiedRevIds[idx]
+            console.log(`${parseInt(idx) + 1}. Verification of Revision ${revid}.`)
+
+            // CONTENT DATA HASH CALCULATOR
+            const bodyRevid = await synchronousGet(`http://localhost:9352/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`)
+            const content = JSON.parse(bodyRevid).parse.wikitext
+            const contentHash = getHashSum(content)
+
+            const [verificationHash, isCorrect] = await verifyRevision(revid, previousRevId, previousVerificationHash, contentHash)
+            if (isCorrect) {
+              count += 1
+            }
+            console.log(`  Validated revisions: ${count} / ${verifiedRevIds.length} (${(100 * count / verifiedRevIds.length).toFixed(1)}%)`)
+            previousVerificationHash = verificationHash
+            previousRevId = revid
+          }
+          resolve(count == verifiedRevIds.length)
+        })
+      }).on("error", (err) => {
+        console.log("Error: " + err.message);
+        reject(err)
+      })
     })
-    resp.on('end', async () => {
-      allRevInfo = JSON.parse(body)
-      verifiedRevIds = allRevInfo.map(x => x.rev_id)
-      console.log('Verified IDs:', verifiedRevIds)
-
-      let previousVerificationHash = ''
-      let previousRevId = ''
-      let count = 0
-      for (const idx in verifiedRevIds) {
-        const revid = verifiedRevIds[idx]
-        console.log(`${parseInt(idx) + 1}. Verification of Revision ${revid}.`)
-
-        // CONTENT DATA HASH CALCULATOR
-        const bodyRevid = await synchronousGet(`http://localhost:9352/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`)
-        const content = JSON.parse(bodyRevid).parse.wikitext
-        const contentHash = getHashSum(content)
-
-        const [verificationHash, isCorrect] = await verifyRevision(revid, previousRevId, previousVerificationHash, contentHash)
-        if (isCorrect) {
-          count += 1
-        }
-        console.log(`  Validated revisions: ${count} / ${verifiedRevIds.length} (${(100 * count / verifiedRevIds.length).toFixed(1)}%)`)
-        previousVerificationHash = verificationHash
-        previousRevId = revid
-      }
-    })
-  }).on("error", (err) => {
-    console.log("Error: " + err.message);
-  })
+    return await http_promise
+  }
+  catch(e) {
+		// if the Promise is rejected
+		console.error(e)
+    return e
+  }
 }
 
 module.exports = {
