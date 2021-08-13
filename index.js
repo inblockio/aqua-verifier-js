@@ -248,6 +248,8 @@ async function verifyPage(title, verbose = false) {
             const [verificationHash, isCorrect] = await verifyRevision(revid, previousRevId, previousVerificationHash, contentHash)
             if (isCorrect) {
               count += 1
+            } else {
+              resolve(false)
             }
             console.log(`  Validated revisions: ${count} / ${verifiedRevIds.length} (${(100 * count / verifiedRevIds.length).toFixed(1)}%)`)
             previousVerificationHash = verificationHash
