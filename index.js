@@ -249,13 +249,24 @@ async function verifyPage(title, verbose = false) {
             if (isCorrect) {
               count += 1
             } else {
-              resolve(false)
+              resolve("INVALID")
+              return
             }
             console.log(`  Validated revisions: ${count} / ${verifiedRevIds.length} (${(100 * count / verifiedRevIds.length).toFixed(1)}%)`)
             previousVerificationHash = verificationHash
             previousRevId = revid
           }
-          resolve(count == verifiedRevIds.length)
+          let status
+          if (count == verifiedRevIds.length) {
+            if (count === 0) {
+              status = "N/A"
+            } else {
+              status = "VERIFIED"
+            }
+          } else {
+            status = "INVALID"
+          }
+          resolve(status)
         })
       }).on("error", (err) => {
         console.log("Error: " + err.message);
