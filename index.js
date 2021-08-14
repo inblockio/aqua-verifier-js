@@ -20,8 +20,16 @@ const WARN = '⚠️'
 const CROSSMARK = '❌'
 const CHECKMARK = '✅'
 
+// Verification status
+const INVALID = "INVALID"
+const VERIFIED = "VERIFIED"
+
+function redify(content) {
+  return FgRed + content + Reset
+}
+
 function log_red(content) {
-  console.log(FgRed + content + Reset)
+  console.log(redify(content))
 }
 
 function log_dim(content) {
@@ -75,6 +83,7 @@ async function getWitnessHash(witness_event_id) {
 }
 
 async function verifyWitness(witness_event_id) {
+  let detail = ""
   const witnessResponse = await synchronousGet(`${apiURL}/get_witness_data?var1=${witness_event_id}`)
   if (witnessResponse !== '{"value":""}') {
     witnessData = JSON.parse(witnessResponse)
@@ -82,8 +91,8 @@ async function verifyWitness(witness_event_id) {
       witnessData.page_manifest_verification_hash + witnessData.merkle_root
     )
 
-    console.log(`  Witness event ${witness_event_id} detected`)
-    console.log(`    Transaction hash: ${witnessData.witness_event_transaction_hash}`)
+    detail += `  Witness event ${witness_event_id} detected`
+    detail += `\n    Transaction hash: ${witnessData.witness_event_transaction_hash}`
     // Do online lookup of transaction hash
     const etherScanResult = await cES.checkEtherScan(
       witnessData.witness_network,
@@ -92,34 +101,74 @@ async function verifyWitness(witness_event_id) {
     )
     const suffix = `${witnessData.witness_network} via etherscan.io`
     if (etherScanResult == 'true') {
-      console.log(`    ${CHECKMARK} witness_verification_hash has been verified on ${suffix}`)
+      detail += `\n    ${CHECKMARK} witness_verification_hash has been verified on ${suffix}`
     } else if (etherScanResult == 'false') {
-      log_red(`    witness_verification_hash does not match on ${suffix}`)
+      detail += redify(`\n    witness_verification_hash does not match on ${suffix}`)
     } else {
-      log_red(`    Online lookup failed on ${suffix}`)
-      log_red(`    Error code: ${etherScanResult}`)
-      log_red(`    Verify manually: ${actual_witness_event_verification_hash}`)
+      detail += redify(`\n    Online lookup failed on ${suffix}`)
+      detail += redify(`\n    Error code: ${etherScanResult}`)
+      detail += redify(`\n    Verify manually: ${actual_witness_event_verification_hash}`)
     }
     if (actual_witness_event_verification_hash != witnessData.witness_event_verification_hash) {
-      console.log("    Witness event verification hash doesn't match")
-      console.log(`    Page manifest verification hash: ${witnessData.page_manifest_verification_hash}`)
-      console.log(`    Merkle root: ${witnessData.merkle_root}`)
-      console.log(`    Expected: ${witnessData.witness_event_verification_hash}`)
-      console.log(`    Actual: ${actual_witness_event_verification_hash}`)
-      return 'INCONSISTENT'
+      detail += redify("\n    Witness event verification hash doesn't match")
+      detail += redify(`\n    Page manifest verification hash: ${witnessData.page_manifest_verification_hash}`)
+      detail += redify(`\n    Merkle root: ${witnessData.merkle_root}`)
+      detail += redify(`\n    Expected: ${witnessData.witness_event_verification_hash}`)
+      detail += redify(`\n    Actual: ${actual_witness_event_verification_hash}`)
+      return ['INCONSISTENT', detail]
     }
-    return 'MATCHES'
+    return ['MATCHES', detail]
   }
-  return 'NO_WITNESS'
+  return ['NO_WITNESS', detail]
+}
+
+function printRevisionInfo(detail) {
+  if (!detail.hasOwnProperty('verification_hash')) {
+    console.log('  no verification hash')
+    return
+  }
+  console.log(`  Domain ID: ${detail.domain_id}`)
+  if (detail.verification_status === INVALID) {
+    log_red(`  ${CROSSMARK}` + " verification hash doesn't match")
+    return
+  }
+  console.log(`  ${CHECKMARK} Verification hash matches`)
+  if (VERBOSE) {
+    console.log(`  Verification hash: ${detail.verification_hash}`)
+  }
+  if (!detail.is_witnessed) {
+    log_dim(`    ${WARN} Not witnessed`)
+  }
+  if (detail.witness_detail !== "") {
+    console.log(detail.witness_detail)
+  }
+  if (!detail.is_signed) {
+    log_dim(`    ${WARN} Not signed`)
+  }
+  if (VERBOSE) {
+    delete detail.witness_detail
+    console.log('  VERBOSE backend', detail)
+  }
+  if (detail.valid_signature) {
+    console.log(`    ${CHECKMARK} signature is valid`)
+  }
 }
 
 async function verifyRevision(revid, prevRevId, previousVerificationHash, contentHash) {
+  let detail = {
+    rev_id: revid,
+    verification_status: null,
+    is_witnessed: null,
+    is_signed: false,
+    valid_signature: false,
+    witness_detail: null,
+  }
   const response = await synchronousGet(`${apiURL}/verify_page?var1=${revid}`)
   if (response === '[]') {
-    console.log('  no verification hash')
-    return [null, false]
+    return [null, false, detail]
   }
   let data = JSON.parse(response)
+  detail = Object.assign(detail, data)
 
   // TODO do sanity check on domain id
   const domainId = data.domain_id
@@ -143,13 +192,14 @@ async function verifyRevision(revid, prevRevId, previousVerificationHash, conten
   const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
 
   // WITNESS DATA HASH CALCULATOR
-  const witnessStatus = await verifyWitness(data.witness_event_id)
+  const [witnessStatus, witness_detail] = await verifyWitness(data.witness_event_id)
+  detail.witness_detail = witness_detail
 
   const calculatedVerificationHash = calculateVerificationHash(
     contentHash, metadataHash, signatureHash, prevWitnessHash)
 
   if (calculatedVerificationHash !== data.verification_hash) {
-    log_red(`  ${CROSSMARK}` + " verification hash doesn't match")
+    detail.verification_status = INVALID
     if (VERBOSE) {
       log_red(`  Actual content hash: ${contentHash}`)
       log_red(`  Actual metadata hash: ${metadataHash}`)
@@ -159,33 +209,29 @@ async function verifyRevision(revid, prevRevId, previousVerificationHash, conten
       log_red(`  Expected verification hash: ${data.verification_hash}`)
       log_red(`  Actual verification hash: ${calculatedVerificationHash}`)
     }
-    return [null, false]
+    return [null, false, detail]
   } else {
-    console.log(`  ${CHECKMARK} Verification hash matches`)
-    if (VERBOSE) {
-      console.log(`  ${calculatedVerificationHash}`)
-    }
+    detail.verification_status = VERIFIED
   }
   if (witnessStatus === 'NO_WITNESS') {
-    log_dim(`    ${WARN} Not witnessed`)
+    detail.is_witnessed = false
+  } else {
+    detail.is_witnessed = true
   }
 
   if (data.signature === '' || data.signature === null) {
-    log_dim(`    ${WARN} Not signed`)
-    return [data.verification_hash, true]
+    detail.is_signed = false
+    return [data.verification_hash, true, detail]
   }
-
-  if (VERBOSE) {
-    console.log('VERBOSE backend', revid, data)
-  }
+  detail.is_signed = true
 
   // The padded message is required
   const paddedMessage = 'I sign the following page verification_hash: [0x' + data.verification_hash + ']'
   const recoveredAddress = ethers.utils.recoverAddress(ethers.utils.hashMessage(paddedMessage), data.signature)
   if (recoveredAddress.toLowerCase() === data.wallet_address.toLowerCase()) {
-    console.log(`    ${CHECKMARK} signature is valid`)
+    detail.valid_signature = true
   }
-  return [data.verification_hash, true]
+  return [data.verification_hash, true, detail]
 }
 
 async function synchronousGet(url) {
@@ -245,11 +291,12 @@ async function verifyPage(title, verbose = false) {
             const content = JSON.parse(bodyRevid).parse.wikitext
             const contentHash = getHashSum(content)
 
-            const [verificationHash, isCorrect] = await verifyRevision(revid, previousRevId, previousVerificationHash, contentHash)
+            const [verificationHash, isCorrect, detail] = await verifyRevision(revid, previousRevId, previousVerificationHash, contentHash)
+            printRevisionInfo(detail)
             if (isCorrect) {
               count += 1
             } else {
-              resolve("INVALID")
+              resolve(INVALID)
               return
             }
             console.log(`  Validated revisions: ${count} / ${verifiedRevIds.length} (${(100 * count / verifiedRevIds.length).toFixed(1)}%)`)
@@ -261,10 +308,10 @@ async function verifyPage(title, verbose = false) {
             if (count === 0) {
               status = "N/A"
             } else {
-              status = "VERIFIED"
+              status = VERIFIED
             }
           } else {
-            status = "INVALID"
+            status = INVALID
           }
           resolve(status)
         })
