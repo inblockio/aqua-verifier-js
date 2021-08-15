@@ -313,6 +313,14 @@ async function synchronousGet(url) {
 }
 
 async function verifyPage(title, verbose = false, doLog = true) {
+  if (title.includes('_')) {
+    // TODO it's not just underscore, catch all potential errors in page title.
+    // This error can not happen in Chrome-Extension because the title has been
+    // sanitized.
+    errorMsg = 'INVALID TITLE: Do not use underscore in title.' 
+    maybeLog(doLog, redify(errorMsg))
+    return [errorMsg, {}] 
+  }
   VERBOSE = verbose
   try {
     http_promise = new Promise((resolve, reject) => {
