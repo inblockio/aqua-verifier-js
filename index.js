@@ -197,7 +197,7 @@ function formatRevisionInfo2HTML(detail, verbose = false) {
   }
   if (verbose) {
     delete detail.witness_detail
-    out += `${_space2}VERBOSE backend ` + detail + '<br>'
+    out += `${_space2}VERBOSE backend ` + JSON.stringify(detail) + '<br>'
   }
   if (detail.valid_signature) {
     out += `${_space4}${CHECKMARK} signature is valid<br>`
@@ -329,7 +329,10 @@ async function verifyPage(title, verbose = false, doLog = true) {
           let previousVerificationHash = ''
           let previousRevId = ''
           let count = 0
-          const details = []
+          const details = {
+            verified_ids: verifiedRevIds,
+            revision_details: [],
+          }
           for (const idx in verifiedRevIds) {
             const revid = verifiedRevIds[idx]
             maybeLog(doLog, `${parseInt(idx) + 1}. Verification of Revision ${revid}.`)
@@ -340,7 +343,7 @@ async function verifyPage(title, verbose = false, doLog = true) {
             const contentHash = getHashSum(content)
 
             const [verificationHash, isCorrect, detail] = await verifyRevision(revid, previousRevId, previousVerificationHash, contentHash)
-            details.push(detail)
+            details.revision_details.push(detail)
             if (doLog) {
               printRevisionInfo(detail)
             }
@@ -368,7 +371,7 @@ async function verifyPage(title, verbose = false, doLog = true) {
         })
       }).on("error", (err) => {
         maybeLog(doLog, "Error: " + err.message);
-        reject([err, []])
+        reject([err, {}])
       })
     })
     return await http_promise
