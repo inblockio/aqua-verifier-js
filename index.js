@@ -36,6 +36,12 @@ function log_dim(content) {
   console.log(Dim + content + Reset)
 }
 
+function maybeLog(doLog, ...args) {
+  if (doLog) {
+    console.log(...args)
+  }
+}
+
 function formatMwTimestamp(ts) {
   // Format timestamp into the timestamp format found in Mediawiki outputs
   return ts.replace(/-/g, '').replace(/:/g, '').replace('T', '').replace('Z', '')
@@ -261,7 +267,7 @@ async function synchronousGet(url) {
 	}
 }
 
-async function verifyPage(title, verbose = false) {
+async function verifyPage(title, verbose = false, doLog = true) {
   VERBOSE = verbose
   try {
     http_promise = new Promise((resolve, reject) => {
@@ -273,14 +279,15 @@ async function verifyPage(title, verbose = false) {
         resp.on('end', async () => {
           allRevInfo = JSON.parse(body)
           verifiedRevIds = allRevInfo.map(x => x.rev_id)
-          console.log('Verified IDs:', verifiedRevIds)
+          maybeLog(doLog, 'Verified IDs:', verifiedRevIds)
 
           let previousVerificationHash = ''
           let previousRevId = ''
           let count = 0
+          const details = []
           for (const idx in verifiedRevIds) {
             const revid = verifiedRevIds[idx]
-            console.log(`${parseInt(idx) + 1}. Verification of Revision ${revid}.`)
+            maybeLog(doLog, `${parseInt(idx) + 1}. Verification of Revision ${revid}.`)
 
             // CONTENT DATA HASH CALCULATOR
             const bodyRevid = await synchronousGet(`http://localhost:9352/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`)
@@ -288,14 +295,17 @@ async function verifyPage(title, verbose = false) {
             const contentHash = getHashSum(content)
 
             const [verificationHash, isCorrect, detail] = await verifyRevision(revid, previousRevId, previousVerificationHash, contentHash)
-            printRevisionInfo(detail)
+            details.push(detail)
+            if (doLog) {
+              printRevisionInfo(detail)
+            }
             if (isCorrect) {
               count += 1
             } else {
-              resolve(INVALID)
+              resolve([INVALID, details])
               return
             }
-            console.log(`  Validated revisions: ${count} / ${verifiedRevIds.length} (${(100 * count / verifiedRevIds.length).toFixed(1)}%)`)
+            maybeLog(doLog, `  Validated revisions: ${count} / ${verifiedRevIds.length} (${(100 * count / verifiedRevIds.length).toFixed(1)}%)`)
             previousVerificationHash = verificationHash
             previousRevId = revid
           }
@@ -309,11 +319,11 @@ async function verifyPage(title, verbose = false) {
           } else {
             status = INVALID
           }
-          resolve(status)
+          resolve([status, details])
         })
       }).on("error", (err) => {
-        console.log("Error: " + err.message);
-        reject(err)
+        maybeLog(doLog, "Error: " + err.message);
+        reject([err, []])
       })
     })
     return await http_promise
