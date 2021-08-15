@@ -213,11 +213,7 @@ async function verifyRevision(revid, prevRevId, previousVerificationHash, conten
   } else {
     detail.verification_status = VERIFIED
   }
-  if (witnessStatus === 'NO_WITNESS') {
-    detail.is_witnessed = false
-  } else {
-    detail.is_witnessed = true
-  }
+  detail.is_witnessed = witnessStatus !== 'NO_WITNESS'
 
   if (data.signature === '' || data.signature === null) {
     detail.is_signed = false
