@@ -28,6 +28,14 @@ function redify(content) {
   return FgRed + content + Reset
 }
 
+function htmlRedify(content) {
+  return '<div style="color:Tomato;">' + content + '</div>'
+}
+
+function htmlDimify(content) {
+  return '<div style="color:Gray;">' + content + '</div>'
+}
+
 function log_red(content) {
   console.log(redify(content))
 }
@@ -158,6 +166,43 @@ function printRevisionInfo(detail) {
   if (detail.valid_signature) {
     console.log(`    ${CHECKMARK} signature is valid`)
   }
+}
+
+function formatRevisionInfo2HTML(detail, verbose = false) {
+  // Format the info into HTML nicely. Used in VerifyPage Chrome extension, but
+  // could be used elsewhere too.
+  const _space = '&nbsp'
+  const _space2 = _space + _space
+  const _space4 = _space2 + _space2
+  if (!detail.hasOwnProperty('verification_hash')) {
+    return `${_space2}no verification hash`
+  }
+  let out = `${_space2}Domain ID: ${detail.domain_id}<br>`
+  if (detail.verification_status === INVALID) {
+    out += htmlRedify(`${_space2}${CROSSMARK}` + " verification hash doesn't match")
+    return out
+  }
+  out += `${_space2}${CHECKMARK} Verification hash matches<br>`
+  if (verbose) {
+    out += `${_space2}Verification hash: ${detail.verification_hash}<br>`
+  }
+  if (!detail.is_witnessed) {
+    out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
+  }
+  if (detail.witness_detail !== "") {
+    out += detail.witness_detail.replace(/\n/g, '<br>').replace(/ /g, _space) + '<br>'
+  }
+  if (!detail.is_signed) {
+    out += htmlDimify(`${_space4}${WARN} Not signed<br>`)
+  }
+  if (verbose) {
+    delete detail.witness_detail
+    out += `${_space2}VERBOSE backend ` + detail + '<br>'
+  }
+  if (detail.valid_signature) {
+    out += `${_space4}${CHECKMARK} signature is valid<br>`
+  }
+  return out
 }
 
 async function verifyRevision(revid, prevRevId, previousVerificationHash, contentHash) {
@@ -338,4 +383,5 @@ async function verifyPage(title, verbose = false, doLog = true) {
 module.exports = {
   verifyPage: verifyPage,
   log_red: log_red,
+  formatRevisionInfo2HTML: formatRevisionInfo2HTML,
 }
