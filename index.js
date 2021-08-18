@@ -29,7 +29,7 @@ function cliRedify(content) {
 }
 
 function htmlRedify(content) {
-  return '<div style="color:Tomato;">' + content + '</div>'
+  return '<div style="color:Crimson;">' + content + '</div>'
 }
 
 function redify(isHtml, content) {
