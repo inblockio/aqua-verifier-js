@@ -389,7 +389,7 @@ async function verifyPage(title, verbose = false, doLog = true) {
               resolve([INVALID, details])
               return
             }
-            maybeLog(doLog, `  Validated revisions: ${count} / ${verifiedRevIds.length} (${(100 * count / verifiedRevIds.length).toFixed(1)}%)`)
+            maybeLog(doLog, `  Progress: ${count} / ${verifiedRevIds.length} (${(100 * count / verifiedRevIds.length).toFixed(1)}%)`)
             previousVerificationHash = verificationHash
             previousRevId = revid
           }
