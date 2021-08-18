@@ -59,6 +59,15 @@ function formatMwTimestamp(ts) {
   return ts.replace(/-/g, '').replace(/:/g, '').replace('T', '').replace('Z', '')
 }
 
+function shortenHash(hash) {
+  return hash.slice(0, 6) + '...' + hash.slice(-6)
+}
+
+function hrefifyHash(hash) {
+  const shortened = shortenHash(hash)
+	return `<a href="${hash}">${shortened}</a>`
+}
+
 function getHashSum(content) {
   if (content === '') {
     return ''
@@ -107,6 +116,7 @@ async function verifyWitness(witness_event_id, isHtml) {
   const newlineRed = isHtml ? '' : "\n"
   const _space2 = isHtml ? '&nbsp&nbsp' : '  '
   const _space4 = _space2 + _space2
+  const maybeHrefify = (hash) => isHtml ? hrefifyHash(hash) : hash
   const witnessResponse = await synchronousGet(`${apiURL}/get_witness_data?var1=${witness_event_id}`)
   if (witnessResponse !== '{"value":""}') {
     witnessData = JSON.parse(witnessResponse)
@@ -135,9 +145,9 @@ async function verifyWitness(witness_event_id, isHtml) {
     if (actual_witness_event_verification_hash != witnessData.witness_event_verification_hash) {
       detail += redify(isHtml, `${newlineRed}${_space4}` + "Witness event verification hash doesn't match")
       detail += redify(isHtml, `${newlineRed}${_space4}Page manifest verification hash: ${witnessData.page_manifest_verification_hash}`)
-      detail += redify(isHtml, `${newlineRed}${_space4}Merkle root: ${witnessData.merkle_root}`)
-      detail += redify(isHtml, `${newlineRed}${_space4}Expected: ${witnessData.witness_event_verification_hash}`)
-      detail += redify(isHtml, `${newlineRed}${_space4}Actual: ${actual_witness_event_verification_hash}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}Merkle root: ${maybeHrefify(witnessData.merkle_root)}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}Expected: ${maybeHrefify(witnessData.witness_event_verification_hash)}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}Actual: ${maybeHrefify(actual_witness_event_verification_hash)}`)
       return ['INCONSISTENT', detail]
     }
     return ['MATCHES', detail]
