@@ -177,12 +177,13 @@ function printRevisionInfo(detail) {
   if (detail.witness_detail !== "") {
     console.log(detail.witness_detail)
   }
-  if (!detail.is_signed) {
-    log_dim(`    ${WARN} Not signed`)
-  }
   if (VERBOSE) {
     delete detail.witness_detail
     console.log('  VERBOSE backend', detail)
+  }
+  if (!detail.is_signed) {
+    log_dim(`    ${WARN} Not signed`)
+    return
   }
   if (detail.valid_signature) {
     console.log(`    ${CHECKMARK}${LOCKED_WITH_PEN} Valid Signature. Wallet: ${detail.wallet_address}`)
@@ -215,12 +216,13 @@ function formatRevisionInfo2HTML(detail, verbose = false) {
   if (detail.witness_detail !== "") {
     out += detail.witness_detail
   }
-  if (!detail.is_signed) {
-    out += htmlDimify(`${_space4}${WARN} Not signed<br>`)
-  }
   if (verbose) {
     delete detail.witness_detail
     out += `${_space2}VERBOSE backend ` + JSON.stringify(detail) + '<br>'
+  }
+  if (!detail.is_signed) {
+    out += htmlDimify(`${_space4}${WARN} Not signed<br>`)
+    return out
   }
   if (detail.valid_signature) {
     out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} Valid Signature. Wallet: ${detail.wallet_address}<br>`
