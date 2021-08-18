@@ -136,9 +136,9 @@ async function verifyWitness(witness_event_id, isHtml) {
     )
     const suffix = `${witnessData.witness_network} via etherscan.io`
     if (etherScanResult == 'true') {
-      detail += `${newline}${_space4}${CHECKMARK}${WATCH} witness_verification_hash has been verified on ${suffix}`
+      detail += `${newline}${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified on ${suffix}`
     } else if (etherScanResult == 'false') {
-      detail += redify(isHtml, `${newlineRed}${_space4}${CROSSMARK}${WATCH}witness_verification_hash does not match on ${suffix}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match on ${suffix}`)
     } else {
       detail += redify(isHtml, `${newlineRed}${_space4}${CROSSMARK}${WATCH}Online lookup failed on ${suffix}`)
       detail += redify(isHtml, `${newlineRed}${_space4}Error code: ${etherScanResult}`)
