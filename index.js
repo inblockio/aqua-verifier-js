@@ -19,6 +19,7 @@ const BgGreen = "\x1b[42m"
 const WARN = '⚠️'
 const CROSSMARK = '❌'
 const CHECKMARK = '✅'
+const LOCKED_WITH_PEN = '🔏'
 
 // Verification status
 const INVALID = "INVALID"
@@ -183,7 +184,9 @@ function printRevisionInfo(detail) {
     console.log('  VERBOSE backend', detail)
   }
   if (detail.valid_signature) {
-    console.log(`    ${CHECKMARK} signature is valid`)
+    console.log(`    ${LOCKED_WITH_PEN} signature is valid`)
+  } else {
+    log_red(`    ${LOCKED_WITH_PEN} signature is invalid`)
   }
 }
 
@@ -219,7 +222,9 @@ function formatRevisionInfo2HTML(detail, verbose = false) {
     out += `${_space2}VERBOSE backend ` + JSON.stringify(detail) + '<br>'
   }
   if (detail.valid_signature) {
-    out += `${_space4}${CHECKMARK} signature is valid<br>`
+    out += `${_space4}${LOCKED_WITH_PEN} signature is valid<br>`
+  } else {
+    out += htmlRedify(`${_space4}${LOCKED_WITH_PEN} signature is invalid`)
   }
   return out
 }
