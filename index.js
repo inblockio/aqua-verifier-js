@@ -85,8 +85,8 @@ function calculateSignatureHash(signature, publicKey) {
     return getHashSum(signature + publicKey)
 }
 
-function calculateWitnessHash(page_manifest_verification_hash, merkle_root, witness_network, witness_tx_hash) {
-    return getHashSum(page_manifest_verification_hash + merkle_root + witness_network + witness_tx_hash)
+function calculateWitnessHash(domain_manifest_verification_hash, merkle_root, witness_network, witness_tx_hash) {
+    return getHashSum(domain_manifest_verification_hash + merkle_root + witness_network + witness_tx_hash)
 }
 
 function calculateVerificationHash(contentHash, metadataHash, signature_hash, witness_hash) {
@@ -123,7 +123,7 @@ async function verifyWitness(witness_event_id, isHtml) {
   if (witnessResponse !== '{"value":""}') {
     witnessData = JSON.parse(witnessResponse)
     actual_witness_event_verification_hash = getHashSum(
-      witnessData.page_manifest_verification_hash + witnessData.merkle_root
+      witnessData.domain_manifest_verification_hash + witnessData.merkle_root
     )
 
     detail += `${_space2}Witness event ${witness_event_id} detected`
@@ -146,7 +146,7 @@ async function verifyWitness(witness_event_id, isHtml) {
     }
     if (actual_witness_event_verification_hash != witnessData.witness_event_verification_hash) {
       detail += redify(isHtml, `${newlineRed}${_space4}${CROSSMARK}` + "Witness event verification hash doesn't match")
-      detail += redify(isHtml, `${newlineRed}${_space4}Page manifest verification hash: ${witnessData.page_manifest_verification_hash}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}Page manifest verification hash: ${witnessData.domain_manifest_verification_hash}`)
       detail += redify(isHtml, `${newlineRed}${_space4}Merkle root: ${maybeHrefify(witnessData.merkle_root)}`)
       detail += redify(isHtml, `${newlineRed}${_space4}Expected: ${maybeHrefify(witnessData.witness_event_verification_hash)}`)
       detail += redify(isHtml, `${newlineRed}${_space4}Actual: ${maybeHrefify(actual_witness_event_verification_hash)}`)
