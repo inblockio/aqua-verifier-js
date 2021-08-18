@@ -102,6 +102,9 @@ async function getWitnessHash(witness_event_id) {
 
 async function verifyWitness(witness_event_id, isHtml) {
   let detail = ""
+  const newline = isHtml ? '<br>' : "\n"
+  const _space2 = isHtml ? '&nbsp&nbsp' : '  '
+  const _space4 = _space2 + _space2
   const witnessResponse = await synchronousGet(`${apiURL}/get_witness_data?var1=${witness_event_id}`)
   if (witnessResponse !== '{"value":""}') {
     witnessData = JSON.parse(witnessResponse)
@@ -109,8 +112,8 @@ async function verifyWitness(witness_event_id, isHtml) {
       witnessData.page_manifest_verification_hash + witnessData.merkle_root
     )
 
-    detail += `  Witness event ${witness_event_id} detected`
-    detail += `\n    Transaction hash: ${witnessData.witness_event_transaction_hash}`
+    detail += `${_space2}Witness event ${witness_event_id} detected`
+    detail += `${newline}${_space4}Transaction hash: ${witnessData.witness_event_transaction_hash}`
     // Do online lookup of transaction hash
     const etherScanResult = await cES.checkEtherScan(
       witnessData.witness_network,
@@ -119,20 +122,20 @@ async function verifyWitness(witness_event_id, isHtml) {
     )
     const suffix = `${witnessData.witness_network} via etherscan.io`
     if (etherScanResult == 'true') {
-      detail += `\n    ${CHECKMARK} witness_verification_hash has been verified on ${suffix}`
+      detail += `${newline}${_space4}${CHECKMARK} witness_verification_hash has been verified on ${suffix}`
     } else if (etherScanResult == 'false') {
-      detail += redify(isHtml, `\n    witness_verification_hash does not match on ${suffix}`)
+      detail += redify(isHtml, `${newline}${_space4}witness_verification_hash does not match on ${suffix}`)
     } else {
-      detail += redify(isHtml, `\n    Online lookup failed on ${suffix}`)
-      detail += redify(isHtml, `\n    Error code: ${etherScanResult}`)
-      detail += redify(isHtml, `\n    Verify manually: ${actual_witness_event_verification_hash}`)
+      detail += redify(isHtml, `${newline}${_space4}Online lookup failed on ${suffix}`)
+      detail += redify(isHtml, `${newline}${_space4}Error code: ${etherScanResult}`)
+      detail += redify(isHtml, `${newline}${_space4}Verify manually: ${actual_witness_event_verification_hash}`)
     }
     if (actual_witness_event_verification_hash != witnessData.witness_event_verification_hash) {
-      detail += redify(isHtml, "\n    Witness event verification hash doesn't match")
-      detail += redify(isHtml, `\n    Page manifest verification hash: ${witnessData.page_manifest_verification_hash}`)
-      detail += redify(isHtml, `\n    Merkle root: ${witnessData.merkle_root}`)
-      detail += redify(isHtml, `\n    Expected: ${witnessData.witness_event_verification_hash}`)
-      detail += redify(isHtml, `\n    Actual: ${actual_witness_event_verification_hash}`)
+      detail += redify(isHtml, "${newline}${_space4}Witness event verification hash doesn't match")
+      detail += redify(isHtml, `${newline}${_space4}Page manifest verification hash: ${witnessData.page_manifest_verification_hash}`)
+      detail += redify(isHtml, `${newline}${_space4}Merkle root: ${witnessData.merkle_root}`)
+      detail += redify(isHtml, `${newline}${_space4}Expected: ${witnessData.witness_event_verification_hash}`)
+      detail += redify(isHtml, `${newline}${_space4}Actual: ${actual_witness_event_verification_hash}`)
       return ['INCONSISTENT', detail]
     }
     return ['MATCHES', detail]
@@ -194,7 +197,7 @@ function formatRevisionInfo2HTML(detail, verbose = false) {
     out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
   }
   if (detail.witness_detail !== "") {
-    out += detail.witness_detail.replace(/\n/g, '<br>').replace(/ /g, _space) + '<br>'
+    out += detail.witness_detail + '<br>'
   }
   if (!detail.is_signed) {
     out += htmlDimify(`${_space4}${WARN} Not signed<br>`)
