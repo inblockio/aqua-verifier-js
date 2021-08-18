@@ -186,9 +186,9 @@ function printRevisionInfo(detail) {
     return
   }
   if (detail.valid_signature) {
-    console.log(`    ${CHECKMARK}${LOCKED_WITH_PEN} Valid Signature. Wallet: ${detail.wallet_address}`)
+    console.log(`    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.wallet_address}`)
   } else {
-    log_red(`    ${CROSSMARK}${LOCKED_WITH_PEN} Invalid Signature`)
+    log_red(`    ${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`)
   }
 }
 
@@ -225,9 +225,9 @@ function formatRevisionInfo2HTML(detail, verbose = false) {
     return out
   }
   if (detail.valid_signature) {
-    out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} Valid Signature. Wallet: ${detail.wallet_address}<br>`
+    out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.wallet_address}<br>`
   } else {
-    out += htmlRedify(`${_space4}${CROSSMARK}${LOCKED_WITH_PEN} Invalid Signature`)
+    out += htmlRedify(`${_space4}${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`)
   }
   return out
 }
