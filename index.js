@@ -103,6 +103,8 @@ async function getWitnessHash(witness_event_id) {
 async function verifyWitness(witness_event_id, isHtml) {
   let detail = ""
   const newline = isHtml ? '<br>' : "\n"
+  // We don't need <br> because redify already wraps the text inside a div.
+  const newlineRed = isHtml ? '' : "\n"
   const _space2 = isHtml ? '&nbsp&nbsp' : '  '
   const _space4 = _space2 + _space2
   const witnessResponse = await synchronousGet(`${apiURL}/get_witness_data?var1=${witness_event_id}`)
@@ -124,18 +126,18 @@ async function verifyWitness(witness_event_id, isHtml) {
     if (etherScanResult == 'true') {
       detail += `${newline}${_space4}${CHECKMARK} witness_verification_hash has been verified on ${suffix}`
     } else if (etherScanResult == 'false') {
-      detail += redify(isHtml, `${newline}${_space4}witness_verification_hash does not match on ${suffix}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}witness_verification_hash does not match on ${suffix}`)
     } else {
-      detail += redify(isHtml, `${newline}${_space4}Online lookup failed on ${suffix}`)
-      detail += redify(isHtml, `${newline}${_space4}Error code: ${etherScanResult}`)
-      detail += redify(isHtml, `${newline}${_space4}Verify manually: ${actual_witness_event_verification_hash}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}Online lookup failed on ${suffix}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}Error code: ${etherScanResult}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}Verify manually: ${actual_witness_event_verification_hash}`)
     }
     if (actual_witness_event_verification_hash != witnessData.witness_event_verification_hash) {
-      detail += redify(isHtml, "${newline}${_space4}Witness event verification hash doesn't match")
-      detail += redify(isHtml, `${newline}${_space4}Page manifest verification hash: ${witnessData.page_manifest_verification_hash}`)
-      detail += redify(isHtml, `${newline}${_space4}Merkle root: ${witnessData.merkle_root}`)
-      detail += redify(isHtml, `${newline}${_space4}Expected: ${witnessData.witness_event_verification_hash}`)
-      detail += redify(isHtml, `${newline}${_space4}Actual: ${actual_witness_event_verification_hash}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}` + "Witness event verification hash doesn't match")
+      detail += redify(isHtml, `${newlineRed}${_space4}Page manifest verification hash: ${witnessData.page_manifest_verification_hash}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}Merkle root: ${witnessData.merkle_root}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}Expected: ${witnessData.witness_event_verification_hash}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}Actual: ${actual_witness_event_verification_hash}`)
       return ['INCONSISTENT', detail]
     }
     return ['MATCHES', detail]
