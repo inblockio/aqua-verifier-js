@@ -359,7 +359,7 @@ async function verifyPage(title, verbose = false, doLog = true) {
         resp.on('end', async () => {
           allRevInfo = JSON.parse(body)
           verifiedRevIds = allRevInfo.map(x => x.rev_id)
-          maybeLog(doLog, 'Verified IDs:', verifiedRevIds)
+          maybeLog(doLog, 'Verified Page Revisions: ', verifiedRevIds)
 
           let previousVerificationHash = ''
           let previousRevId = ''
