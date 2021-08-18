@@ -185,7 +185,7 @@ function printRevisionInfo(detail) {
     console.log('  VERBOSE backend', detail)
   }
   if (detail.valid_signature) {
-    console.log(`    ${CHECKMARK}${LOCKED_WITH_PEN} signature is valid`)
+    console.log(`    ${CHECKMARK}${LOCKED_WITH_PEN} signature is valid: ${detail.wallet_address}`)
   } else {
     log_red(`    ${CROSSMARK}${LOCKED_WITH_PEN} signature is invalid`)
   }
@@ -223,7 +223,7 @@ function formatRevisionInfo2HTML(detail, verbose = false) {
     out += `${_space2}VERBOSE backend ` + JSON.stringify(detail) + '<br>'
   }
   if (detail.valid_signature) {
-    out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} signature is valid<br>`
+    out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} signature is valid: ${detail.wallet_address}<br>`
   } else {
     out += htmlRedify(`${_space4}${CROSSMARK}${LOCKED_WITH_PEN} signature is invalid`)
   }
