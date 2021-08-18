@@ -24,7 +24,7 @@ const CHECKMARK = '✅'
 const INVALID = "INVALID"
 const VERIFIED = "VERIFIED"
 
-function redify(content) {
+function cliRedify(content) {
   return FgRed + content + Reset
 }
 
@@ -32,12 +32,16 @@ function htmlRedify(content) {
   return '<div style="color:Tomato;">' + content + '</div>'
 }
 
+function redify(isHtml, content) {
+  return isHtml ? htmlRedify(content) : cliRedify(content)
+}
+
 function htmlDimify(content) {
   return '<div style="color:Gray;">' + content + '</div>'
 }
 
 function log_red(content) {
-  console.log(redify(content))
+  console.log(cliRedify(content))
 }
 
 function log_dim(content) {
@@ -96,7 +100,7 @@ async function getWitnessHash(witness_event_id) {
   return ''
 }
 
-async function verifyWitness(witness_event_id) {
+async function verifyWitness(witness_event_id, isHtml) {
   let detail = ""
   const witnessResponse = await synchronousGet(`${apiURL}/get_witness_data?var1=${witness_event_id}`)
   if (witnessResponse !== '{"value":""}') {
@@ -117,18 +121,18 @@ async function verifyWitness(witness_event_id) {
     if (etherScanResult == 'true') {
       detail += `\n    ${CHECKMARK} witness_verification_hash has been verified on ${suffix}`
     } else if (etherScanResult == 'false') {
-      detail += redify(`\n    witness_verification_hash does not match on ${suffix}`)
+      detail += redify(isHtml, `\n    witness_verification_hash does not match on ${suffix}`)
     } else {
-      detail += redify(`\n    Online lookup failed on ${suffix}`)
-      detail += redify(`\n    Error code: ${etherScanResult}`)
-      detail += redify(`\n    Verify manually: ${actual_witness_event_verification_hash}`)
+      detail += redify(isHtml, `\n    Online lookup failed on ${suffix}`)
+      detail += redify(isHtml, `\n    Error code: ${etherScanResult}`)
+      detail += redify(isHtml, `\n    Verify manually: ${actual_witness_event_verification_hash}`)
     }
     if (actual_witness_event_verification_hash != witnessData.witness_event_verification_hash) {
-      detail += redify("\n    Witness event verification hash doesn't match")
-      detail += redify(`\n    Page manifest verification hash: ${witnessData.page_manifest_verification_hash}`)
-      detail += redify(`\n    Merkle root: ${witnessData.merkle_root}`)
-      detail += redify(`\n    Expected: ${witnessData.witness_event_verification_hash}`)
-      detail += redify(`\n    Actual: ${actual_witness_event_verification_hash}`)
+      detail += redify(isHtml, "\n    Witness event verification hash doesn't match")
+      detail += redify(isHtml, `\n    Page manifest verification hash: ${witnessData.page_manifest_verification_hash}`)
+      detail += redify(isHtml, `\n    Merkle root: ${witnessData.merkle_root}`)
+      detail += redify(isHtml, `\n    Expected: ${witnessData.witness_event_verification_hash}`)
+      detail += redify(isHtml, `\n    Actual: ${actual_witness_event_verification_hash}`)
       return ['INCONSISTENT', detail]
     }
     return ['MATCHES', detail]
@@ -205,7 +209,7 @@ function formatRevisionInfo2HTML(detail, verbose = false) {
   return out
 }
 
-async function verifyRevision(revid, prevRevId, previousVerificationHash, contentHash) {
+async function verifyRevision(revid, prevRevId, previousVerificationHash, contentHash, isHtml) {
   let detail = {
     rev_id: revid,
     verification_status: null,
@@ -243,7 +247,7 @@ async function verifyRevision(revid, prevRevId, previousVerificationHash, conten
   const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
 
   // WITNESS DATA HASH CALCULATOR
-  const [witnessStatus, witness_detail] = await verifyWitness(data.witness_event_id)
+  const [witnessStatus, witness_detail] = await verifyWitness(data.witness_event_id, isHtml)
   detail.witness_detail = witness_detail
 
   const calculatedVerificationHash = calculateVerificationHash(
@@ -318,7 +322,7 @@ async function verifyPage(title, verbose = false, doLog = true) {
     // This error can not happen in Chrome-Extension because the title has been
     // sanitized.
     errorMsg = 'INVALID TITLE: Do not use underscore in title.' 
-    maybeLog(doLog, redify(errorMsg))
+    maybeLog(doLog, cliRedify(errorMsg))
     return [errorMsg, {}] 
   }
   VERBOSE = verbose
@@ -350,7 +354,8 @@ async function verifyPage(title, verbose = false, doLog = true) {
             const content = JSON.parse(bodyRevid).parse.wikitext
             const contentHash = getHashSum(content)
 
-            const [verificationHash, isCorrect, detail] = await verifyRevision(revid, previousRevId, previousVerificationHash, contentHash)
+            const isHtml = !doLog // TODO: generalize this later
+            const [verificationHash, isCorrect, detail] = await verifyRevision(revid, previousRevId, previousVerificationHash, contentHash, isHtml)
             details.revision_details.push(detail)
             if (doLog) {
               printRevisionInfo(detail)
