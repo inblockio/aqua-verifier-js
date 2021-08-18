@@ -145,7 +145,7 @@ async function verifyWitness(witness_event_id, isHtml) {
       detail += redify(isHtml, `${newlineRed}${_space4}Verify manually: ${actual_witness_event_verification_hash}`)
     }
     if (actual_witness_event_verification_hash != witnessData.witness_event_verification_hash) {
-      detail += redify(isHtml, `${newlineRed}${_space4}` + "Witness event verification hash doesn't match")
+      detail += redify(isHtml, `${newlineRed}${_space4}${CROSSMARK}` + "Witness event verification hash doesn't match")
       detail += redify(isHtml, `${newlineRed}${_space4}Page manifest verification hash: ${witnessData.page_manifest_verification_hash}`)
       detail += redify(isHtml, `${newlineRed}${_space4}Merkle root: ${maybeHrefify(witnessData.merkle_root)}`)
       detail += redify(isHtml, `${newlineRed}${_space4}Expected: ${maybeHrefify(witnessData.witness_event_verification_hash)}`)
