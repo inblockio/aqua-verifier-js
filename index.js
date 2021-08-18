@@ -199,7 +199,7 @@ function formatRevisionInfo2HTML(detail, verbose = false) {
     out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
   }
   if (detail.witness_detail !== "") {
-    out += detail.witness_detail + '<br>'
+    out += detail.witness_detail
   }
   if (!detail.is_signed) {
     out += htmlDimify(`${_space4}${WARN} Not signed<br>`)
