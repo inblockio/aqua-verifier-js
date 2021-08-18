@@ -20,6 +20,7 @@ const WARN = '⚠️'
 const CROSSMARK = '❌'
 const CHECKMARK = '✅'
 const LOCKED_WITH_PEN = '🔏'
+const WATCH = '⌚'
 
 // Verification status
 const INVALID = "INVALID"
@@ -135,11 +136,11 @@ async function verifyWitness(witness_event_id, isHtml) {
     )
     const suffix = `${witnessData.witness_network} via etherscan.io`
     if (etherScanResult == 'true') {
-      detail += `${newline}${_space4}${CHECKMARK} witness_verification_hash has been verified on ${suffix}`
+      detail += `${newline}${_space4}${CHECKMARK}${WATCH} witness_verification_hash has been verified on ${suffix}`
     } else if (etherScanResult == 'false') {
-      detail += redify(isHtml, `${newlineRed}${_space4}witness_verification_hash does not match on ${suffix}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}${CROSSMARK}${WATCH}witness_verification_hash does not match on ${suffix}`)
     } else {
-      detail += redify(isHtml, `${newlineRed}${_space4}Online lookup failed on ${suffix}`)
+      detail += redify(isHtml, `${newlineRed}${_space4}${CROSSMARK}${WATCH}Online lookup failed on ${suffix}`)
       detail += redify(isHtml, `${newlineRed}${_space4}Error code: ${etherScanResult}`)
       detail += redify(isHtml, `${newlineRed}${_space4}Verify manually: ${actual_witness_event_verification_hash}`)
     }
