@@ -396,7 +396,7 @@ async function verifyPage(title, verbose = false, doLog = true) {
           let status
           if (count == verifiedRevIds.length) {
             if (count === 0) {
-              status = "N/A"
+              status = "NORECORD"
             } else {
               status = VERIFIED
             }
