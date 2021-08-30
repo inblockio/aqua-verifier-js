@@ -214,7 +214,7 @@ function formatRevisionInfo2HTML(detail, verbose = false) {
     out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
   }
   if (detail.witness_detail !== "") {
-    out += detail.witness_detail
+    out += detail.witness_detail + '<br>'
   }
   if (verbose) {
     delete detail.witness_detail
