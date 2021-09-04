@@ -357,7 +357,10 @@ async function verifyPage(title, verbose = false, doLog = true) {
           body += chunk
         })
         resp.on('end', async () => {
-          allRevInfo = JSON.parse(body)
+          const allRevInfo = JSON.parse(body)
+          if (allRevInfo.hasOwnProperty('error')) {
+            throw body
+          }
           verifiedRevIds = allRevInfo.map(x => x.rev_id)
           maybeLog(doLog, 'Verified Page Revisions: ', verifiedRevIds)
 
