@@ -299,14 +299,20 @@ async function verifyRevision(revid, prevRevId, previousVerificationHash, conten
   }
   detail.is_signed = true
 
+  // Signature verification
+  let isCorrect = false
   // The padded message is required
   const paddedMessage = 'I sign the following page verification_hash: [0x' + data.verification_hash + ']'
-  const recoveredAddress = ethers.utils.recoverAddress(ethers.utils.hashMessage(paddedMessage), data.signature)
-  let isCorrect = false
-  if (recoveredAddress.toLowerCase() === data.wallet_address.toLowerCase()) {
-    detail.valid_signature = true
-    isCorrect = true
+  try {
+    const recoveredAddress = ethers.utils.recoverAddress(ethers.utils.hashMessage(paddedMessage), data.signature)
+    if (recoveredAddress.toLowerCase() === data.wallet_address.toLowerCase()) {
+      detail.valid_signature = true
+      isCorrect = true
+    }
   }
+  catch(e) {
+  }
+
   return [data.verification_hash, isCorrect, detail]
 }
 
