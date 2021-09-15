@@ -313,6 +313,11 @@ async function verifyRevision(revid, prevRevId, previousVerificationHash, conten
   catch(e) {
   }
 
+  // Update isCorrect based on witness status
+  if (detail.is_witnessed && witnessStatus === 'INCONSISTENT') {
+    isCorrect = false
+  }
+
   return [data.verification_hash, isCorrect, detail]
 }
 
