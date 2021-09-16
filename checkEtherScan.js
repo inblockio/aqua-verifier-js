@@ -3,7 +3,11 @@ const https = require( 'https' )
 const re = /<span id='rawinput'.*<\/span>/
 
 const witnessNetworkMap = {
-  'goerli': 'https://goerli.etherscan.io/tx'
+  'mainnet': 'https://etherscan.io/tx',
+  'ropsten': 'https://ropsten.etherscan.io/tx',
+  'kovan': 'https://kovan.etherscan.io/tx',
+  'rinkeby': 'https://rinkeby.etherscan.io/tx',
+  'goerli': 'https://goerli.etherscan.io/tx',
 }
 
 function sleep(ms) {
