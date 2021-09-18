@@ -8,8 +8,6 @@ const cES = require('./checkEtherScan.js')
 
 let VERBOSE = undefined
 
-const apiURL = 'http://localhost:9352/rest.php/data_accounting/v1/standard'
-
 // https://stackoverflow.com/questions/9781218/how-to-change-node-jss-console-font-color
 const Reset = "\x1b[0m"
 const Dim = "\x1b[2m"
@@ -93,7 +91,7 @@ function calculateVerificationHash(contentHash, metadataHash, signature_hash, wi
     return getHashSum(contentHash + metadataHash + signature_hash + witness_hash)
 }
 
-async function getWitnessHash(witness_event_id) {
+async function getWitnessHash(apiURL, witness_event_id) {
   if (witness_event_id === null) {
     return ''
   }
@@ -111,7 +109,7 @@ async function getWitnessHash(witness_event_id) {
   return ''
 }
 
-async function verifyWitness(witness_event_id, isHtml) {
+async function verifyWitness(apiURL, witness_event_id, isHtml) {
   let detail = ""
   const newline = isHtml ? '<br>' : "\n"
   // We don't need <br> because redify already wraps the text inside a div.
@@ -232,7 +230,7 @@ function formatRevisionInfo2HTML(detail, verbose = false) {
   return out
 }
 
-async function verifyRevision(revid, prevRevId, previousVerificationHash, contentHash, isHtml) {
+async function verifyRevision(apiURL, revid, prevRevId, previousVerificationHash, contentHash, isHtml) {
   let detail = {
     rev_id: revid,
     verification_status: null,
@@ -265,12 +263,12 @@ async function verifyRevision(revid, prevRevId, previousVerificationHash, conten
     // and public key are nulls, not empty strings.
     prevSignature = !!dataPrevious.signature ? dataPrevious.signature: ''
     prevPublicKey = !!dataPrevious.public_key ? dataPrevious.public_key: ''
-    prevWitnessHash = await getWitnessHash(dataPrevious.witness_event_id)
+    prevWitnessHash = await getWitnessHash(apiURL, dataPrevious.witness_event_id)
   }
   const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
 
   // WITNESS DATA HASH CALCULATOR
-  const [witnessStatus, witness_detail] = await verifyWitness(data.witness_event_id, isHtml)
+  const [witnessStatus, witness_detail] = await verifyWitness(apiURL, data.witness_event_id, isHtml)
   detail.witness_detail = witness_detail
 
   const calculatedVerificationHash = calculateVerificationHash(
@@ -352,7 +350,8 @@ async function synchronousGet(url) {
 	}
 }
 
-async function verifyPage(title, verbose = false, doLog = true) {
+async function verifyPage(title, server, verbose = false, doLog = true) {
+  const apiURL = `${server}/rest.php/data_accounting/v1/standard`
   if (title.includes('_')) {
     // TODO it's not just underscore, catch all potential errors in page title.
     // This error can not happen in Chrome-Extension because the title has been
@@ -398,7 +397,7 @@ async function verifyPage(title, verbose = false, doLog = true) {
             const contentHash = getHashSum(content)
 
             const isHtml = !doLog // TODO: generalize this later
-            const [verificationHash, isCorrect, detail] = await verifyRevision(revid, previousRevId, previousVerificationHash, contentHash, isHtml)
+            const [verificationHash, isCorrect, detail] = await verifyRevision(apiURL, revid, previousRevId, previousVerificationHash, contentHash, isHtml)
             details.revision_details.push(detail)
             if (doLog) {
               printRevisionInfo(detail)
