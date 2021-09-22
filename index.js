@@ -1,4 +1,5 @@
 const http = require( 'http' )
+const https = require( 'https' )
 const sha3 = require('js-sha3')
 
 // utilities for verifying signatures
@@ -23,6 +24,10 @@ const WATCH = '⌚'
 // Verification status
 const INVALID = "INVALID"
 const VERIFIED = "VERIFIED"
+
+function adaptiveGet(url) {
+  return url.startsWith('https://') ? https.get : http.get
+}
 
 function cliRedify(content) {
   return FgRed + content + Reset
@@ -322,7 +327,7 @@ async function verifyRevision(apiURL, revid, prevRevId, previousVerificationHash
 async function synchronousGet(url) {
   try {
     http_promise = new Promise((resolve, reject) => {
-      http.get(url, (response) => {
+      adaptiveGet(url)(url, (response) => {
         let chunks_of_data = [];
 
         response.on('data', (fragments) => {
@@ -363,7 +368,8 @@ async function verifyPage(title, server, verbose = false, doLog = true) {
   VERBOSE = verbose
   try {
     http_promise = new Promise((resolve, reject) => {
-      http.get(`${apiURL}/page_all_rev?var1=${title}`, (resp) => {
+      const url = `${apiURL}/page_all_rev?var1=${title}`
+      adaptiveGet(url)(url, (resp) => {
         let body = ""
         resp.on('data', (chunk) => {
           body += chunk
