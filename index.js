@@ -394,7 +394,7 @@ async function verifyPage(title, server, verbose = false, doLog = true) {
             maybeLog(doLog, `${parseInt(idx) + 1}. Verification of Revision ${revid}.`)
 
             // CONTENT DATA HASH CALCULATOR
-            const bodyRevid = await synchronousGet(`http://localhost:9352/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`)
+            const bodyRevid = await synchronousGet(`${server}/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`)
             const jsonBody = JSON.parse(bodyRevid)
             if (!jsonBody.parse || !jsonBody.parse.wikitext) {
               throw `No wikitext found for revid ${revid}`;
