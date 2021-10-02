@@ -6,9 +6,9 @@
   "dependencies": {
     "ethers": "^5.4.1",
     "js-sha3": "^0.8.0",
-    "minimist": "^1.2.5"
+    "minimist": "^1.2.5",
+    "moment": "^2.29.1"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

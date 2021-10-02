@@ -1,6 +1,8 @@
 const http = require( 'http' )
 const https = require( 'https' )
+
 const sha3 = require('js-sha3')
+const moment = require('moment')
 
 // utilities for verifying signatures
 const ethers = require('ethers')
@@ -62,6 +64,11 @@ function maybeLog(doLog, ...args) {
 function formatMwTimestamp(ts) {
   // Format timestamp into the timestamp format found in Mediawiki outputs
   return ts.replace(/-/g, '').replace(/:/g, '').replace('T', '').replace('Z', '')
+}
+
+function formatDBTimestamp(ts) {
+  // Format 20210927075124 into '27 Sep 2021, 7:51:24 AM'
+  return moment(ts, 'YYYYMMDDHHmmss').format("D MMM YYYY, h:mm:ss A")
 }
 
 function shortenHash(hash) {
@@ -165,6 +172,8 @@ function printRevisionInfo(detail) {
     console.log('  no verification hash')
     return
   }
+
+  console.log(`  ${formatDBTimestamp(detail.time_stamp)}`)
   console.log(`  Domain ID: ${detail.domain_id}`)
   if (detail.verification_status === INVALID) {
     log_red(`  ${CROSSMARK}` + " verification hash doesn't match")
@@ -204,7 +213,8 @@ function formatRevisionInfo2HTML(detail, verbose = false) {
   if (!detail.hasOwnProperty('verification_hash')) {
     return `${_space2}no verification hash`
   }
-  let out = `${_space2}Domain ID: ${detail.domain_id}<br>`
+  let out = `${_space2}${formatDBTimestamp(detail.time_stamp)}<br>`
+  out += `${_space2}Domain ID: ${detail.domain_id}<br>`
   if (detail.verification_status === INVALID) {
     out += htmlRedify(`${_space2}${CROSSMARK}` + " verification hash doesn't match")
     return out
