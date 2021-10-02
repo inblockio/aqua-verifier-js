@@ -179,10 +179,7 @@ function printRevisionInfo(detail) {
     log_red(`  ${CROSSMARK}` + " verification hash doesn't match")
     return
   }
-  console.log(`  ${CHECKMARK} Verification hash matches`)
-  if (VERBOSE) {
-    console.log(`  Verification hash: ${detail.verification_hash}`)
-  }
+  console.log(`  ${CHECKMARK} Verification hash matches (${detail.verification_hash})`)
   if (!detail.is_witnessed) {
     log_dim(`    ${WARN} Not witnessed`)
   }
@@ -219,10 +216,7 @@ function formatRevisionInfo2HTML(detail, verbose = false) {
     out += htmlRedify(`${_space2}${CROSSMARK}` + " verification hash doesn't match")
     return out
   }
-  out += `${_space2}${CHECKMARK} Verification hash matches<br>`
-  if (verbose) {
-    out += `${_space2}Verification hash: ${detail.verification_hash}<br>`
-  }
+  out += `${_space2}${CHECKMARK} Verification hash matches (${hrefifyHash(detail.verification_hash)})<br>`
   if (!detail.is_witnessed) {
     out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
   }
