@@ -75,9 +75,10 @@ function shortenHash(hash) {
   return hash.slice(0, 6) + '...' + hash.slice(-6)
 }
 
-function hrefifyHash(hash) {
+function hrefifyHash(hash, newTab = false) {
   const shortened = shortenHash(hash)
-	return `<a href="${hash}">${shortened}</a>`
+  newTabString = newTab ? ' target="_blank"' : ''
+	return `<a href="${hash}"${newTabString}>${shortened}</a>`
 }
 
 function getHashSum(content) {
@@ -216,7 +217,7 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     out += htmlRedify(`${_space2}${CROSSMARK}` + " verification hash doesn't match")
     return out
   }
-  out += `${_space2}${CHECKMARK} Verification hash matches (${hrefifyHash(detail.verification_hash)})<br>`
+  out += `${_space2}${CHECKMARK} Verification hash matches (${hrefifyHash(detail.verification_hash, true)})<br>`
   if (!detail.is_witnessed) {
     out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
   }
