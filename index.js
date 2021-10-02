@@ -233,7 +233,7 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   }
   if (detail.valid_signature) {
     const walletURL = `${server}/index.php/User:${detail.wallet_address}`
-    const walletA = `<a href='${walletURL}'>${detail.wallet_address}</a>`
+    const walletA = `<a href='${walletURL}' target="_blank">${detail.wallet_address}</a>`
     out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${walletA}<br>`
   } else {
     out += htmlRedify(`${_space4}${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`)
