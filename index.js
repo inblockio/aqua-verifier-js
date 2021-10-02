@@ -201,7 +201,7 @@ function printRevisionInfo(detail) {
   }
 }
 
-function formatRevisionInfo2HTML(detail, verbose = false) {
+function formatRevisionInfo2HTML(server, detail, verbose = false) {
   // Format the info into HTML nicely. Used in VerifyPage Chrome extension, but
   // could be used elsewhere too.
   const _space = '&nbsp'
@@ -232,7 +232,9 @@ function formatRevisionInfo2HTML(detail, verbose = false) {
     return out
   }
   if (detail.valid_signature) {
-    out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.wallet_address}<br>`
+    const walletURL = `${server}/index.php/User:${detail.wallet_address}`
+    const walletA = `<a href='${walletURL}'>${detail.wallet_address}</a>`
+    out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${walletA}<br>`
   } else {
     out += htmlRedify(`${_space4}${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`)
   }
