@@ -21,5 +21,8 @@
   "bugs": {
     "url": "https://github.com/FantasticoFox/data-accounting-external-verifier/issues"
   },
-  "homepage": "https://github.com/FantasticoFox/data-accounting-external-verifier#readme"
+  "homepage": "https://github.com/FantasticoFox/data-accounting-external-verifier#readme",
+  "devDependencies": {
+    "prettier": "^2.4.1"
+  }
 }
