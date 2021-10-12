@@ -122,7 +122,40 @@ async function getWitnessHash(apiURL, witness_event_id) {
   return ''
 }
 
-async function verifyWitness(apiURL, witness_event_id, isHtml) {
+function verifyMerkleIntegrity(merkleBranch) {
+  let prevSuccessor = null
+  for (const idx in merkleBranch) {
+    const node = merkleBranch[idx]
+    if (!!prevSuccessor) {
+      const leaves = [node.left_leaf, node.right_leaf]
+      if (!leaves.includes(prevSuccessor)) {
+        //console.log("Expected leaf", prevSuccessor)
+        //console.log("Actual leaves", leaves)
+        return false
+      }
+    }
+
+    const calculatedSuccessor = getHashSum(node.left_leaf + node.right_leaf)
+    if (calculatedSuccessor !== node.successor) {
+      //console.log("Expected successor", calculatedSuccessor)
+      //console.log("Actual successor", node.successor)
+      return false
+    }
+    prevSuccessor = node.successor
+  }
+  return true
+}
+
+async function verifyWitnessMerkleProof(apiURL, witness_event_id, verificationHash) {
+  const witnessMerkleProofStr = await synchronousGet(`${apiURL}/request_merkle_proof?var1=${witness_event_id}&var2=${verificationHash}`)
+  if (witnessMerkleProofStr === '[]') {
+    return false
+  }
+  const witnessMerkleProof = JSON.parse(witnessMerkleProofStr)
+  return verifyMerkleIntegrity(witnessMerkleProof)
+}
+
+async function verifyWitness(apiURL, witness_event_id, verification_hash, doVerifyMerkleProof, isHtml) {
   let detail = ""
   const newline = isHtml ? '<br>' : "\n"
   // We don't need <br> because redify already wraps the text inside a div.
@@ -162,6 +195,17 @@ async function verifyWitness(apiURL, witness_event_id, isHtml) {
       detail += redify(isHtml, `${newlineRed}${_space4}Expected: ${maybeHrefify(witnessData.witness_event_verification_hash)}`)
       detail += redify(isHtml, `${newlineRed}${_space4}Actual: ${maybeHrefify(actual_witness_event_verification_hash)}`)
       return ['INCONSISTENT', detail]
+    }
+    // At this point, we know that the witness matches.
+    if (doVerifyMerkleProof) {
+      // Only verify the witness merkle proof when verifyWitness is successful,
+      // because this step is expensive.
+      const merkleProofIsOK = await verifyWitnessMerkleProof(apiURL, witness_event_id, verification_hash)
+      if (merkleProofIsOK) {
+        detail += `${newline}${_space4}${CHECKMARK}Witness Merkle Proof is OK`
+      } else {
+        detail += `${newline}${_space4}${CROSSMARK}Witness Merkle Proof is corrupted`
+      }
     }
     return ['MATCHES', detail]
   }
@@ -242,7 +286,7 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   return out
 }
 
-async function verifyRevision(apiURL, revid, prevRevId, previousVerificationHash, contentHash, isHtml) {
+async function verifyRevision(apiURL, revid, prevRevId, previousVerificationHash, contentHash, isHtml, doVerifyMerkleProof) {
   let detail = {
     rev_id: revid,
     verification_status: null,
@@ -280,7 +324,7 @@ async function verifyRevision(apiURL, revid, prevRevId, previousVerificationHash
   const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
 
   // WITNESS DATA HASH CALCULATOR
-  const [witnessStatus, witness_detail] = await verifyWitness(apiURL, data.witness_event_id, isHtml)
+  const [witnessStatus, witness_detail] = await verifyWitness(apiURL, data.witness_event_id, data.verification_hash, doVerifyMerkleProof, isHtml)
   detail.witness_detail = witness_detail
 
   const calculatedVerificationHash = calculateVerificationHash(
@@ -362,15 +406,15 @@ async function synchronousGet(url) {
 	}
 }
 
-async function verifyPage(title, server, verbose = false, doLog = true) {
+async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
   const apiURL = `${server}/rest.php/data_accounting/v1/standard`
   if (title.includes('_')) {
     // TODO it's not just underscore, catch all potential errors in page title.
     // This error can not happen in Chrome-Extension because the title has been
     // sanitized.
-    errorMsg = 'INVALID TITLE: Do not use underscore in title.' 
+    errorMsg = 'INVALID TITLE: Do not use underscore in title.'
     maybeLog(doLog, cliRedify(errorMsg))
-    return [errorMsg, {}] 
+    return [errorMsg, {}]
   }
   VERBOSE = verbose
   try {
@@ -410,7 +454,7 @@ async function verifyPage(title, server, verbose = false, doLog = true) {
             const contentHash = getHashSum(content)
 
             const isHtml = !doLog // TODO: generalize this later
-            const [verificationHash, isCorrect, detail] = await verifyRevision(apiURL, revid, previousRevId, previousVerificationHash, contentHash, isHtml)
+            const [verificationHash, isCorrect, detail] = await verifyRevision(apiURL, revid, previousRevId, previousVerificationHash, contentHash, isHtml, doVerifyMerkleProof)
             details.revision_details.push(detail)
             if (doLog) {
               printRevisionInfo(detail)
