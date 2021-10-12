@@ -1,13 +1,13 @@
-const http = require( 'http' )
-const https = require( 'https' )
+const http = require("http")
+const https = require("https")
 
-const sha3 = require('js-sha3')
-const moment = require('moment')
+const sha3 = require("js-sha3")
+const moment = require("moment")
 
 // utilities for verifying signatures
-const ethers = require('ethers')
+const ethers = require("ethers")
 
-const cES = require('./checkEtherScan.js')
+const cES = require("./checkEtherScan.js")
 
 let VERBOSE = undefined
 
@@ -17,18 +17,18 @@ const Dim = "\x1b[2m"
 const FgRed = "\x1b[31m"
 const FgWhite = "\x1b[37m"
 const BgGreen = "\x1b[42m"
-const WARN = '⚠️'
-const CROSSMARK = '❌'
-const CHECKMARK = '✅'
-const LOCKED_WITH_PEN = '🔏'
-const WATCH = '⌚'
+const WARN = "⚠️"
+const CROSSMARK = "❌"
+const CHECKMARK = "✅"
+const LOCKED_WITH_PEN = "🔏"
+const WATCH = "⌚"
 
 // Verification status
 const INVALID = "INVALID"
 const VERIFIED = "VERIFIED"
 
 function adaptiveGet(url) {
-  return url.startsWith('https://') ? https.get : http.get
+  return url.startsWith("https://") ? https.get : http.get
 }
 
 function cliRedify(content) {
@@ -36,7 +36,7 @@ function cliRedify(content) {
 }
 
 function htmlRedify(content) {
-  return '<div style="color:Crimson;">' + content + '</div>'
+  return '<div style="color:Crimson;">' + content + "</div>"
 }
 
 function redify(isHtml, content) {
@@ -44,7 +44,7 @@ function redify(isHtml, content) {
 }
 
 function htmlDimify(content) {
-  return '<div style="color:Gray;">' + content + '</div>'
+  return '<div style="color:Gray;">' + content + "</div>"
 }
 
 function log_red(content) {
@@ -63,63 +63,88 @@ function maybeLog(doLog, ...args) {
 
 function formatMwTimestamp(ts) {
   // Format timestamp into the timestamp format found in Mediawiki outputs
-  return ts.replace(/-/g, '').replace(/:/g, '').replace('T', '').replace('Z', '')
+  return ts
+    .replace(/-/g, "")
+    .replace(/:/g, "")
+    .replace("T", "")
+    .replace("Z", "")
 }
 
 function formatDBTimestamp(ts) {
   // Format 20210927075124 into '27 Sep 2021, 7:51:24 AM'
-  return moment(ts, 'YYYYMMDDHHmmss').format("D MMM YYYY, h:mm:ss A")
+  return moment(ts, "YYYYMMDDHHmmss").format("D MMM YYYY, h:mm:ss A")
 }
 
 function shortenHash(hash) {
-  return hash.slice(0, 6) + '...' + hash.slice(-6)
+  return hash.slice(0, 6) + "..." + hash.slice(-6)
 }
 
 function hrefifyHash(hash, newTab = false) {
   const shortened = shortenHash(hash)
-  newTabString = newTab ? ' target="_blank"' : ''
-	return `<a href="${hash}"${newTabString}>${shortened}</a>`
+  newTabString = newTab ? ' target="_blank"' : ""
+  return `<a href="${hash}"${newTabString}>${shortened}</a>`
 }
 
 function getHashSum(content) {
-  if (content === '') {
-    return ''
+  if (content === "") {
+    return ""
   }
   return sha3.sha3_512(content)
 }
 
-function calculateMetadataHash(domainId, timestamp, previousVerificationHash = "") {
-    return getHashSum(domainId + timestamp + previousVerificationHash)
+function calculateMetadataHash(
+  domainId,
+  timestamp,
+  previousVerificationHash = ""
+) {
+  return getHashSum(domainId + timestamp + previousVerificationHash)
 }
 
 function calculateSignatureHash(signature, publicKey) {
-    return getHashSum(signature + publicKey)
+  return getHashSum(signature + publicKey)
 }
 
-function calculateWitnessHash(domain_manifest_verification_hash, merkle_root, witness_network, witness_tx_hash) {
-    return getHashSum(domain_manifest_verification_hash + merkle_root + witness_network + witness_tx_hash)
+function calculateWitnessHash(
+  domain_manifest_verification_hash,
+  merkle_root,
+  witness_network,
+  witness_tx_hash
+) {
+  return getHashSum(
+    domain_manifest_verification_hash +
+      merkle_root +
+      witness_network +
+      witness_tx_hash
+  )
 }
 
-function calculateVerificationHash(contentHash, metadataHash, signature_hash, witness_hash) {
-    return getHashSum(contentHash + metadataHash + signature_hash + witness_hash)
+function calculateVerificationHash(
+  contentHash,
+  metadataHash,
+  signature_hash,
+  witness_hash
+) {
+  return getHashSum(contentHash + metadataHash + signature_hash + witness_hash)
 }
 
 async function getWitnessHash(apiURL, witness_event_id) {
   if (witness_event_id === null) {
-    return ''
+    return ""
   }
-  const witnessResponse = await synchronousGet(`${apiURL}/get_witness_data?var1=${witness_event_id}`)
+  const witnessResponse = await synchronousGet(
+    `${apiURL}/get_witness_data?var1=${witness_event_id}`
+  )
   if (witnessResponse !== '{"value":""}') {
     witnessData = JSON.parse(witnessResponse)
     witnessHash = calculateWitnessHash(
       witnessData.witness_event_verification_hash,
       witnessData.merkle_root,
       witnessData.witness_network,
-      witnessData.witness_event_transaction_hash,
+      witnessData.witness_event_transaction_hash
     )
     return witnessHash
   }
-  return ''
+  return ""
 }
 
 function verifyMerkleIntegrity(merkleBranch) {
@@ -146,24 +171,38 @@ function verifyMerkleIntegrity(merkleBranch) {
   return true
 }
 
-async function verifyWitnessMerkleProof(apiURL, witness_event_id, verificationHash) {
-  const witnessMerkleProofStr = await synchronousGet(`${apiURL}/request_merkle_proof?var1=${witness_event_id}&var2=${verificationHash}`)
-  if (witnessMerkleProofStr === '[]') {
+async function verifyWitnessMerkleProof(
+  apiURL,
+  witness_event_id,
+  verificationHash
+) {
+  const witnessMerkleProofStr = await synchronousGet(
+    `${apiURL}/request_merkle_proof?var1=${witness_event_id}&var2=${verificationHash}`
+  )
+  if (witnessMerkleProofStr === "[]") {
     return false
   }
   const witnessMerkleProof = JSON.parse(witnessMerkleProofStr)
   return verifyMerkleIntegrity(witnessMerkleProof)
 }
 
-async function verifyWitness(apiURL, witness_event_id, verification_hash, doVerifyMerkleProof, isHtml) {
+async function verifyWitness(
+  apiURL,
+  witness_event_id,
+  verification_hash,
+  doVerifyMerkleProof,
+  isHtml
+) {
   let detail = ""
-  const newline = isHtml ? '<br>' : "\n"
+  const newline = isHtml ? "<br>" : "\n"
   // We don't need <br> because redify already wraps the text inside a div.
-  const newlineRed = isHtml ? '' : "\n"
-  const _space2 = isHtml ? '&nbsp&nbsp' : '  '
+  const newlineRed = isHtml ? "" : "\n"
+  const _space2 = isHtml ? "&nbsp&nbsp" : "  "
   const _space4 = _space2 + _space2
-  const maybeHrefify = (hash) => isHtml ? hrefifyHash(hash) : hash
-  const witnessResponse = await synchronousGet(`${apiURL}/get_witness_data?var1=${witness_event_id}`)
+  const maybeHrefify = (hash) => (isHtml ? hrefifyHash(hash) : hash)
+  const witnessResponse = await synchronousGet(
+    `${apiURL}/get_witness_data?var1=${witness_event_id}`
+  )
   if (witnessResponse !== '{"value":""}') {
     witnessData = JSON.parse(witnessResponse)
     actual_witness_event_verification_hash = getHashSum(
@@ -179,42 +218,83 @@ async function verifyWitness(apiURL, witness_event_id, verification_hash, doVeri
       actual_witness_event_verification_hash
     )
     const suffix = `${witnessData.witness_network} via etherscan.io`
-    if (etherScanResult == 'true') {
+    if (etherScanResult == "true") {
       detail += `${newline}${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified on ${suffix}`
-    } else if (etherScanResult == 'false') {
-      detail += redify(isHtml, `${newlineRed}${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match on ${suffix}`)
+    } else if (etherScanResult == "false") {
+      detail += redify(
+        isHtml,
+        `${newlineRed}${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match on ${suffix}`
+      )
     } else {
-      detail += redify(isHtml, `${newlineRed}${_space4}${CROSSMARK}${WATCH}Online lookup failed on ${suffix}`)
-      detail += redify(isHtml, `${newlineRed}${_space4}Error code: ${etherScanResult}`)
-      detail += redify(isHtml, `${newlineRed}${_space4}Verify manually: ${actual_witness_event_verification_hash}`)
+      detail += redify(
+        isHtml,
+        `${newlineRed}${_space4}${CROSSMARK}${WATCH}Online lookup failed on ${suffix}`
+      )
+      detail += redify(
+        isHtml,
+        `${newlineRed}${_space4}Error code: ${etherScanResult}`
+      )
+      detail += redify(
+        isHtml,
+        `${newlineRed}${_space4}Verify manually: ${actual_witness_event_verification_hash}`
+      )
     }
-    if (actual_witness_event_verification_hash != witnessData.witness_event_verification_hash) {
-      detail += redify(isHtml, `${newlineRed}${_space4}${CROSSMARK}` + "Witness event verification hash doesn't match")
-      detail += redify(isHtml, `${newlineRed}${_space4}Page manifest verification hash: ${witnessData.domain_manifest_verification_hash}`)
-      detail += redify(isHtml, `${newlineRed}${_space4}Merkle root: ${maybeHrefify(witnessData.merkle_root)}`)
-      detail += redify(isHtml, `${newlineRed}${_space4}Expected: ${maybeHrefify(witnessData.witness_event_verification_hash)}`)
-      detail += redify(isHtml, `${newlineRed}${_space4}Actual: ${maybeHrefify(actual_witness_event_verification_hash)}`)
-      return ['INCONSISTENT', detail]
+    if (
+      actual_witness_event_verification_hash !=
+      witnessData.witness_event_verification_hash
+    ) {
+      detail += redify(
+        isHtml,
+        `${newlineRed}${_space4}${CROSSMARK}` +
+          "Witness event verification hash doesn't match"
+      )
+      detail += redify(
+        isHtml,
+        `${newlineRed}${_space4}Page manifest verification hash: ${witnessData.domain_manifest_verification_hash}`
+      )
+      detail += redify(
+        isHtml,
+        `${newlineRed}${_space4}Merkle root: ${maybeHrefify(
+          witnessData.merkle_root
+        )}`
+      )
+      detail += redify(
+        isHtml,
+        `${newlineRed}${_space4}Expected: ${maybeHrefify(
+          witnessData.witness_event_verification_hash
+        )}`
+      )
+      detail += redify(
+        isHtml,
+        `${newlineRed}${_space4}Actual: ${maybeHrefify(
+          actual_witness_event_verification_hash
+        )}`
+      )
+      return ["INCONSISTENT", detail]
     }
     // At this point, we know that the witness matches.
     if (doVerifyMerkleProof) {
       // Only verify the witness merkle proof when verifyWitness is successful,
       // because this step is expensive.
-      const merkleProofIsOK = await verifyWitnessMerkleProof(apiURL, witness_event_id, verification_hash)
+      const merkleProofIsOK = await verifyWitnessMerkleProof(
+        apiURL,
+        witness_event_id,
+        verification_hash
+      )
       if (merkleProofIsOK) {
         detail += `${newline}${_space4}${CHECKMARK}Witness Merkle Proof is OK`
       } else {
         detail += `${newline}${_space4}${CROSSMARK}Witness Merkle Proof is corrupted`
       }
     }
-    return ['MATCHES', detail]
+    return ["MATCHES", detail]
   }
-  return ['NO_WITNESS', detail]
+  return ["NO_WITNESS", detail]
 }
 
 function printRevisionInfo(detail) {
-  if (!detail.hasOwnProperty('verification_hash')) {
-    console.log('  no verification hash')
+  if (!detail.hasOwnProperty("verification_hash")) {
+    console.log("  no verification hash")
     return
   }
 
@@ -224,7 +304,9 @@ function printRevisionInfo(detail) {
     log_red(`  ${CROSSMARK}` + " verification hash doesn't match")
     return
   }
-  console.log(`  ${CHECKMARK} Verification hash matches (${detail.verification_hash})`)
+  console.log(
+    `  ${CHECKMARK} Verification hash matches (${detail.verification_hash})`
+  )
   if (!detail.is_witnessed) {
     log_dim(`    ${WARN} Not witnessed`)
   }
@@ -233,14 +315,16 @@ function printRevisionInfo(detail) {
   }
   if (VERBOSE) {
     delete detail.witness_detail
-    console.log('  VERBOSE backend', detail)
+    console.log("  VERBOSE backend", detail)
   }
   if (!detail.is_signed) {
     log_dim(`    ${WARN} Not signed`)
     return
   }
   if (detail.valid_signature) {
-    console.log(`    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.wallet_address}`)
+    console.log(
+      `    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.wallet_address}`
+    )
   } else {
     log_red(`    ${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`)
   }
@@ -249,28 +333,33 @@ function printRevisionInfo(detail) {
 function formatRevisionInfo2HTML(server, detail, verbose = false) {
   // Format the info into HTML nicely. Used in VerifyPage Chrome extension, but
   // could be used elsewhere too.
-  const _space = '&nbsp'
+  const _space = "&nbsp"
   const _space2 = _space + _space
   const _space4 = _space2 + _space2
-  if (!detail.hasOwnProperty('verification_hash')) {
+  if (!detail.hasOwnProperty("verification_hash")) {
     return `${_space2}no verification hash`
   }
   let out = `${_space2}${formatDBTimestamp(detail.time_stamp)}<br>`
   out += `${_space2}Domain ID: ${detail.domain_id}<br>`
   if (detail.verification_status === INVALID) {
-    out += htmlRedify(`${_space2}${CROSSMARK}` + " verification hash doesn't match")
+    out += htmlRedify(
+      `${_space2}${CROSSMARK}` + " verification hash doesn't match"
+    )
     return out
   }
-  out += `${_space2}${CHECKMARK} Verification hash matches (${hrefifyHash(detail.verification_hash, true)})<br>`
+  out += `${_space2}${CHECKMARK} Verification hash matches (${hrefifyHash(
+    detail.verification_hash,
+    true
+  )})<br>`
   if (!detail.is_witnessed) {
     out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
   }
   if (detail.witness_detail !== "") {
-    out += detail.witness_detail + '<br>'
+    out += detail.witness_detail + "<br>"
   }
   if (verbose) {
     delete detail.witness_detail
-    out += `${_space2}VERBOSE backend ` + JSON.stringify(detail) + '<br>'
+    out += `${_space2}VERBOSE backend ` + JSON.stringify(detail) + "<br>"
   }
   if (!detail.is_signed) {
     out += htmlDimify(`${_space4}${WARN} Not signed<br>`)
@@ -281,12 +370,22 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     const walletA = `<a href='${walletURL}' target="_blank">${detail.wallet_address}</a>`
     out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${walletA}<br>`
   } else {
-    out += htmlRedify(`${_space4}${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`)
+    out += htmlRedify(
+      `${_space4}${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`
+    )
   }
   return out
 }
 
-async function verifyRevision(apiURL, revid, prevRevId, previousVerificationHash, contentHash, isHtml, doVerifyMerkleProof) {
+async function verifyRevision(
+  apiURL,
+  revid,
+  prevRevId,
+  previousVerificationHash,
+  contentHash,
+  isHtml,
+  doVerifyMerkleProof
+) {
   let detail = {
     rev_id: revid,
     verification_status: null,
@@ -296,7 +395,7 @@ async function verifyRevision(apiURL, revid, prevRevId, previousVerificationHash
     witness_detail: null,
   }
   const response = await synchronousGet(`${apiURL}/verify_page?var1=${revid}`)
-  if (response === '[]') {
+  if (response === "[]") {
     return [null, false, detail]
   }
   let data = JSON.parse(response)
@@ -305,30 +404,49 @@ async function verifyRevision(apiURL, revid, prevRevId, previousVerificationHash
   // TODO do sanity check on domain id
   const domainId = data.domain_id
 
-  const metadataHash = calculateMetadataHash(domainId, data.time_stamp, previousVerificationHash)
+  const metadataHash = calculateMetadataHash(
+    domainId,
+    data.time_stamp,
+    previousVerificationHash
+  )
 
   // SIGNATURE DATA HASH CALCULATOR
-  let prevSignature = ''
-  let prevPublicKey = ''
-  let prevWitnessHash = ''
-  if (prevRevId !== '') {
-    const responsePrevious = await synchronousGet(`${apiURL}/verify_page?var1=${prevRevId}`)
+  let prevSignature = ""
+  let prevPublicKey = ""
+  let prevWitnessHash = ""
+  if (prevRevId !== "") {
+    const responsePrevious = await synchronousGet(
+      `${apiURL}/verify_page?var1=${prevRevId}`
+    )
     const dataPrevious = JSON.parse(responsePrevious)
     // TODO just use signature and public key from previous element in the loop inside verifyPage
     // We have to do these ternary operations because sometimes the signature
     // and public key are nulls, not empty strings.
-    prevSignature = !!dataPrevious.signature ? dataPrevious.signature: ''
-    prevPublicKey = !!dataPrevious.public_key ? dataPrevious.public_key: ''
-    prevWitnessHash = await getWitnessHash(apiURL, dataPrevious.witness_event_id)
+    prevSignature = !!dataPrevious.signature ? dataPrevious.signature : ""
+    prevPublicKey = !!dataPrevious.public_key ? dataPrevious.public_key : ""
+    prevWitnessHash = await getWitnessHash(
+      apiURL,
+      dataPrevious.witness_event_id
+    )
   }
   const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
 
   // WITNESS DATA HASH CALCULATOR
-  const [witnessStatus, witness_detail] = await verifyWitness(apiURL, data.witness_event_id, data.verification_hash, doVerifyMerkleProof, isHtml)
+  const [witnessStatus, witness_detail] = await verifyWitness(
+    apiURL,
+    data.witness_event_id,
+    data.verification_hash,
+    doVerifyMerkleProof,
+    isHtml
+  )
   detail.witness_detail = witness_detail
 
   const calculatedVerificationHash = calculateVerificationHash(
-    contentHash, metadataHash, signatureHash, prevWitnessHash)
+    contentHash,
+    metadataHash,
+    signatureHash,
+    prevWitnessHash
+  )
 
   if (calculatedVerificationHash !== data.verification_hash) {
     detail.verification_status = INVALID
@@ -345,9 +463,9 @@ async function verifyRevision(apiURL, revid, prevRevId, previousVerificationHash
   } else {
     detail.verification_status = VERIFIED
   }
-  detail.is_witnessed = witnessStatus !== 'NO_WITNESS'
+  detail.is_witnessed = witnessStatus !== "NO_WITNESS"
 
-  if (data.signature === '' || data.signature === null) {
+  if (data.signature === "" || data.signature === null) {
     detail.is_signed = false
     return [data.verification_hash, true, detail]
   }
@@ -356,19 +474,23 @@ async function verifyRevision(apiURL, revid, prevRevId, previousVerificationHash
   // Signature verification
   let isCorrect = false
   // The padded message is required
-  const paddedMessage = 'I sign the following page verification_hash: [0x' + data.verification_hash + ']'
+  const paddedMessage =
+    "I sign the following page verification_hash: [0x" +
+    data.verification_hash +
+    "]"
   try {
-    const recoveredAddress = ethers.utils.recoverAddress(ethers.utils.hashMessage(paddedMessage), data.signature)
+    const recoveredAddress = ethers.utils.recoverAddress(
+      ethers.utils.hashMessage(paddedMessage),
+      data.signature
+    )
     if (recoveredAddress.toLowerCase() === data.wallet_address.toLowerCase()) {
       detail.valid_signature = true
       isCorrect = true
     }
-  }
-  catch(e) {
-  }
+  } catch (e) {}
 
   // Update isCorrect based on witness status
-  if (detail.is_witnessed && witnessStatus === 'INCONSISTENT') {
+  if (detail.is_witnessed && witnessStatus === "INCONSISTENT") {
     isCorrect = false
   }
 
@@ -379,40 +501,39 @@ async function synchronousGet(url) {
   try {
     http_promise = new Promise((resolve, reject) => {
       adaptiveGet(url)(url, (response) => {
-        let chunks_of_data = [];
+        let chunks_of_data = []
 
-        response.on('data', (fragments) => {
-          chunks_of_data.push(fragments);
-        });
+        response.on("data", (fragments) => {
+          chunks_of_data.push(fragments)
+        })
 
-        response.on('end', () => {
-          let response_body = Buffer.concat(chunks_of_data);
+        response.on("end", () => {
+          let response_body = Buffer.concat(chunks_of_data)
 
           // promise resolved on success
           resolve(response_body.toString())
-        });
+        })
 
-        response.on('error', (error) => {
+        response.on("error", (error) => {
           // promise rejected on error
           reject(error)
-        });
-      });
-    });
-    return await http_promise;
+        })
+      })
+    })
+    return await http_promise
+  } catch (e) {
+    // if the Promise is rejected
+    console.error(e)
   }
-	catch(e) {
-		// if the Promise is rejected
-		console.error(e)
-	}
 }
 
 async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
   const apiURL = `${server}/rest.php/data_accounting/v1/standard`
-  if (title.includes('_')) {
+  if (title.includes("_")) {
     // TODO it's not just underscore, catch all potential errors in page title.
     // This error can not happen in Chrome-Extension because the title has been
     // sanitized.
-    errorMsg = 'INVALID TITLE: Do not use underscore in title.'
+    errorMsg = "INVALID TITLE: Do not use underscore in title."
     maybeLog(doLog, cliRedify(errorMsg))
     return [errorMsg, {}]
   }
@@ -422,19 +543,19 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
       const url = `${apiURL}/page_all_rev?var1=${title}`
       adaptiveGet(url)(url, (resp) => {
         let body = ""
-        resp.on('data', (chunk) => {
+        resp.on("data", (chunk) => {
           body += chunk
         })
-        resp.on('end', async () => {
+        resp.on("end", async () => {
           const allRevInfo = JSON.parse(body)
-          if (allRevInfo.hasOwnProperty('error')) {
+          if (allRevInfo.hasOwnProperty("error")) {
             throw body
           }
-          verifiedRevIds = allRevInfo.map(x => x.rev_id)
-          maybeLog(doLog, 'Verified Page Revisions: ', verifiedRevIds)
+          verifiedRevIds = allRevInfo.map((x) => x.rev_id)
+          maybeLog(doLog, "Verified Page Revisions: ", verifiedRevIds)
 
-          let previousVerificationHash = ''
-          let previousRevId = ''
+          let previousVerificationHash = ""
+          let previousRevId = ""
           let count = 0
           const details = {
             verified_ids: verifiedRevIds,
@@ -442,19 +563,32 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
           }
           for (const idx in verifiedRevIds) {
             const revid = verifiedRevIds[idx]
-            maybeLog(doLog, `${parseInt(idx) + 1}. Verification of Revision ${revid}.`)
+            maybeLog(
+              doLog,
+              `${parseInt(idx) + 1}. Verification of Revision ${revid}.`
+            )
 
             // CONTENT DATA HASH CALCULATOR
-            const bodyRevid = await synchronousGet(`${server}/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`)
+            const bodyRevid = await synchronousGet(
+              `${server}/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`
+            )
             const jsonBody = JSON.parse(bodyRevid)
             if (!jsonBody.parse || !jsonBody.parse.wikitext) {
-              throw `No wikitext found for revid ${revid}`;
+              throw `No wikitext found for revid ${revid}`
             }
             const content = jsonBody.parse.wikitext
             const contentHash = getHashSum(content)
 
             const isHtml = !doLog // TODO: generalize this later
-            const [verificationHash, isCorrect, detail] = await verifyRevision(apiURL, revid, previousRevId, previousVerificationHash, contentHash, isHtml, doVerifyMerkleProof)
+            const [verificationHash, isCorrect, detail] = await verifyRevision(
+              apiURL,
+              revid,
+              previousRevId,
+              previousVerificationHash,
+              contentHash,
+              isHtml,
+              doVerifyMerkleProof
+            )
             details.revision_details.push(detail)
             if (doLog) {
               printRevisionInfo(detail)
@@ -465,7 +599,13 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
               resolve([INVALID, details])
               return
             }
-            maybeLog(doLog, `  Progress: ${count} / ${verifiedRevIds.length} (${(100 * count / verifiedRevIds.length).toFixed(1)}%)`)
+            maybeLog(
+              doLog,
+              `  Progress: ${count} / ${verifiedRevIds.length} (${(
+                (100 * count) /
+                verifiedRevIds.length
+              ).toFixed(1)}%)`
+            )
             previousVerificationHash = verificationHash
             previousRevId = revid
           }
@@ -482,15 +622,14 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
           resolve([status, details])
         })
       }).on("error", (err) => {
-        maybeLog(doLog, "Error: " + err.message);
+        maybeLog(doLog, "Error: " + err.message)
         reject([err, {}])
       })
     })
     return await http_promise
-  }
-  catch(e) {
-		// if the Promise is rejected
-		console.error(e)
+  } catch (e) {
+    // if the Promise is rejected
+    console.error(e)
     return e
   }
 }
