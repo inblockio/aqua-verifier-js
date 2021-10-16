@@ -147,15 +147,22 @@ async function getWitnessHash(apiURL, witness_event_id) {
   return ""
 }
 
-function verifyMerkleIntegrity(merkleBranch) {
+function verifyMerkleIntegrity(merkleBranch, verificationHash) {
   let prevSuccessor = null
   for (const idx in merkleBranch) {
     const node = merkleBranch[idx]
+    const leaves = [node.left_leaf, node.right_leaf]
     if (!!prevSuccessor) {
-      const leaves = [node.left_leaf, node.right_leaf]
       if (!leaves.includes(prevSuccessor)) {
         //console.log("Expected leaf", prevSuccessor)
         //console.log("Actual leaves", leaves)
+        return false
+      }
+    } else {
+      // This means we are at the beginning of the loop.
+      if (!leaves.includes(verificationHash)) {
+        // In the beginning, either the left or right leaf must match the
+        // verification hash.
         return false
       }
     }
@@ -183,7 +190,7 @@ async function verifyWitnessMerkleProof(
     return false
   }
   const witnessMerkleProof = JSON.parse(witnessMerkleProofStr)
-  return verifyMerkleIntegrity(witnessMerkleProof)
+  return verifyMerkleIntegrity(witnessMerkleProof, verificationHash)
 }
 
 async function verifyWitness(
