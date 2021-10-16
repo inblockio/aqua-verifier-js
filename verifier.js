@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
-const argv = require('minimist')(process.argv.slice(2));
+const opts = {
+  // This is required so that -v and -m are position independent.
+  "boolean": ["v", "m"]
+}
+const argv = require('minimist')(process.argv.slice(2), opts);
 const main = require('./index')
 
 function usage() {
