@@ -2,10 +2,10 @@
 
 const opts = {
   // This is required so that -v and -m are position independent.
-  "boolean": ["v", "m"]
+  boolean: ["v", "m"],
 }
-const argv = require('minimist')(process.argv.slice(2), opts);
-const main = require('./index')
+const argv = require("minimist")(process.argv.slice(2), opts)
+const main = require("./index")
 
 function usage() {
   console.log(`Usage:
@@ -31,7 +31,7 @@ const verbose = argv.v
 
 const doVerifyMerkleProof = argv.m
 
-const server = argv.server ?? 'http://localhost:9352'
+const server = argv.server ?? "http://localhost:9352"
 
 console.log(`Verifying ${title}`)
 const doLog = true
