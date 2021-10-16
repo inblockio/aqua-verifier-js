@@ -276,15 +276,21 @@ async function verifyWitness(
     if (doVerifyMerkleProof) {
       // Only verify the witness merkle proof when verifyWitness is successful,
       // because this step is expensive.
-      const merkleProofIsOK = await verifyWitnessMerkleProof(
-        apiURL,
-        witness_event_id,
-        verification_hash
-      )
-      if (merkleProofIsOK) {
-        detail += `${newline}${_space4}${CHECKMARK}Witness Merkle Proof is OK`
+      if (verification_hash === witnessData.domain_manifest_verification_hash) {
+        // Corner case when the page is a domain manifest.
+        detail += `${newline}${_space4}${CHECKMARK}Domain Manifest; therefore does not require Merkle Proof`
       } else {
-        detail += `${newline}${_space4}${CROSSMARK}Witness Merkle Proof is corrupted`
+        const merkleProofIsOK = await verifyWitnessMerkleProof(
+          apiURL,
+          witness_event_id,
+          verification_hash
+        )
+        if (merkleProofIsOK) {
+          detail += `${newline}${_space4}${CHECKMARK}Witness Merkle Proof is OK`
+        } else {
+          detail += `${newline}${_space4}${CROSSMARK}Witness Merkle Proof is corrupted`
+          return ["INCONSISTENT", detail]
+        }
       }
     }
     return ["MATCHES", detail]
