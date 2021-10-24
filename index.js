@@ -569,6 +569,7 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
       adaptiveGet(url)(url, (resp) => {
         if (resp.statusCode === 400) {
           reject(["Bad API request", {}])
+          return
         }
         let body = ""
         resp.on("data", (chunk) => {
