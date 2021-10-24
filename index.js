@@ -565,7 +565,7 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
   VERBOSE = verbose
   try {
     http_promise = new Promise((resolve, reject) => {
-      const url = `${apiURL}/standard/page_all_rev?var1=${title}`
+      const url = `${apiURL}/get_page_all_revs/${title}`
       adaptiveGet(url)(url, (resp) => {
         if (resp.statusCode === 400) {
           reject(["Bad API request", {}])
