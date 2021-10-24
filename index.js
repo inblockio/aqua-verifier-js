@@ -567,6 +567,9 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
     http_promise = new Promise((resolve, reject) => {
       const url = `${apiURL}/standard/page_all_rev?var1=${title}`
       adaptiveGet(url)(url, (resp) => {
+        if (resp.statusCode === 400) {
+          reject(["Bad API request", {}])
+        }
         let body = ""
         resp.on("data", (chunk) => {
           body += chunk
@@ -645,6 +648,9 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
             status = INVALID
           }
           resolve([status, details])
+        })
+        resp.on("error", (err) => {
+          reject([err, {}])
         })
       }).on("error", (err) => {
         maybeLog(doLog, "Error: " + err.message)
