@@ -132,7 +132,7 @@ async function getWitnessHash(apiURL, witness_event_id) {
     return ""
   }
   const [witnessResponse, statusCode] = await synchronousGet(
-    `${apiURL}/get_witness_data?var1=${witness_event_id}`
+    `${apiURL}/standard/get_witness_data?var1=${witness_event_id}`
   )
   if (witnessResponse !== '{"value":""}') {
     witnessData = JSON.parse(witnessResponse)
@@ -184,7 +184,7 @@ async function verifyWitnessMerkleProof(
   verificationHash
 ) {
   const [witnessMerkleProofStr, statusCode] = await synchronousGet(
-    `${apiURL}/request_merkle_proof?var1=${witness_event_id}&var2=${verificationHash}`
+    `${apiURL}/standard/request_merkle_proof?var1=${witness_event_id}&var2=${verificationHash}`
   )
   if (witnessMerkleProofStr === "[]") {
     return false
@@ -208,7 +208,7 @@ async function verifyWitness(
   const _space4 = _space2 + _space2
   const maybeHrefify = (hash) => (isHtml ? hrefifyHash(hash) : hash)
   const [witnessResponse, statusCode] = await synchronousGet(
-    `${apiURL}/get_witness_data?var1=${witness_event_id}`
+    `${apiURL}/standard/get_witness_data?var1=${witness_event_id}`
   )
   if (witnessResponse !== '{"value":""}') {
     witnessData = JSON.parse(witnessResponse)
@@ -414,7 +414,7 @@ async function verifyRevision(
     valid_signature: false,
     witness_detail: null,
   }
-  const [response, statusCode] = await synchronousGet(`${apiURL}/verify_page?var1=${revid}`)
+  const [response, statusCode] = await synchronousGet(`${apiURL}/verify_page/${revid}`)
   // TODO we should handle the various status codes for all of the
   // synchronousGet calls.
   if (statusCode === 400) {
@@ -441,7 +441,7 @@ async function verifyRevision(
   let prevWitnessHash = ""
   if (prevRevId !== "") {
     const [responsePrevious, statusCode2] = await synchronousGet(
-      `${apiURL}/verify_page?var1=${prevRevId}`
+      `${apiURL}/verify_page/${prevRevId}`
     )
     const dataPrevious = JSON.parse(responsePrevious)
     // TODO just use signature and public key from previous element in the loop inside verifyPage
@@ -553,7 +553,7 @@ async function synchronousGet(url) {
 }
 
 async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
-  const apiURL = `${server}/rest.php/data_accounting/v1/standard`
+  const apiURL = `${server}/rest.php/data_accounting/v1`
   if (title.includes("_")) {
     // TODO it's not just underscore, catch all potential errors in page title.
     // This error can not happen in Chrome-Extension because the title has been
@@ -565,7 +565,7 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
   VERBOSE = verbose
   try {
     http_promise = new Promise((resolve, reject) => {
-      const url = `${apiURL}/page_all_rev?var1=${title}`
+      const url = `${apiURL}/standard/page_all_rev?var1=${title}`
       adaptiveGet(url)(url, (resp) => {
         let body = ""
         resp.on("data", (chunk) => {
