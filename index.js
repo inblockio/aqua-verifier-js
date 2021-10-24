@@ -306,6 +306,10 @@ async function verifyWitness(
 }
 
 function printRevisionInfo(detail) {
+  if ("error_message" in detail) {
+    console.log(detail.error_message)
+    return
+  }
   if (!detail.hasOwnProperty("verification_hash")) {
     console.log("  no verification hash")
     return
@@ -349,6 +353,9 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   const _space = "&nbsp"
   const _space2 = _space + _space
   const _space4 = _space2 + _space2
+  if ("error_message" in detail) {
+    return _space2 + detail.error_message
+  }
   if (!detail.hasOwnProperty("verification_hash")) {
     return `${_space2}no verification hash`
   }
@@ -408,6 +415,11 @@ async function verifyRevision(
     witness_detail: null,
   }
   const [response, statusCode] = await synchronousGet(`${apiURL}/verify_page?var1=${revid}`)
+  // TODO we should handle the various status codes for all of the
+  // synchronousGet calls.
+  if (statusCode === 400) {
+    return [null, false, {"error_message": "Bad API request"}]
+  }
   if (response === "[]") {
     return [null, false, detail]
   }
