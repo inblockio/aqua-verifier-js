@@ -131,7 +131,7 @@ async function getWitnessHash(apiURL, witness_event_id) {
   if (witness_event_id === null) {
     return ""
   }
-  const witnessResponse = await synchronousGet(
+  const [witnessResponse, statusCode] = await synchronousGet(
     `${apiURL}/get_witness_data?var1=${witness_event_id}`
   )
   if (witnessResponse !== '{"value":""}') {
@@ -183,7 +183,7 @@ async function verifyWitnessMerkleProof(
   witness_event_id,
   verificationHash
 ) {
-  const witnessMerkleProofStr = await synchronousGet(
+  const [witnessMerkleProofStr, statusCode] = await synchronousGet(
     `${apiURL}/request_merkle_proof?var1=${witness_event_id}&var2=${verificationHash}`
   )
   if (witnessMerkleProofStr === "[]") {
@@ -207,7 +207,7 @@ async function verifyWitness(
   const _space2 = isHtml ? "&nbsp&nbsp" : "  "
   const _space4 = _space2 + _space2
   const maybeHrefify = (hash) => (isHtml ? hrefifyHash(hash) : hash)
-  const witnessResponse = await synchronousGet(
+  const [witnessResponse, statusCode] = await synchronousGet(
     `${apiURL}/get_witness_data?var1=${witness_event_id}`
   )
   if (witnessResponse !== '{"value":""}') {
@@ -407,7 +407,7 @@ async function verifyRevision(
     valid_signature: false,
     witness_detail: null,
   }
-  const response = await synchronousGet(`${apiURL}/verify_page?var1=${revid}`)
+  const [response, statusCode] = await synchronousGet(`${apiURL}/verify_page?var1=${revid}`)
   if (response === "[]") {
     return [null, false, detail]
   }
@@ -428,7 +428,7 @@ async function verifyRevision(
   let prevPublicKey = ""
   let prevWitnessHash = ""
   if (prevRevId !== "") {
-    const responsePrevious = await synchronousGet(
+    const [responsePrevious, statusCode2] = await synchronousGet(
       `${apiURL}/verify_page?var1=${prevRevId}`
     )
     const dataPrevious = JSON.parse(responsePrevious)
@@ -524,7 +524,7 @@ async function synchronousGet(url) {
           let response_body = Buffer.concat(chunks_of_data)
 
           // promise resolved on success
-          resolve(response_body.toString())
+          resolve([response_body.toString(), response.statusCode])
         })
 
         response.on("error", (error) => {
@@ -582,7 +582,7 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
             )
 
             // CONTENT DATA HASH CALCULATOR
-            const bodyRevid = await synchronousGet(
+            const [bodyRevid, statusCode] = await synchronousGet(
               `${server}/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`
             )
             const jsonBody = JSON.parse(bodyRevid)
