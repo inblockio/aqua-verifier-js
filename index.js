@@ -127,6 +127,18 @@ function calculateVerificationHash(
   return getHashSum(contentHash + metadataHash + signature_hash + witness_hash)
 }
 
+/**
+ * Calls the witness data API, parses the result
+ * and then builds the witness hash, which is returned to the calling program
+ * Steps:
+ * - Calls get_witness_data API passing witness event ID
+ * - The response from the API call is used to calculate the witness hash using witness_event_verification_hash,
+ *   merkle_root, witness_network and the witness_event_transaction_hash
+ * - The witness hash is returned to the calling program
+ * @param   {string} apiURL - the URL for the API call
+ * @param   {string} witness_event_id - the key for the witness event
+ * @returns {string} witnessHash - the witness hash
+ */
 async function getWitnessHash(apiURL, witness_event_id) {
   if (witness_event_id === null) {
     return ""
@@ -147,6 +159,16 @@ async function getWitnessHash(apiURL, witness_event_id) {
   return ""
 }
 
+/**
+ * Verifies the integrity of the merkle branch passed to the function
+ * Steps:
+ * - The code traverses the nodes in the merkle branch passed in
+ * - False is returned to the calling program if an inconsistency is found in the merkle branch nodes
+ * - False is returned to the calling program if an inconsistency is found in the hash sum between linked nodes
+ * @param   {array} merkleBranch - array of merkle nodes
+ * @param   {string} merkleBranch - verification hash string
+ * @returns {boolean} determined merkle integrity
+ */
 function verifyMerkleIntegrity(merkleBranch, verificationHash) {
   let prevSuccessor = null
   for (const idx in merkleBranch) {
@@ -178,6 +200,17 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
   return true
 }
 
+/**
+ * Verifies the Merkle proof via an API call
+ * Steps:
+ * - Calls API request_merkle_proof passing the witness event id and the verification Hash
+ * - Calls function verifyMerkleIntegrity using witnessMerkleProof from API request_merkle_proof
+ * - Returns boolean value from function verifyMerkleIntegrity
+ * @param   {string} apiURL - the URL for the API call
+ * @param   {string} witness_event_id - the witness event key 
+ * @param   {string} verificationHash - the verification hash string
+ * @returns {boolean} determined merkle integrity
+ */
 async function verifyWitnessMerkleProof(
   apiURL,
   witness_event_id,
@@ -193,6 +226,26 @@ async function verifyWitnessMerkleProof(
   return verifyMerkleIntegrity(witnessMerkleProof, verificationHash)
 }
 
+/**
+ * Analyses the witnessing steps for a page and builds a validation log
+ * Steps:
+ * - Calls get_witness_data API passing witness event ID
+ * - Calls function getHashSum passing domain_manifest_verification_hash and merkle_root from the get_witness_data API call
+ * - The witness event ID and transaction hash are written into the log
+ * - Calls function checkEtherScan (file checkEtherScan.js) passing witness network, witness event transaction hash and the actual  *   witness event verification hash
+ * - If checkEtherScan returns true, Witness event verification hash verified is written into the log
+ * - Else the errors from the checkEtherScan call are written to the log
+ * - If the Verify Merkle Proof flag is set, call function verifyWitnessMerkleProof using the api URL,
+ *   the witness event id and the verification hash
+ * - The boolean value returned from verifyWitnessMerkleProof is written into the log
+ * - The log is returned to the calling program as HTML if the is Html flag is set, otherwise text
+ * @param   {string} apiURL - the URL for the API call
+ * @param   {string} witness_event_id - the witness event key 
+ * @param   {string} verificationHash - the verification hash string
+ * @param   {boolean} doVerifyMerkleProof - flag for do Verify Merkle Proof
+ * @param   {boolean} isHtml - flag to return Html based log
+ * @returns {string} detail - validation log
+ */
 async function verifyWitness(
   apiURL,
   witness_event_id,
@@ -397,6 +450,29 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   return out
 }
 
+/**
+ * Verifies the page revisions
+ * Steps:
+ * - Calls verify_page API passing revision id
+ * - Calculates Meta data hash using previous verification hash
+ * - If previous revision id is set, call verify_page API passing previous revision id, 
+ *   then determine witness hash for the previous revision
+ * - Call function verifyWitness using data from the verify_page API call
+ * - Calculate the verification hash using content hash, metadata hash, signature hash and previous witness hash
+ * - If the calculated verification hash is different from the verification hash returned from the first verify_page API
+ *   call then log a hash mismatch error, else set verification status to VERIFIED
+ * - Do lookup on ethereum blockchain to find the recovered Address
+ * - If the recovered Address equals the current wallet address, set valid signature to true
+ * - If witness status is inconsistent set is correct flag to false
+ * @param   {string} apiURL - the URL for the API call
+ * @param   {string} revid - the page revision id
+ * @param   {string} prevRevId - the previous page revision id
+ * @param   {string} previousVerificationHash - the previous verification hash string
+ * @param   {string} contentHash - the page content hash string 
+ * @param   {boolean} isHtml - flag to return Html based log
+ * @param   {boolean} doVerifyMerkleProof - flag for do Verify Merkle Proof
+ * @returns {array} containing verification hash, isCorrect flag and an array of page revision details
+ */
 async function verifyRevision(
   apiURL,
   revid,
@@ -552,6 +628,23 @@ async function synchronousGet(url) {
   }
 }
 
+/**
+ * Verifies the Page including all revisions
+ * Steps:
+ * - Check if title includes an underscore, if yes, throw error
+ * - Calls page_all_rev API passing page title
+ * - Loop at the revision IDs for the page
+ *   If no wiki text exists for the revision, throw error
+ *   Call function verifyRevision, if isCorrect flag is returned as true, add 1 to count
+ * - Outside of loop, check count against number of revisions
+ * - If all revisions verified, set return status to verified
+ * @param   {string} title - the page title
+ * @param   {string} server - the server for API call 
+ * @param   {string} verbose - verbose
+ * @param   {string} doLog - do log flag
+ * @param   {string} doVerifyMerkleProof - check flag for call to verifyRevision
+ * @returns {object} status string and page details array
+ */
 async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
   const apiURL = `${server}/rest.php/data_accounting/v1`
   if (title.includes("_")) {
