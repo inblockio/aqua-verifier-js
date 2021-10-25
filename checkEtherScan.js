@@ -17,10 +17,11 @@ function sleep(ms) {
 }
 
 /** function checkEtherScan is passed witness network, transaction hash, verification hash as parameters.
-    Notes on the logic:
-    Determines witness url from the witness network passed in.
-    Does a lookup with the witness url and transaction hash (Ethereum blockchain).
-    Then returns true if the verification hash equals the hash value returned from the previous step.  */
+  * Notes on the logic:
+  * Determines witness url from the witness network passed in.
+  * Does a lookup with the witness url and transaction hash (Ethereum blockchain).
+  * Then returns true if the verification hash equals the hash value returned from the previous step.  
+  */
 
 async function checkEtherScan(witnessNetwork, txHash, witnessVerificationHash) {
   try {
