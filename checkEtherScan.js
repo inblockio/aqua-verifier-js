@@ -16,8 +16,7 @@ function sleep(ms) {
   });
 }
 
-// function checkEtherScan
-// Is passed witness network, transaction hash, verification hash as parameters.
+// function checkEtherScan is passed witness network, transaction hash, verification hash as parameters.
 // Determines witness url from the witness network passed in.
 // Does a lookup with the witness url and transaction hash (Ethereum blockchain).
 // Then returns true if the verification hash equals the hash value returned from the previous step.
