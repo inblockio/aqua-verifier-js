@@ -128,13 +128,13 @@ function calculateVerificationHash(
 }
 
 /**
- * Calls the witness data API, parses the result
+ * Calls the get_witness_data API, parses the result
  * and then builds the witness hash, which is returned to the calling program
  * Steps:
  * - Calls get_witness_data API passing witness event ID
  * - The response from the API call is used to calculate the witness hash using witness_event_verification_hash,
  *   merkle_root, witness_network and the witness_event_transaction_hash
- * - The witness hash is returned to the calling program
+ * - Returns witness hash or emptry string
  * @param   {string} apiURL - the URL for the API call
  * @param   {string} witness_event_id - the key for the witness event
  * @returns {string} witnessHash - the witness hash
@@ -166,8 +166,8 @@ async function getWitnessHash(apiURL, witness_event_id) {
  * - False is returned to the calling program if an inconsistency is found in the merkle branch nodes
  * - False is returned to the calling program if an inconsistency is found in the hash sum between linked nodes
  * @param   {array} merkleBranch - array of merkle nodes
- * @param   {string} merkleBranch - verification hash string
- * @returns {boolean} determined merkle integrity
+ * @param   {string} verificationHash - verification hash string
+ * @returns {boolean} determines merkle integrity
  */
 function verifyMerkleIntegrity(merkleBranch, verificationHash) {
   let prevSuccessor = null
