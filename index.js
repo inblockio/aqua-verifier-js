@@ -1,6 +1,7 @@
 const http = require("http")
 const https = require("https")
 
+const fetch = require("node-fetch")
 const sha3 = require("js-sha3")
 const moment = require("moment")
 
@@ -555,6 +556,7 @@ async function synchronousGet(url) {
 
 async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
   const apiURL = `${server}/rest.php/data_accounting/v1`
+  let errorMsg
   if (title.includes("_")) {
     // TODO it's not just underscore, catch all potential errors in page title.
     // This error can not happen in Chrome-Extension because the title has been
@@ -564,112 +566,87 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
     return [ERROR_VERIFICATION_STATUS, {error: errorMsg}]
   }
   VERBOSE = verbose
-  try {
-    http_promise = new Promise((resolve, reject) => {
-      const url = `${apiURL}/get_page_all_revs/${title}`
-      adaptiveGet(url)(url, (resp) => {
-        if (resp.statusCode === 400) {
-          reject([ERROR_VERIFICATION_STATUS, {error: "HTTP 400: Bad API request"}])
-          return
-        }
-        if (resp.statusCode === 404) {
-          reject([ERROR_VERIFICATION_STATUS, {error: "HTTP 404: Not found"}])
-          return
-        }
-        let body = ""
-        resp.on("data", (chunk) => {
-          body += chunk
-        })
-        resp.on("end", async () => {
-          const allRevInfo = JSON.parse(body)
-          if (allRevInfo.hasOwnProperty("error")) {
-            reject([ERROR_VERIFICATION_STATUS, allRevInfo])
-            return
-          }
-          verifiedRevIds = allRevInfo.map((x) => x.rev_id)
-          maybeLog(doLog, "Verified Page Revisions: ", verifiedRevIds)
-
-          let previousVerificationHash = ""
-          let previousRevId = ""
-          let count = 0
-          const details = {
-            verified_ids: verifiedRevIds,
-            revision_details: [],
-          }
-          for (const idx in verifiedRevIds) {
-            const revid = verifiedRevIds[idx]
-            maybeLog(
-              doLog,
-              `${parseInt(idx) + 1}. Verification of Revision ${revid}.`
-            )
-
-            // CONTENT DATA HASH CALCULATOR
-            const [bodyRevid, statusCode] = await synchronousGet(
-              `${server}/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`
-            )
-            const jsonBody = JSON.parse(bodyRevid)
-            if (!jsonBody.parse || !jsonBody.parse.wikitext) {
-              throw `No wikitext found for revid ${revid}`
-            }
-            const content = jsonBody.parse.wikitext
-            const contentHash = getHashSum(content)
-
-            const isHtml = !doLog // TODO: generalize this later
-            const [verificationHash, isCorrect, detail] = await verifyRevision(
-              apiURL,
-              revid,
-              previousRevId,
-              previousVerificationHash,
-              contentHash,
-              isHtml,
-              doVerifyMerkleProof
-            )
-            details.revision_details.push(detail)
-            if (doLog) {
-              printRevisionInfo(detail)
-            }
-            if (isCorrect) {
-              count += 1
-            } else {
-              resolve([INVALID_VERIFICATION_STATUS, details])
-              return
-            }
-            maybeLog(
-              doLog,
-              `  Progress: ${count} / ${verifiedRevIds.length} (${(
-                (100 * count) /
-                verifiedRevIds.length
-              ).toFixed(1)}%)`
-            )
-            previousVerificationHash = verificationHash
-            previousRevId = revid
-          }
-          let status
-          if (count == verifiedRevIds.length) {
-            if (count === 0) {
-              status = "NORECORD"
-            } else {
-              status = VERIFIED_VERIFICATION_STATUS
-            }
-          } else {
-            status = INVALID_VERIFICATION_STATUS
-          }
-          resolve([status, details])
-        })
-        resp.on("error", (err) => {
-          reject([ERROR_VERIFICATION_STATUS, {error: err}])
-        })
-      }).on("error", (err) => {
-        maybeLog(doLog, "Error: " + err.message)
-        reject([ERROR_VERIFICATION_STATUS, {error: err}])
-      })
-    })
-    return await http_promise
-  } catch (e) {
-    // if the Promise is rejected
-    console.error(e)
-    return e
+  const url = `${apiURL}/get_page_all_revs/${title}`
+  const response = await fetch(url)
+  if (!response.ok) {
+    errorMsg = `HTTP ${response.status}: ${response.statusText}`
+    maybeLog(doLog, cliRedify(errorMsg))
+    return [ERROR_VERIFICATION_STATUS, {error: errorMsg}]
   }
+  const allRevInfo = await response.json()
+  if (allRevInfo.hasOwnProperty("error")) {
+    maybeLog(doLog, cliRedify(allRevInfo))
+    return [ERROR_VERIFICATION_STATUS, allRevInfo]
+  }
+  verifiedRevIds = allRevInfo.map((x) => x.rev_id)
+  maybeLog(doLog, "Verified Page Revisions: ", verifiedRevIds)
+
+  let previousVerificationHash = ""
+  let previousRevId = ""
+  let count = 0
+  const details = {
+    verified_ids: verifiedRevIds,
+    revision_details: [],
+  }
+  for (const idx in verifiedRevIds) {
+    const revid = verifiedRevIds[idx]
+    maybeLog(
+      doLog,
+      `${parseInt(idx) + 1}. Verification of Revision ${revid}.`
+    )
+
+    // CONTENT DATA HASH CALCULATOR
+    const [bodyRevid, statusCode] = await synchronousGet(
+      `${server}/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`
+    )
+    const jsonBody = JSON.parse(bodyRevid)
+    if (!jsonBody.parse || !jsonBody.parse.wikitext) {
+      throw `No wikitext found for revid ${revid}`
+    }
+    const content = jsonBody.parse.wikitext
+    const contentHash = getHashSum(content)
+
+    const isHtml = !doLog // TODO: generalize this later
+    const [verificationHash, isCorrect, detail] = await verifyRevision(
+      apiURL,
+      revid,
+      previousRevId,
+      previousVerificationHash,
+      contentHash,
+      isHtml,
+      doVerifyMerkleProof
+    )
+    details.revision_details.push(detail)
+    if (doLog) {
+      printRevisionInfo(detail)
+    }
+    if (isCorrect) {
+      count += 1
+    } else {
+      return [INVALID_VERIFICATION_STATUS, details]
+    }
+    maybeLog(
+      doLog,
+      `  Progress: ${count} / ${verifiedRevIds.length} (${(
+        (100 * count) /
+        verifiedRevIds.length
+      ).toFixed(1)}%)`
+    )
+    previousVerificationHash = verificationHash
+    previousRevId = revid
+  }
+  let status
+  if (count == verifiedRevIds.length) {
+    if (count === 0) {
+      status = "NORECORD"
+    } else {
+      status = VERIFIED_VERIFICATION_STATUS
+    }
+  } else {
+    status = INVALID_VERIFICATION_STATUS
+  }
+  maybeLog(doLog, `Status: ${status}`)
+  return [status, details]
 }
 
 module.exports = {
