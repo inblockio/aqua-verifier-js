@@ -1,6 +1,3 @@
-const http = require("http")
-const https = require("https")
-
 const fetch = require("node-fetch")
 const sha3 = require("js-sha3")
 const moment = require("moment")
@@ -29,8 +26,8 @@ const INVALID_VERIFICATION_STATUS = "INVALID"
 const VERIFIED_VERIFICATION_STATUS = "VERIFIED"
 const ERROR_VERIFICATION_STATUS = "ERROR"
 
-function adaptiveGet(url) {
-  return url.startsWith("https://") ? https.get : http.get
+function formatHTTPError(response) {
+  return `HTTP ${response.status}: ${response.statusText}`
 }
 
 function cliRedify(content) {
@@ -133,11 +130,14 @@ async function getWitnessHash(apiURL, witness_event_id) {
   if (witness_event_id === null) {
     return ""
   }
-  const [witnessResponse, statusCode] = await synchronousGet(
+  const witnessResponse = await fetch(
     `${apiURL}/standard/get_witness_data?var1=${witness_event_id}`
   )
-  if (witnessResponse !== '{"value":""}') {
-    witnessData = JSON.parse(witnessResponse)
+  // TODO handle when witnessResponse.ok is false
+  const witnessText = await witnessResponse.text()
+  // TODO checking for '{"value":""}' is just bad.
+  if (witnessText !== '{"value":""}') {
+    witnessData = JSON.parse(witnessText)
     witnessHash = calculateWitnessHash(
       witnessData.witness_event_verification_hash,
       witnessData.merkle_root,
@@ -185,13 +185,17 @@ async function verifyWitnessMerkleProof(
   witness_event_id,
   verificationHash
 ) {
-  const [witnessMerkleProofStr, statusCode] = await synchronousGet(
+  const response = await fetch(
     `${apiURL}/standard/request_merkle_proof?var1=${witness_event_id}&var2=${verificationHash}`
   )
-  if (witnessMerkleProofStr === "[]") {
+  if (!response.ok) {
+    // TODO better tell the user that there is something wrong.
     return false
   }
-  const witnessMerkleProof = JSON.parse(witnessMerkleProofStr)
+  const witnessMerkleProof = await response.json()
+  if (witnessMerkleProof.length === 0) {
+    return false
+  }
   return verifyMerkleIntegrity(witnessMerkleProof, verificationHash)
 }
 
@@ -209,11 +213,16 @@ async function verifyWitness(
   const _space2 = isHtml ? "&nbsp&nbsp" : "  "
   const _space4 = _space2 + _space2
   const maybeHrefify = (hash) => (isHtml ? hrefifyHash(hash) : hash)
-  const [witnessResponse, statusCode] = await synchronousGet(
+  const witnessResponse = await fetch(
     `${apiURL}/standard/get_witness_data?var1=${witness_event_id}`
   )
-  if (witnessResponse !== '{"value":""}') {
-    witnessData = JSON.parse(witnessResponse)
+  if (!witnessResponse.ok) {
+    return ["ERROR", detail]
+  }
+  const witnessText = await witnessResponse.text()
+
+  if (witnessText !== '{"value":""}') {
+    witnessData = JSON.parse(witnessText)
     actual_witness_event_verification_hash = getHashSum(
       witnessData.domain_manifest_verification_hash + witnessData.merkle_root
     )
@@ -416,16 +425,11 @@ async function verifyRevision(
     valid_signature: false,
     witness_detail: null,
   }
-  const [response, statusCode] = await synchronousGet(`${apiURL}/verify_page/${revid}`)
-  // TODO we should handle the various status codes for all of the
-  // synchronousGet calls.
-  if (statusCode === 400) {
-    return [null, false, {"error_message": "Bad API request"}]
+  const response = await fetch(`${apiURL}/verify_page/${revid}`)
+  if (!response.ok) {
+    return [null, false, { error_message: formatHTTPError(response) }]
   }
-  if (response === "[]") {
-    return [null, false, detail]
-  }
-  let data = JSON.parse(response)
+  let data = await response.json()
   detail = Object.assign(detail, data)
 
   // TODO do sanity check on domain id
@@ -442,10 +446,11 @@ async function verifyRevision(
   let prevPublicKey = ""
   let prevWitnessHash = ""
   if (prevRevId !== "") {
-    const [responsePrevious, statusCode2] = await synchronousGet(
-      `${apiURL}/verify_page/${prevRevId}`
-    )
-    const dataPrevious = JSON.parse(responsePrevious)
+    const responsePrevious = await fetch(`${apiURL}/verify_page/${prevRevId}`)
+    if (!responsePrevious.ok) {
+      return [null, false, { error_message: formatHTTPError(responsePrevious) }]
+    }
+    const dataPrevious = await responsePrevious.json()
     // TODO just use signature and public key from previous element in the loop inside verifyPage
     // We have to do these ternary operations because sometimes the signature
     // and public key are nulls, not empty strings.
@@ -524,36 +529,6 @@ async function verifyRevision(
   return [data.verification_hash, isCorrect, detail]
 }
 
-async function synchronousGet(url) {
-  try {
-    http_promise = new Promise((resolve, reject) => {
-      adaptiveGet(url)(url, (response) => {
-        let chunks_of_data = []
-
-        response.on("data", (fragments) => {
-          chunks_of_data.push(fragments)
-        })
-
-        response.on("end", () => {
-          let response_body = Buffer.concat(chunks_of_data)
-
-          // promise resolved on success
-          resolve([response_body.toString(), response.statusCode])
-        })
-
-        response.on("error", (error) => {
-          // promise rejected on error
-          reject(error)
-        })
-      })
-    })
-    return await http_promise
-  } catch (e) {
-    // if the Promise is rejected
-    console.error(e)
-  }
-}
-
 async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
   const apiURL = `${server}/rest.php/data_accounting/v1`
   let errorMsg
@@ -563,15 +538,15 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
     // sanitized.
     errorMsg = "INVALID TITLE: Do not use underscore in title."
     maybeLog(doLog, cliRedify(errorMsg))
-    return [ERROR_VERIFICATION_STATUS, {error: errorMsg}]
+    return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
   }
   VERBOSE = verbose
   const url = `${apiURL}/get_page_all_revs/${title}`
   const response = await fetch(url)
   if (!response.ok) {
-    errorMsg = `HTTP ${response.status}: ${response.statusText}`
+    errorMsg = formatHTTPError(response)
     maybeLog(doLog, cliRedify(errorMsg))
-    return [ERROR_VERIFICATION_STATUS, {error: errorMsg}]
+    return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
   }
   const allRevInfo = await response.json()
   if (allRevInfo.hasOwnProperty("error")) {
@@ -590,16 +565,16 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
   }
   for (const idx in verifiedRevIds) {
     const revid = verifiedRevIds[idx]
-    maybeLog(
-      doLog,
-      `${parseInt(idx) + 1}. Verification of Revision ${revid}.`
-    )
+    maybeLog(doLog, `${parseInt(idx) + 1}. Verification of Revision ${revid}.`)
 
     // CONTENT DATA HASH CALCULATOR
-    const [bodyRevid, statusCode] = await synchronousGet(
+    const bodyRevidResponse = await fetch(
       `${server}/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`
     )
-    const jsonBody = JSON.parse(bodyRevid)
+    if (!bodyRevidResponse.ok) {
+      throw formatHTTPError(bodyRevidResponse)
+    }
+    const jsonBody = await bodyRevidResponse.json()
     if (!jsonBody.parse || !jsonBody.parse.wikitext) {
       throw `No wikitext found for revid ${revid}`
     }
