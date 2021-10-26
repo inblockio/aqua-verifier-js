@@ -26,6 +26,7 @@ const WATCH = "⌚"
 // Verification status
 const INVALID = "INVALID"
 const VERIFIED = "VERIFIED"
+const ERROR_VERIFICATION_STATUS = "ERROR"
 
 function adaptiveGet(url) {
   return url.startsWith("https://") ? https.get : http.get
@@ -560,7 +561,7 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
     // sanitized.
     errorMsg = "INVALID TITLE: Do not use underscore in title."
     maybeLog(doLog, cliRedify(errorMsg))
-    return [errorMsg, {}]
+    return [ERROR_VERIFICATION_STATUS, {error: errorMsg}]
   }
   VERBOSE = verbose
   try {
@@ -568,7 +569,11 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
       const url = `${apiURL}/get_page_all_revs/${title}`
       adaptiveGet(url)(url, (resp) => {
         if (resp.statusCode === 400) {
-          reject(["Bad API request", {}])
+          reject([ERROR_VERIFICATION_STATUS, {error: "HTTP 400: Bad API request"}])
+          return
+        }
+        if (resp.statusCode === 404) {
+          reject([ERROR_VERIFICATION_STATUS, {error: "HTTP 404: Not found"}])
           return
         }
         let body = ""
@@ -578,7 +583,8 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
         resp.on("end", async () => {
           const allRevInfo = JSON.parse(body)
           if (allRevInfo.hasOwnProperty("error")) {
-            throw body
+            reject([ERROR_VERIFICATION_STATUS, allRevInfo])
+            return
           }
           verifiedRevIds = allRevInfo.map((x) => x.rev_id)
           maybeLog(doLog, "Verified Page Revisions: ", verifiedRevIds)
@@ -651,11 +657,11 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
           resolve([status, details])
         })
         resp.on("error", (err) => {
-          reject([err, {}])
+          reject([ERROR_VERIFICATION_STATUS, {error: err}])
         })
       }).on("error", (err) => {
         maybeLog(doLog, "Error: " + err.message)
-        reject([err, {}])
+        reject([ERROR_VERIFICATION_STATUS, {error: err}])
       })
     })
     return await http_promise
