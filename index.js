@@ -163,11 +163,11 @@ async function getWitnessHash(apiURL, witness_event_id) {
  * Verifies the integrity of the merkle branch passed to the function
  * Steps:
  * - The code traverses the nodes in the merkle branch passed in
- * - False is returned to the calling program if an inconsistency is found in the merkle branch nodes
- * - False is returned to the calling program if an inconsistency is found in the hash sum between linked nodes
+ * - Returns false if an inconsistency is found in the merkle branch nodes
+ * - Returns false if an inconsistency is found in the hash sum between linked nodes
  * @param   {array} merkleBranch - array of merkle nodes
  * @param   {string} verificationHash - verification hash string
- * @returns {boolean} determines merkle integrity
+ * @returns {boolean} determined merkle integrity
  */
 function verifyMerkleIntegrity(merkleBranch, verificationHash) {
   let prevSuccessor = null
@@ -201,7 +201,7 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
 }
 
 /**
- * Verifies the Merkle proof via an API call
+ * Verifies the Merkle proof
  * Steps:
  * - Calls API request_merkle_proof passing the witness event id and the verification Hash
  * - Calls function verifyMerkleIntegrity using witnessMerkleProof from API request_merkle_proof
@@ -227,18 +227,17 @@ async function verifyWitnessMerkleProof(
 }
 
 /**
- * Analyses the witnessing steps for a page and builds a validation log
+ * Analyses the witnessing steps for a revision of a page and builds a validation log
  * Steps:
  * - Calls get_witness_data API passing witness event ID
  * - Calls function getHashSum passing domain_manifest_verification_hash and merkle_root from the get_witness_data API call
- * - The witness event ID and transaction hash are written into the log
- * - Calls function checkEtherScan (file checkEtherScan.js) passing witness network, witness event transaction hash and the actual  *   witness event verification hash
+ * - Write witness event ID and transaction hash to the log
+ * - Calls function checkEtherScan (see the file checkEtherScan.js) passing witness network, witness event transaction hash and the actual  *   witness event verification hash
  * - If checkEtherScan returns true, Witness event verification hash verified is written into the log
- * - Else the errors from the checkEtherScan call are written to the log
- * - If the Verify Merkle Proof flag is set, call function verifyWitnessMerkleProof using the api URL,
- *   the witness event id and the verification hash
- * - The boolean value returned from verifyWitnessMerkleProof is written into the log
- * - The log is returned to the calling program as HTML if the is Html flag is set, otherwise text
+ * - Else log errors from the checkEtherScan call
+ * - If doVerifyMerkleProof is set, calls function verifyWitnessMerkleProof
+ * - Returned boolean value from verifyWitnessMerkleProof is written into the log
+ * - Return log to the calling program, as HTML if the is Html flag is set, otherwise text
  * @param   {string} apiURL - the URL for the API call
  * @param   {string} witness_event_id - the witness event key 
  * @param   {string} verificationHash - the verification hash string
@@ -455,12 +454,12 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
  * Steps:
  * - Calls verify_page API passing revision id
  * - Calculates Meta data hash using previous verification hash
- * - If previous revision id is set, call verify_page API passing previous revision id, 
- *   then determine witness hash for the previous revision
- * - Call function verifyWitness using data from the verify_page API call
- * - Calculate the verification hash using content hash, metadata hash, signature hash and previous witness hash
+ * - If previous revision id is set, calls verify_page API passing previous revision id, 
+ *   then determines witness hash for the previous revision
+ * - Calls function verifyWitness using data from the verify_page API call
+ * - Calculates the verification hash using content hash, metadata hash, signature hash and previous witness hash
  * - If the calculated verification hash is different from the verification hash returned from the first verify_page API
- *   call then log a hash mismatch error, else set verification status to VERIFIED
+ *   calls then logs a hash mismatch error, else set verification status to VERIFIED
  * - Do lookup on ethereum blockchain to find the recovered Address
  * - If the recovered Address equals the current wallet address, set valid signature to true
  * - If witness status is inconsistent set is correct flag to false
@@ -640,9 +639,9 @@ async function synchronousGet(url) {
  * - If all revisions verified, set return status to verified
  * @param   {string} title - the page title
  * @param   {string} server - the server for API call 
- * @param   {string} verbose - verbose
- * @param   {string} doLog - do log flag
- * @param   {string} doVerifyMerkleProof - check flag for call to verifyRevision
+ * @param   {boolean} verbose - verbose
+ * @param   {boolean} doLog - do log flag
+ * @param   {boolean} doVerifyMerkleProof - check flag for call to verifyRevision
  * @returns {object} status string and page details array
  */
 async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
