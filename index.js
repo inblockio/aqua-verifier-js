@@ -24,8 +24,8 @@ const LOCKED_WITH_PEN = "🔏"
 const WATCH = "⌚"
 
 // Verification status
-const INVALID = "INVALID"
-const VERIFIED = "VERIFIED"
+const INVALID_VERIFICATION_STATUS = "INVALID"
+const VERIFIED_VERIFICATION_STATUS = "VERIFIED"
 const ERROR_VERIFICATION_STATUS = "ERROR"
 
 function adaptiveGet(url) {
@@ -318,7 +318,7 @@ function printRevisionInfo(detail) {
 
   console.log(`  ${formatDBTimestamp(detail.time_stamp)}`)
   console.log(`  Domain ID: ${detail.domain_id}`)
-  if (detail.verification_status === INVALID) {
+  if (detail.verification_status === INVALID_VERIFICATION_STATUS) {
     log_red(`  ${CROSSMARK}` + " verification hash doesn't match")
     return
   }
@@ -362,7 +362,7 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   }
   let out = `${_space2}${formatDBTimestamp(detail.time_stamp)}<br>`
   out += `${_space2}Domain ID: ${detail.domain_id}<br>`
-  if (detail.verification_status === INVALID) {
+  if (detail.verification_status === INVALID_VERIFICATION_STATUS) {
     out += htmlRedify(
       `${_space2}${CROSSMARK}` + " verification hash doesn't match"
     )
@@ -475,7 +475,7 @@ async function verifyRevision(
   )
 
   if (calculatedVerificationHash !== data.verification_hash) {
-    detail.verification_status = INVALID
+    detail.verification_status = INVALID_VERIFICATION_STATUS
     if (VERBOSE) {
       log_red(`  Actual content hash: ${contentHash}`)
       log_red(`  Actual metadata hash: ${metadataHash}`)
@@ -487,7 +487,7 @@ async function verifyRevision(
     }
     return [null, false, detail]
   } else {
-    detail.verification_status = VERIFIED
+    detail.verification_status = VERIFIED_VERIFICATION_STATUS
   }
   detail.is_witnessed = witnessStatus !== "NO_WITNESS"
 
@@ -631,7 +631,7 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
             if (isCorrect) {
               count += 1
             } else {
-              resolve([INVALID, details])
+              resolve([INVALID_VERIFICATION_STATUS, details])
               return
             }
             maybeLog(
@@ -649,10 +649,10 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
             if (count === 0) {
               status = "NORECORD"
             } else {
-              status = VERIFIED
+              status = VERIFIED_VERIFICATION_STATUS
             }
           } else {
-            status = INVALID
+            status = INVALID_VERIFICATION_STATUS
           }
           resolve([status, details])
         })
