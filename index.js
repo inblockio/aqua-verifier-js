@@ -542,7 +542,15 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
   }
   VERBOSE = verbose
   const url = `${apiURL}/get_page_all_revs/${title}`
-  const response = await fetch(url)
+  let response
+  try {
+    // We do a try block for our first ever fetch because the server might be
+    // down, and we get a connection refused error.
+    response = await fetch(url)
+  } catch (e) {
+    maybeLog(doLog, cliRedify(e))
+    return [ERROR_VERIFICATION_STATUS, { error: e }]
+  }
   if (!response.ok) {
     errorMsg = formatHTTPError(response)
     maybeLog(doLog, cliRedify(errorMsg))
