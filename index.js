@@ -491,14 +491,13 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
  * @param   {string} contentHash The page content hash string.
  * @param   {boolean} isHtml Flag to format the log as an HTML string.
  * @param   {boolean} doVerifyMerkleProof Flag for do Verify Merkle Proof.
- * @returns {Array} An array containing verification hash, isCorrect flag and
+ * @returns {Array} An array containing verification data, isCorrect flag and
  *                  an array of page revision details.
  */
 async function verifyRevision(
   apiURL,
   revid,
-  prevRevId,
-  previousVerificationHash,
+  previousVerificationData,
   contentHash,
   isHtml,
   doVerifyMerkleProof
@@ -521,6 +520,7 @@ async function verifyRevision(
   // TODO do sanity check on domain id
   const domainId = data.domain_id
 
+  const previousVerificationHash = previousVerificationData ? previousVerificationData.verification_hash : ""
   const metadataHash = calculateMetadataHash(
     domainId,
     data.time_stamp,
@@ -531,20 +531,14 @@ async function verifyRevision(
   let prevSignature = ""
   let prevPublicKey = ""
   let prevWitnessHash = ""
-  if (prevRevId !== "") {
-    const responsePrevious = await fetch(`${apiURL}/verify_page/${prevRevId}`)
-    if (!responsePrevious.ok) {
-      return [null, false, { error_message: formatHTTPError(responsePrevious) }]
-    }
-    const dataPrevious = await responsePrevious.json()
-    // TODO just use signature and public key from previous element in the loop inside verifyPage
+  if (previousVerificationData !== null) {
     // We have to do these ternary operations because sometimes the signature
     // and public key are nulls, not empty strings.
-    prevSignature = !!dataPrevious.signature ? dataPrevious.signature : ""
-    prevPublicKey = !!dataPrevious.public_key ? dataPrevious.public_key : ""
+    prevSignature = !!previousVerificationData.signature ? previousVerificationData.signature : ""
+    prevPublicKey = !!previousVerificationData.public_key ? previousVerificationData.public_key : ""
     prevWitnessHash = await getWitnessHash(
       apiURL,
-      dataPrevious.witness_event_id
+      previousVerificationData.witness_event_id
     )
   }
   const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
@@ -585,7 +579,7 @@ async function verifyRevision(
 
   if (data.signature === "" || data.signature === null) {
     detail.is_signed = false
-    return [data.verification_hash, true, detail]
+    return [data, true, detail]
   }
   detail.is_signed = true
 
@@ -612,7 +606,7 @@ async function verifyRevision(
     isCorrect = false
   }
 
-  return [data.verification_hash, isCorrect, detail]
+  return [data, isCorrect, detail]
 }
 
 /**
@@ -669,8 +663,7 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
   verifiedRevIds = allRevInfo.map((x) => x.rev_id)
   maybeLog(doLog, "Verified Page Revisions: ", verifiedRevIds)
 
-  let previousVerificationHash = ""
-  let previousRevId = ""
+  let previousVerificationData = null
   let count = 0
   const details = {
     verified_ids: verifiedRevIds,
@@ -695,11 +688,10 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
     const contentHash = getHashSum(content)
 
     const isHtml = !doLog // TODO: generalize this later
-    const [verificationHash, isCorrect, detail] = await verifyRevision(
+    const [verificationData, isCorrect, detail] = await verifyRevision(
       apiURL,
       revid,
-      previousRevId,
-      previousVerificationHash,
+      previousVerificationData,
       contentHash,
       isHtml,
       doVerifyMerkleProof
@@ -720,8 +712,7 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
         verifiedRevIds.length
       ).toFixed(1)}%)`
     )
-    previousVerificationHash = verificationHash
-    previousRevId = revid
+    previousVerificationData = verificationData
   }
   let status
   if (count == verifiedRevIds.length) {
