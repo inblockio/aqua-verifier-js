@@ -647,11 +647,12 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
     // down, and we get a connection refused error.
     response = await fetch(url)
   } catch (e) {
-    maybeLog(doLog, cliRedify(e))
-    return [ERROR_VERIFICATION_STATUS, { error: e }]
+    errorMsg = 'get_page_all_revs: ' + e
+    maybeLog(doLog, cliRedify(errorMsg))
+    return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
   }
   if (!response.ok) {
-    errorMsg = formatHTTPError(response)
+    errorMsg = 'get_page_all_revs: ' + formatHTTPError(response)
     maybeLog(doLog, cliRedify(errorMsg))
     return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
   }
