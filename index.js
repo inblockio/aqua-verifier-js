@@ -20,6 +20,7 @@ const CROSSMARK = "❌"
 const CHECKMARK = "✅"
 const LOCKED_WITH_PEN = "🔏"
 const WATCH = "⌚"
+const BRANCH = "🌿"
 
 // Verification status
 const INVALID_VERIFICATION_STATUS = "INVALID"
@@ -223,6 +224,7 @@ async function verifyWitnessMerkleProof(
     `${apiURL}/request_merkle_proof/${witness_event_id}/${verificationHash}`
   )
   if (!response.ok) {
+    console.log(response)
     // TODO better tell the user that there is something wrong.
     return false
   }
@@ -369,9 +371,9 @@ async function verifyWitness(
         verification_hash
       )
       if (merkleProofIsOK) {
-        detail += `${newline}${_space4}${CHECKMARK}Witness Merkle Proof is OK`
+        detail += `${newline}${_space4}${CHECKMARK}${BRANCH}Witness Merkle Proof is OK`
       } else {
-        detail += `${newline}${_space4}${CROSSMARK}Witness Merkle Proof is corrupted`
+        detail += `${newline}${_space4}${CROSSMARK}${BRANCH}Witness Merkle Proof is corrupted`
         return ["INCONSISTENT", detail]
       }
     }
