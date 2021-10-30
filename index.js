@@ -220,7 +220,7 @@ async function verifyWitnessMerkleProof(
   verificationHash
 ) {
   const response = await fetch(
-    `${apiURL}/standard/request_merkle_proof?var1=${witness_event_id}&var2=${verificationHash}`
+    `${apiURL}/request_merkle_proof/${witness_event_id}/${verificationHash}`
   )
   if (!response.ok) {
     // TODO better tell the user that there is something wrong.
