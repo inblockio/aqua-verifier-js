@@ -146,20 +146,20 @@ async function getWitnessHash(apiURL, witness_event_id) {
   const witnessResponse = await fetch(
     `${apiURL}/get_witness_data/${witness_event_id}`
   )
-  // TODO handle when witnessResponse.ok is false
-  const witnessText = await witnessResponse.text()
-  // TODO checking for '{"value":""}' is just bad.
-  if (witnessText !== '{"value":""}') {
-    witnessData = JSON.parse(witnessText)
-    witnessHash = calculateWitnessHash(
-      witnessData.witness_event_verification_hash,
-      witnessData.merkle_root,
-      witnessData.witness_network,
-      witnessData.witness_event_transaction_hash
-    )
-    return witnessHash
+  if (witnessResponse.status === 404) {
+    return ""
   }
-  return ""
+  if (!witnessResponse.ok) {
+    return `ERROR HTTP ${witnessResponse.status} ${witnessResponse.statusText}`
+  }
+  const witnessData = await witnessResponse.json()
+  witnessHash = calculateWitnessHash(
+    witnessData.witness_event_verification_hash,
+    witnessData.merkle_root,
+    witnessData.witness_network,
+    witnessData.witness_event_transaction_hash
+  )
+  return witnessHash
 }
 
 /**
@@ -266,6 +266,10 @@ async function verifyWitness(
   isHtml
 ) {
   let detail = ""
+  if (witness_event_id === null) {
+    return ["NO_WITNESS", detail]
+  }
+
   const newline = isHtml ? "<br>" : "\n"
   // We don't need <br> because redify already wraps the text inside a div.
   const newlineRed = isHtml ? "" : "\n"
@@ -275,104 +279,104 @@ async function verifyWitness(
   const witnessResponse = await fetch(
     `${apiURL}/get_witness_data/${witness_event_id}`
   )
+  if (witnessResponse.status === 404) {
+    return ["NO_WITNESS", detail]
+  }
   if (!witnessResponse.ok) {
-    return ["ERROR", detail]
+    return ["ERROR", `${_space4}${CROSSMARK}Error retrieving witness data. Reason: HTTP ${witnessResponse.status} ${witnessResponse.statusText}`]
   }
   const witnessText = await witnessResponse.text()
 
-  if (witnessText !== '{"value":""}') {
-    witnessData = JSON.parse(witnessText)
-    actual_witness_event_verification_hash = getHashSum(
-      witnessData.domain_manifest_verification_hash + witnessData.merkle_root
-    )
+  witnessData = JSON.parse(witnessText)
+  actual_witness_event_verification_hash = getHashSum(
+    witnessData.domain_manifest_verification_hash + witnessData.merkle_root
+  )
 
-    detail += `${_space2}Witness event ${witness_event_id} detected`
-    detail += `${newline}${_space4}Transaction hash: ${witnessData.witness_event_transaction_hash}`
-    // Do online lookup of transaction hash
-    const etherScanResult = await cES.checkEtherScan(
-      witnessData.witness_network,
-      witnessData.witness_event_transaction_hash,
-      actual_witness_event_verification_hash
+  detail += `${_space2}Witness event ${witness_event_id} detected`
+  detail += `${newline}${_space4}Transaction hash: ${witnessData.witness_event_transaction_hash}`
+  // Do online lookup of transaction hash
+  const etherScanResult = await cES.checkEtherScan(
+    witnessData.witness_network,
+    witnessData.witness_event_transaction_hash,
+    actual_witness_event_verification_hash
+  )
+  const suffix = `${witnessData.witness_network} via etherscan.io`
+  if (etherScanResult == "true") {
+    detail += `${newline}${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified on ${suffix}`
+  } else if (etherScanResult == "false") {
+    detail += redify(
+      isHtml,
+      `${newlineRed}${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match on ${suffix}`
     )
-    const suffix = `${witnessData.witness_network} via etherscan.io`
-    if (etherScanResult == "true") {
-      detail += `${newline}${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified on ${suffix}`
-    } else if (etherScanResult == "false") {
-      detail += redify(
-        isHtml,
-        `${newlineRed}${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match on ${suffix}`
-      )
-    } else {
-      detail += redify(
-        isHtml,
-        `${newlineRed}${_space4}${CROSSMARK}${WATCH}Online lookup failed on ${suffix}`
-      )
-      detail += redify(
-        isHtml,
-        `${newlineRed}${_space4}Error code: ${etherScanResult}`
-      )
-      detail += redify(
-        isHtml,
-        `${newlineRed}${_space4}Verify manually: ${actual_witness_event_verification_hash}`
-      )
-    }
-    if (
-      actual_witness_event_verification_hash !=
+  } else {
+    detail += redify(
+      isHtml,
+      `${newlineRed}${_space4}${CROSSMARK}${WATCH}Online lookup failed on ${suffix}`
+    )
+    detail += redify(
+      isHtml,
+      `${newlineRed}${_space4}Error code: ${etherScanResult}`
+    )
+    detail += redify(
+      isHtml,
+      `${newlineRed}${_space4}Verify manually: ${actual_witness_event_verification_hash}`
+    )
+  }
+  if (
+    actual_witness_event_verification_hash !=
+    witnessData.witness_event_verification_hash
+  ) {
+    detail += redify(
+      isHtml,
+      `${newlineRed}${_space4}${CROSSMARK}` +
+        "Witness event verification hash doesn't match"
+    )
+    detail += redify(
+      isHtml,
+      `${newlineRed}${_space4}Page manifest verification hash: ${witnessData.domain_manifest_verification_hash}`
+    )
+    detail += redify(
+      isHtml,
+      `${newlineRed}${_space4}Merkle root: ${maybeHrefify(
+      witnessData.merkle_root
+      )}`
+    )
+    detail += redify(
+      isHtml,
+      `${newlineRed}${_space4}Expected: ${maybeHrefify(
       witnessData.witness_event_verification_hash
-    ) {
-      detail += redify(
-        isHtml,
-        `${newlineRed}${_space4}${CROSSMARK}` +
-          "Witness event verification hash doesn't match"
+      )}`
+    )
+    detail += redify(
+      isHtml,
+      `${newlineRed}${_space4}Actual: ${maybeHrefify(
+      actual_witness_event_verification_hash
+      )}`
+    )
+    return ["INCONSISTENT", detail]
+  }
+  // At this point, we know that the witness matches.
+  if (doVerifyMerkleProof) {
+    // Only verify the witness merkle proof when verifyWitness is successful,
+    // because this step is expensive.
+    if (verification_hash === witnessData.domain_manifest_verification_hash) {
+      // Corner case when the page is a domain manifest.
+      detail += `${newline}${_space4}${CHECKMARK}Domain Manifest; therefore does not require Merkle Proof`
+    } else {
+      const merkleProofIsOK = await verifyWitnessMerkleProof(
+        apiURL,
+        witness_event_id,
+        verification_hash
       )
-      detail += redify(
-        isHtml,
-        `${newlineRed}${_space4}Page manifest verification hash: ${witnessData.domain_manifest_verification_hash}`
-      )
-      detail += redify(
-        isHtml,
-        `${newlineRed}${_space4}Merkle root: ${maybeHrefify(
-          witnessData.merkle_root
-        )}`
-      )
-      detail += redify(
-        isHtml,
-        `${newlineRed}${_space4}Expected: ${maybeHrefify(
-          witnessData.witness_event_verification_hash
-        )}`
-      )
-      detail += redify(
-        isHtml,
-        `${newlineRed}${_space4}Actual: ${maybeHrefify(
-          actual_witness_event_verification_hash
-        )}`
-      )
-      return ["INCONSISTENT", detail]
-    }
-    // At this point, we know that the witness matches.
-    if (doVerifyMerkleProof) {
-      // Only verify the witness merkle proof when verifyWitness is successful,
-      // because this step is expensive.
-      if (verification_hash === witnessData.domain_manifest_verification_hash) {
-        // Corner case when the page is a domain manifest.
-        detail += `${newline}${_space4}${CHECKMARK}Domain Manifest; therefore does not require Merkle Proof`
+      if (merkleProofIsOK) {
+        detail += `${newline}${_space4}${CHECKMARK}Witness Merkle Proof is OK`
       } else {
-        const merkleProofIsOK = await verifyWitnessMerkleProof(
-          apiURL,
-          witness_event_id,
-          verification_hash
-        )
-        if (merkleProofIsOK) {
-          detail += `${newline}${_space4}${CHECKMARK}Witness Merkle Proof is OK`
-        } else {
-          detail += `${newline}${_space4}${CROSSMARK}Witness Merkle Proof is corrupted`
-          return ["INCONSISTENT", detail]
-        }
+        detail += `${newline}${_space4}${CROSSMARK}Witness Merkle Proof is corrupted`
+        return ["INCONSISTENT", detail]
       }
     }
-    return ["MATCHES", detail]
   }
-  return ["NO_WITNESS", detail]
+  return ["MATCHES", detail]
 }
 
 function printRevisionInfo(detail) {
@@ -540,6 +544,9 @@ async function verifyRevision(
       apiURL,
       previousVerificationData.witness_event_id
     )
+    if (prevWitnessHash.startsWith("ERROR HTTP ")) {
+      return [null, false, { error_message: `${CROSSMARK}Previous witness hash error: ${prevWitnessHash}` }]
+    }
   }
   const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
 
