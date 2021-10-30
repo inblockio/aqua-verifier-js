@@ -144,7 +144,7 @@ async function getWitnessHash(apiURL, witness_event_id) {
     return ""
   }
   const witnessResponse = await fetch(
-    `${apiURL}/standard/get_witness_data?var1=${witness_event_id}`
+    `${apiURL}/get_witness_data/${witness_event_id}`
   )
   // TODO handle when witnessResponse.ok is false
   const witnessText = await witnessResponse.text()
@@ -273,7 +273,7 @@ async function verifyWitness(
   const _space4 = _space2 + _space2
   const maybeHrefify = (hash) => (isHtml ? hrefifyHash(hash) : hash)
   const witnessResponse = await fetch(
-    `${apiURL}/standard/get_witness_data?var1=${witness_event_id}`
+    `${apiURL}/get_witness_data/${witness_event_id}`
   )
   if (!witnessResponse.ok) {
     return ["ERROR", detail]
