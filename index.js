@@ -484,6 +484,33 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   return out
 }
 
+function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
+  if (status === 'NORECORD') {
+    return 'No revision record'
+  }
+  if (status === 'N/A' || !details) {
+    return ''
+  }
+  const _space2 = '&nbsp&nbsp'
+  let out = ""
+  out += `Number of Verified Page Revisions: ${details.verified_ids.length}<br>`
+  for (let i = 0; i < details.revision_details.length; i++) {
+    if (i % 2 == 0) {
+      out += '<div style="background: LightCyan;">'
+    } else {
+      out += '<div>'
+    }
+    const revid = details.verified_ids[i]
+    const revidURL = `${serverUrl}/index.php?title=${title}&oldid=${revid}`
+    out += `${i + 1}. Verification of <a href='${revidURL}' target="_blank">Revision ID ${revid}<a>.<br>`
+    out += formatRevisionInfo2HTML(serverUrl, details.revision_details[i], verbose)
+    const count = i + 1
+    out += `${_space2}Progress: ${count} / ${details.verified_ids.length} (${(100 * count / details.verified_ids.length).toFixed(1)}%)<br>`
+    out += '</div>'
+  }
+  return out
+}
+
 /**
  * Verifies a revision from a page.
  * Steps:
@@ -759,4 +786,5 @@ module.exports = {
   verifyPage: verifyPage,
   log_red: log_red,
   formatRevisionInfo2HTML: formatRevisionInfo2HTML,
+  formatPageInfo2HTML: formatPageInfo2HTML,
 }
