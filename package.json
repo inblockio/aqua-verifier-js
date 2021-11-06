@@ -16,14 +16,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FantasticoFox/data-accounting-external-verifier.git"
+    "url": "git+https://github.com/inblockio/data-accounting-external-verifier.git"
   },
   "author": "",
   "license": "GPLv3",
   "bugs": {
-    "url": "https://github.com/FantasticoFox/data-accounting-external-verifier/issues"
+    "url": "https://github.com/inblockio/data-accounting-external-verifier/issues"
   },
-  "homepage": "https://github.com/FantasticoFox/data-accounting-external-verifier#readme",
+  "homepage": "https://github.com/inblockio/data-accounting-external-verifier#readme",
   "devDependencies": {
     "prettier": "^2.4.1"
   }
