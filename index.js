@@ -72,7 +72,7 @@ function formatMwTimestamp(ts) {
 
 function formatDBTimestamp(ts) {
   // Format 20210927075124 into '27 Sep 2021, 7:51:24 AM'
-  return moment(ts, "YYYYMMDDHHmmss").format("D MMM YYYY, h:mm:ss A")
+  return moment(ts, "YYYYMMDDHHmmss").format("D MMM YYYY, h:mm:ss A") + " UTC"
 }
 
 function shortenHash(hash) {
@@ -391,7 +391,7 @@ function printRevisionInfo(detail) {
     return
   }
 
-  console.log(`  ${formatDBTimestamp(detail.time_stamp)}`)
+  console.log(`  Timestamp: ${formatDBTimestamp(detail.time_stamp)}`)
   console.log(`  Domain ID: ${detail.domain_id}`)
   if (detail.verification_status === INVALID_VERIFICATION_STATUS) {
     log_red(`  ${CROSSMARK}` + " verification hash doesn't match")
