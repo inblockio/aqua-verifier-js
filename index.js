@@ -1,6 +1,7 @@
 const fetch = require("node-fetch")
 const sha3 = require("js-sha3")
 const moment = require("moment")
+const hrtime = require('browser-process-hrtime')
 
 // utilities for verifying signatures
 const ethers = require("ethers")
@@ -73,6 +74,14 @@ function formatMwTimestamp(ts) {
 function formatDBTimestamp(ts) {
   // Format 20210927075124 into '27 Sep 2021, 7:51:24 AM'
   return moment(ts, "YYYYMMDDHHmmss").format("D MMM YYYY, h:mm:ss A") + " UTC"
+}
+
+function getElapsedTime(start) {
+  const precision = 2 // 2 decimal places
+  const elapsed = hrtime(start)
+  // elapsed[1] is in nanosecond, so we divide by a billion to get nanosecond
+  // to second.
+  return (elapsed[0] + elapsed[1] / 1e9).toFixed(precision)
 }
 
 function shortenHash(hash) {
@@ -391,6 +400,7 @@ function printRevisionInfo(detail) {
     return
   }
 
+  console.log(`  Elapsed: ${detail.elapsed} s`)
   console.log(`  Timestamp: ${formatDBTimestamp(detail.time_stamp)}`)
   console.log(`  Domain ID: ${detail.domain_id}`)
   if (detail.verification_status === INVALID_VERIFICATION_STATUS) {
@@ -435,7 +445,8 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   if (!detail.hasOwnProperty("verification_hash")) {
     return `${_space2}no verification hash`
   }
-  let out = `${_space2}${formatDBTimestamp(detail.time_stamp)}<br>`
+  let out = `${_space2}Elapsed: ${detail.elapsed} s<br>`
+  out += `${_space2}${formatDBTimestamp(detail.time_stamp)}<br>`
   out += `${_space2}Domain ID: ${detail.domain_id}<br>`
   if (detail.verification_status === INVALID_VERIFICATION_STATUS) {
     out += htmlRedify(
@@ -679,9 +690,12 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
     verified_ids: verifiedRevIds,
     revision_details: [],
   }
+  let elapsed
+  let totalElapsed = 0.0
   for (const idx in verifiedRevIds) {
     const revid = verifiedRevIds[idx]
     maybeLog(doLog, `${parseInt(idx) + 1}. Verification of Revision ${revid}.`)
+    elapsedStart = hrtime()
 
     // CONTENT DATA HASH CALCULATOR
     const bodyRevidResponse = await fetch(
@@ -706,6 +720,9 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
       isHtml,
       doVerifyMerkleProof
     )
+    elapsed = getElapsedTime(elapsedStart)
+    detail.elapsed = elapsed
+    totalElapsed += elapsed
     details.revision_details.push(detail)
     if (doLog) {
       printRevisionInfo(detail)
