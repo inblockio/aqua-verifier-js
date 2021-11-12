@@ -136,6 +136,15 @@ function calculateVerificationHash(
   return getHashSum(contentHash + metadataHash + signature_hash + witness_hash)
 }
 
+function fetchWithToken(url, token) {
+  if (!token) {
+    return fetch(url)
+  }
+  return fetch(url, {
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+  })
+}
+
 /**
  * Calls the get_witness_data API, parses the result and then builds and
  * returns the witness hash.
@@ -146,15 +155,16 @@ function calculateVerificationHash(
  *   merkle_root, witness_network and the witness_event_transaction_hash.
  * - Returns the witness hash or an empty string.
  * @param   {string} apiURL The URL for the API call.
+ * @param   {Object} token The OAuth2 token required to make the API call.
  * @param   {string} witness_event_id The key for the witness event.
  * @returns {string} The witness hash.
  */
-async function getWitnessHash(apiURL, witness_event_id) {
+async function getWitnessHash(apiURL, token, witness_event_id) {
   if (witness_event_id === null) {
     return ""
   }
-  const witnessResponse = await fetch(
-    `${apiURL}/get_witness_data/${witness_event_id}`
+  const witnessResponse = await fetchWithToken(
+    `${apiURL}/get_witness_data/${witness_event_id}`, token
   )
   if (witnessResponse.status === 404) {
     return ""
@@ -220,17 +230,19 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
  * - Calls function verifyMerkleIntegrity using witnessMerkleProof from API request_merkle_proof.
  * - Returns boolean value from function verifyMerkleIntegrity.
  * @param   {string} apiURL The URL for the API call.
+ * @param   {Object} token The OAuth2 token required to make the API call.
  * @param   {string} witness_event_id
  * @param   {string} verificationHash
  * @returns {boolean} Whether the merkle integrity is OK.
  */
 async function verifyWitnessMerkleProof(
   apiURL,
+  token,
   witness_event_id,
   verificationHash
 ) {
-  const response = await fetch(
-    `${apiURL}/request_merkle_proof/${witness_event_id}/${verificationHash}`
+  const response = await fetchWithToken(
+    `${apiURL}/request_merkle_proof/${witness_event_id}/${verificationHash}`, token
   )
   if (!response.ok) {
     console.log(response)
@@ -263,6 +275,7 @@ async function verifyWitnessMerkleProof(
  *   log.
  * - Returns the log, as an HTML string if the isHtml flag is set, otherwise text.
  * @param   {string} apiURL The URL for the API call.
+ * @param   {Object} token The OAuth2 token required to make the API call.
  * @param   {string} witness_event_id
  * @param   {string} verificationHash
  * @param   {boolean} doVerifyMerkleProof Flag for do Verify Merkle Proof.
@@ -271,6 +284,7 @@ async function verifyWitnessMerkleProof(
  */
 async function verifyWitness(
   apiURL,
+  token,
   witness_event_id,
   verification_hash,
   doVerifyMerkleProof,
@@ -287,8 +301,8 @@ async function verifyWitness(
   const _space2 = isHtml ? "&nbsp&nbsp" : "  "
   const _space4 = _space2 + _space2
   const maybeHrefify = (hash) => (isHtml ? hrefifyHash(hash) : hash)
-  const witnessResponse = await fetch(
-    `${apiURL}/get_witness_data/${witness_event_id}`
+  const witnessResponse = await fetchWithToken(
+    `${apiURL}/get_witness_data/${witness_event_id}`, token
   )
   if (witnessResponse.status === 404) {
     return ["NO_WITNESS", detail]
@@ -376,6 +390,7 @@ async function verifyWitness(
     } else {
       const merkleProofIsOK = await verifyWitnessMerkleProof(
         apiURL,
+        token,
         witness_event_id,
         verification_hash
       )
@@ -529,6 +544,7 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
  *   signature to true.
  * - If witness status is inconsistent, sets isCorrect flag to false.
  * @param   {string} apiURL The URL for the API call.
+ * @param   {Object} token The OAuth2 token required to make the API call.
  * @param   {string} revid The page revision id.
  * @param   {string} prevRevId The previous page revision id.
  * @param   {string} previousVerificationHash The previous verification hash string.
@@ -540,6 +556,7 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
  */
 async function verifyRevision(
   apiURL,
+  token,
   revid,
   previousVerificationData,
   contentHash,
@@ -554,7 +571,7 @@ async function verifyRevision(
     valid_signature: false,
     witness_detail: null,
   }
-  const response = await fetch(`${apiURL}/verify_page/${revid}`)
+  const response = await fetchWithToken(`${apiURL}/verify_page/${revid}`, token)
   if (!response.ok) {
     return [null, false, { error_message: formatHTTPError(response) }]
   }
@@ -582,7 +599,8 @@ async function verifyRevision(
     prevPublicKey = !!previousVerificationData.public_key ? previousVerificationData.public_key : ""
     prevWitnessHash = await getWitnessHash(
       apiURL,
-      previousVerificationData.witness_event_id
+      token,
+      previousVerificationData.witness_event_id,
     )
     if (prevWitnessHash.startsWith("ERROR HTTP ")) {
       return [null, false, { error_message: `${CROSSMARK}Previous witness hash error: ${prevWitnessHash}` }]
@@ -593,6 +611,7 @@ async function verifyRevision(
   // WITNESS DATA HASH CALCULATOR
   const [witnessStatus, witness_detail] = await verifyWitness(
     apiURL,
+    token,
     data.witness_event_id,
     data.verification_hash,
     doVerifyMerkleProof,
@@ -673,9 +692,10 @@ async function verifyRevision(
  * @param   {boolean} doLog
  * @param   {boolean} doVerifyMerkleProof The flag for whether to do rigorous
  *                    verification of the merkle proof. TODO clarify this.
+ * @param   {Object} token (Optional) The OAuth2 token required to make the API call.
  * @returns {Array} Array of status string and page details object.
  */
-async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
+async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof, token = null) {
   const apiURL = `${server}/rest.php/data_accounting/v1`
   let errorMsg
   if (title.includes("_")) {
@@ -692,7 +712,7 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
   try {
     // We do a try block for our first ever fetch because the server might be
     // down, and we get a connection refused error.
-    response = await fetch(url)
+    response = await fetchWithToken(url, token)
   } catch (e) {
     errorMsg = 'get_page_all_revs: ' + e
     maybeLog(doLog, cliRedify(errorMsg))
@@ -725,8 +745,8 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
     elapsedStart = hrtime()
 
     // CONTENT DATA HASH CALCULATOR
-    const bodyRevidResponse = await fetch(
-      `${server}/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`
+    const bodyRevidResponse = await fetchWithToken(
+      `${server}/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`, token
     )
     if (!bodyRevidResponse.ok) {
       throw formatHTTPError(bodyRevidResponse)
@@ -741,6 +761,7 @@ async function verifyPage(title, server, verbose, doLog, doVerifyMerkleProof) {
     const isHtml = !doLog // TODO: generalize this later
     const [verificationData, isCorrect, detail] = await verifyRevision(
       apiURL,
+      token,
       revid,
       previousVerificationData,
       contentHash,
