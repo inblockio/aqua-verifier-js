@@ -705,6 +705,28 @@ async function verifyRevision(
   return [data, isCorrect, detail]
 }
 
+async function getVerifiedRevIds(apiURL, title, token) {
+  const url = `${apiURL}/get_page_all_revs/${title}`
+  let response
+  try {
+    // We do a try block for our first ever fetch because the server might be
+    // down, and we get a connection refused error.
+    response = await fetchWithToken(url, token)
+  } catch (e) {
+    errorMsg = "get_page_all_revs: " + e
+    return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
+  }
+  if (!response.ok) {
+    errorMsg = "get_page_all_revs: " + formatHTTPError(response)
+    return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
+  }
+  const allRevInfo = await response.json()
+  if (allRevInfo.hasOwnProperty("error")) {
+    return [ERROR_VERIFICATION_STATUS, allRevInfo]
+  }
+  return ["OK", allRevInfo.map((x) => x.rev_id)]
+}
+
 /**
  * Verifies all of the verified revisions of a page.
  * Steps:
@@ -743,25 +765,11 @@ async function verifyPage(
     return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
   }
   VERBOSE = verbose
-  const url = `${apiURL}/get_page_all_revs/${title}`
-  let response
-  try {
-    // We do a try block for our first ever fetch because the server might be
-    // down, and we get a connection refused error.
-    response = await fetchWithToken(url, token)
-  } catch (e) {
-    errorMsg = "get_page_all_revs: " + e
-    return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
+  const [getVerifiedRevIdsStatus, res] = await getVerifiedRevIds(apiURL, title, token)
+  if (getVerifiedRevIdsStatus === ERROR_VERIFICATION_STATUS) {
+    return [ERROR_VERIFICATION_STATUS, res]
   }
-  if (!response.ok) {
-    errorMsg = "get_page_all_revs: " + formatHTTPError(response)
-    return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
-  }
-  const allRevInfo = await response.json()
-  if (allRevInfo.hasOwnProperty("error")) {
-    return [ERROR_VERIFICATION_STATUS, allRevInfo]
-  }
-  verifiedRevIds = allRevInfo.map((x) => x.rev_id)
+  const verifiedRevIds = res
   maybeLog(doLog, "Verified Page Revisions: ", verifiedRevIds)
 
   let previousVerificationData = null
