@@ -790,7 +790,7 @@ async function verifyPage(
       throw formatHTTPError(bodyRevidResponse)
     }
     const jsonBody = await bodyRevidResponse.json()
-    if (!jsonBody.parse || !jsonBody.parse.wikitext) {
+    if (!jsonBody.parse || !jsonBody.parse.wikitext && jsonBody.parse.wikitext !== "") {
       throw `No wikitext found for revid ${revid}`
     }
     const content = jsonBody.parse.wikitext
