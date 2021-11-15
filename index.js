@@ -590,11 +590,11 @@ async function getContentHash(server, revid, token) {
  *                  an array of page revision details.
  */
 async function verifyRevision(
+  server,
   apiURL,
   token,
   revid,
   previousVerificationData,
-  contentHash,
   isHtml,
   doVerifyMerkleProof
 ) {
@@ -666,6 +666,7 @@ async function verifyRevision(
   )
   detail.witness_detail = witness_detail
 
+  const contentHash = await getContentHash(server, revid, token)
   const calculatedVerificationHash = calculateVerificationHash(
     contentHash,
     metadataHash,
@@ -802,14 +803,13 @@ async function verifyPage(
     maybeLog(doLog, `${parseInt(idx) + 1}. Verification of Revision ${revid}.`)
     elapsedStart = hrtime()
 
-    const contentHash = await getContentHash(server, revid, token)
     const isHtml = !doLog // TODO: generalize this later
     const [verificationData, isCorrect, detail] = await verifyRevision(
+      server,
       apiURL,
       token,
       revid,
       previousVerificationData,
-      contentHash,
       isHtml,
       doVerifyMerkleProof
     )
