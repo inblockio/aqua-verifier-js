@@ -544,6 +544,23 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
   return out
 }
 
+async function getContentHash(server, revid, token) {
+    // CONTENT DATA HASH CALCULATOR
+    const response = await fetchWithToken(
+      `${server}/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`,
+      token
+    )
+    if (!response.ok) {
+      throw formatHTTPError(response)
+    }
+    const jsonBody = await response.json()
+    if (!jsonBody.parse || !jsonBody.parse.wikitext && jsonBody.parse.wikitext !== "") {
+      throw `No wikitext found for revid ${revid}`
+    }
+    const content = jsonBody.parse.wikitext
+    return getHashSum(content)
+}
+
 /**
  * Verifies a revision from a page.
  * Steps:
@@ -785,21 +802,7 @@ async function verifyPage(
     maybeLog(doLog, `${parseInt(idx) + 1}. Verification of Revision ${revid}.`)
     elapsedStart = hrtime()
 
-    // CONTENT DATA HASH CALCULATOR
-    const bodyRevidResponse = await fetchWithToken(
-      `${server}/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`,
-      token
-    )
-    if (!bodyRevidResponse.ok) {
-      throw formatHTTPError(bodyRevidResponse)
-    }
-    const jsonBody = await bodyRevidResponse.json()
-    if (!jsonBody.parse || !jsonBody.parse.wikitext && jsonBody.parse.wikitext !== "") {
-      throw `No wikitext found for revid ${revid}`
-    }
-    const content = jsonBody.parse.wikitext
-    const contentHash = getHashSum(content)
-
+    const contentHash = await getContentHash(server, revid, token)
     const isHtml = !doLog // TODO: generalize this later
     const [verificationData, isCorrect, detail] = await verifyRevision(
       apiURL,
