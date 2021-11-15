@@ -781,8 +781,9 @@ async function verifyPage(
   let errorMsg
   if (title.includes("_")) {
     // TODO it's not just underscore, catch all potential errors in page title.
-    // This error can not happen in Chrome-Extension because the title has been
-    // sanitized.
+    // This error should not happen in Chrome-Extension because the title has been
+    // sanitized. But this is not true for any library that calls this
+    // function, and so we always validate the title.
     errorMsg = "INVALID TITLE: Do not use underscore in title."
     return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
   }
