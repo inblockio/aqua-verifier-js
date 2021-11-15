@@ -148,6 +148,10 @@ function fetchWithToken(url, token) {
   })
 }
 
+function getApiURL(server) {
+  return `${server}/rest.php/data_accounting/v1`
+}
+
 /**
  * Calls the get_witness_data API, parses the result and then builds and
  * returns the witness hash.
@@ -773,7 +777,7 @@ async function verifyPage(
   doVerifyMerkleProof,
   token = null
 ) {
-  const apiURL = `${server}/rest.php/data_accounting/v1`
+  const apiURL = getApiURL(server)
   let errorMsg
   if (title.includes("_")) {
     // TODO it's not just underscore, catch all potential errors in page title.
