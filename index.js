@@ -61,12 +61,6 @@ function log_dim(content) {
   console.log(Dim + content + Reset)
 }
 
-function maybeLog(doLog, ...args) {
-  if (doLog) {
-    console.log(...args)
-  }
-}
-
 function formatMwTimestamp(ts) {
   // Format timestamp into the timestamp format found in Mediawiki outputs
   return ts
@@ -754,66 +748,51 @@ async function getVerifiedRevIds(apiURL, title, token) {
   return ["OK", allRevInfo.map((x) => x.rev_id)]
 }
 
+function calculateStatus(count, totalLength) {
+  if (count == totalLength) {
+    if (count === 0) {
+      return "NORECORD"
+    } else {
+      return VERIFIED_VERIFICATION_STATUS
+    }
+  } else {
+    return INVALID_VERIFICATION_STATUS
+  }
+}
+
 /**
  * Verifies all of the verified revisions of a page.
  * Steps:
- * - Checks if the title includes an underscore, if yes, throw an error.
- * - Calls page_all_rev API passing page title.
  * - Loops through the revision IDs for the page.
- *   If no wiki text exists for the revision, throws an error.
- *   Calls function verifyRevision, if isCorrect flag is returned as true, add
- *   1 to count.
- * - After the loop, checks count against number of revisions.
- * - If all revisions are verified, set return status to verified.
- * @param   {string} title
+ *   Calls function verifyRevision, if isCorrect flag is returned as true,
+ *   yield true and the revision detail.
+ * @param   {Array} verifiedRevIds Array of revision ids which have verification detail.
  * @param   {string} server The server URL for the API call.
  * @param   {boolean} verbose
- * @param   {boolean} doLog
+ * @param   {boolean} isHtml
  * @param   {boolean} doVerifyMerkleProof The flag for whether to do rigorous
  *                    verification of the merkle proof. TODO clarify this.
  * @param   {Object} token (Optional) The OAuth2 token required to make the API call.
- * @returns {Array} Array of status string and page details object.
+ * @returns {Generator} Generator for isCorrect boolean and detail object of
+ *                      each revisions.
  */
-async function verifyPage(
-  title,
+async function* generateVerifyPage(
+  verifiedRevIds,
   server,
   verbose,
-  doLog,
+  isHtml,
   doVerifyMerkleProof,
   token = null
 ) {
   const apiURL = getApiURL(server)
-  let errorMsg
-  if (title.includes("_")) {
-    // TODO it's not just underscore, catch all potential errors in page title.
-    // This error should not happen in Chrome-Extension because the title has been
-    // sanitized. But this is not true for any library that calls this
-    // function, and so we always validate the title.
-    errorMsg = "INVALID TITLE: Do not use underscore in title."
-    return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
-  }
   VERBOSE = verbose
-  const [getVerifiedRevIdsStatus, res] = await getVerifiedRevIds(apiURL, title, token)
-  if (getVerifiedRevIdsStatus === ERROR_VERIFICATION_STATUS) {
-    return [ERROR_VERIFICATION_STATUS, res]
-  }
-  const verifiedRevIds = res
-  maybeLog(doLog, "Verified Page Revisions: ", verifiedRevIds)
 
   let previousVerificationData = null
-  let count = 0
-  const details = {
-    verified_ids: verifiedRevIds,
-    revision_details: [],
-  }
   let elapsed
   let totalElapsed = 0.0
-  for (const idx in verifiedRevIds) {
-    const revid = verifiedRevIds[idx]
-    maybeLog(doLog, `${parseInt(idx) + 1}. Verification of Revision ${revid}.`)
+  for (const revid of verifiedRevIds) {
     elapsedStart = hrtime()
 
-    const isHtml = !doLog // TODO: generalize this later
     const [verificationData, isCorrect, detail] = await verifyRevision(
       server,
       apiURL,
@@ -826,48 +805,63 @@ async function verifyPage(
     elapsed = getElapsedTime(elapsedStart)
     detail.elapsed = elapsed
     totalElapsed += elapsed
-    details.revision_details.push(detail)
-    if (doLog) {
-      printRevisionInfo(detail)
+    if (!isCorrect) {
+      yield [false, detail]
+      return
     }
-    if (isCorrect) {
-      count += 1
-    } else {
-      return [INVALID_VERIFICATION_STATUS, details]
+    previousVerificationData = verificationData
+    yield [true, detail]
+  }
+}
+
+async function verifyPageCLI(title, server, verbose, doVerifyMerkleProof, token) {
+  if (title.includes("_")) {
+    // TODO it's not just underscore, catch all potential errors in page title.
+    // This error should not happen in Chrome-Extension because the title has been
+    // sanitized.
+    log_red("INVALID TITLE: Do not use underscore in title.")
+    return
+  }
+
+  const apiURL = getApiURL(server)
+  const [revIdsStatus, res] = await getVerifiedRevIds(apiURL, title, token)
+  if (revIdsStatus === ERROR_VERIFICATION_STATUS) {
+    log_red(res.error)
+    return
+  }
+  const verifiedRevIds = res
+  console.log("Verified Page Revisions: ", verifiedRevIds)
+
+  let count = 0
+  if (verifiedRevIds.length > 0) {
+    // Print out the revision id of the first one.
+    console.log(`${count + 1}. Verification of Revision ${verifiedRevIds[0]}.`)
+  }
+  let verificationStatus
+  for await (const value of generateVerifyPage(verifiedRevIds, server, verbose, false, doVerifyMerkleProof)) {
+    count += 1
+    const [isCorrect, detail] = value
+    printRevisionInfo(detail)
+    if (!isCorrect) {
+      verificationStatus = INVALID_VERIFICATION_STATUS
+      break
     }
-    maybeLog(
-      doLog,
+    console.log(
       `  Progress: ${count} / ${verifiedRevIds.length} (${(
         (100 * count) /
         verifiedRevIds.length
       ).toFixed(1)}%)`
     )
-    previousVerificationData = verificationData
-  }
-  let status
-  if (count == verifiedRevIds.length) {
-    if (count === 0) {
-      status = "NORECORD"
-    } else {
-      status = VERIFIED_VERIFICATION_STATUS
+    if (count < verifiedRevIds.length) {
+      console.log(`${count + 1}. Verification of Revision ${verifiedRevIds[count]}.`)
     }
-  } else {
-    status = INVALID_VERIFICATION_STATUS
   }
-  return [status, details]
-}
-
-async function verifyPageCLI(title, server, verbose, doVerifyMerkleProof, token) {
-  const [verificationStatus, details] = await verifyPage(title, server, verbose, true, doVerifyMerkleProof);
-  if (verificationStatus === ERROR_VERIFICATION_STATUS) {
-    log_red(details.error)
-    return
-  }
+  verificationStatus = calculateStatus(count, verifiedRevIds.length)
   console.log(`Status: ${verificationStatus}`)
 }
 
 module.exports = {
-  verifyPage: verifyPage,
+  generateVerifyPage: generateVerifyPage,
   verifyPageCLI: verifyPageCLI,
   log_red: log_red,
   formatRevisionInfo2HTML: formatRevisionInfo2HTML,
