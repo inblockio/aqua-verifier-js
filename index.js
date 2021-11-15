@@ -740,7 +740,6 @@ async function verifyPage(
     // This error can not happen in Chrome-Extension because the title has been
     // sanitized.
     errorMsg = "INVALID TITLE: Do not use underscore in title."
-    maybeLog(doLog, cliRedify(errorMsg))
     return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
   }
   VERBOSE = verbose
@@ -752,17 +751,14 @@ async function verifyPage(
     response = await fetchWithToken(url, token)
   } catch (e) {
     errorMsg = "get_page_all_revs: " + e
-    maybeLog(doLog, cliRedify(errorMsg))
     return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
   }
   if (!response.ok) {
     errorMsg = "get_page_all_revs: " + formatHTTPError(response)
-    maybeLog(doLog, cliRedify(errorMsg))
     return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
   }
   const allRevInfo = await response.json()
   if (allRevInfo.hasOwnProperty("error")) {
-    maybeLog(doLog, cliRedify(allRevInfo))
     return [ERROR_VERIFICATION_STATUS, allRevInfo]
   }
   verifiedRevIds = allRevInfo.map((x) => x.rev_id)
@@ -837,12 +833,21 @@ async function verifyPage(
   } else {
     status = INVALID_VERIFICATION_STATUS
   }
-  maybeLog(doLog, `Status: ${status}`)
   return [status, details]
+}
+
+async function verifyPageCLI(title, server, verbose, doVerifyMerkleProof, token) {
+  const [verificationStatus, details] = await verifyPage(title, server, verbose, true, doVerifyMerkleProof);
+  if (verificationStatus === ERROR_VERIFICATION_STATUS) {
+    log_red(details.error)
+    return
+  }
+  console.log(`Status: ${verificationStatus}`)
 }
 
 module.exports = {
   verifyPage: verifyPage,
+  verifyPageCLI: verifyPageCLI,
   log_red: log_red,
   formatRevisionInfo2HTML: formatRevisionInfo2HTML,
   formatPageInfo2HTML: formatPageInfo2HTML,

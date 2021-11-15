@@ -37,5 +37,4 @@ const server = argv.server ?? "http://localhost:9352"
 const token = argv.token
 
 console.log(`Verifying ${title}`)
-const doLog = true
-main.verifyPage(title, server, verbose, doLog, doVerifyMerkleProof, token)
+main.verifyPageCLI(title, server, verbose, doVerifyMerkleProof, token)
