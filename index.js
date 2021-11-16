@@ -1,3 +1,5 @@
+const { STATUS_CODES } = require("http")
+
 const fetch = require("node-fetch")
 const sha3 = require("js-sha3")
 const moment = require("moment")
@@ -29,7 +31,10 @@ const VERIFIED_VERIFICATION_STATUS = "VERIFIED"
 const ERROR_VERIFICATION_STATUS = "ERROR"
 
 function formatHTTPError(response) {
-  return `HTTP ${response.status}: ${response.statusText}`
+  // We use STATUS_CODES mapping instead of response.statusText because
+  // apparently in HTTP/2, the statusText is removed. See
+  // https://stackoverflow.com/questions/41632077/why-is-the-statustext-of-my-xhr-empty
+  return `HTTP ${response.status}: ${STATUS_CODES[response.status]}`
 }
 
 function cliRedify(content) {
