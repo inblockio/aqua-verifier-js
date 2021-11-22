@@ -181,7 +181,7 @@ async function getWitnessHash(apiURL, token, witness_event_id) {
   }
   const witnessData = await witnessResponse.json()
   witnessHash = calculateWitnessHash(
-    witnessData.witness_event_verification_hash,
+    witnessData.domain_manifest_verification_hash,
     witnessData.merkle_root,
     witnessData.witness_network,
     witnessData.witness_event_transaction_hash
