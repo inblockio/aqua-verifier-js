@@ -548,20 +548,23 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
 }
 
 async function getContentHash(server, revid, token) {
-    // CONTENT DATA HASH CALCULATOR
-    const response = await fetchWithToken(
-      `${server}/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`,
-      token
-    )
-    if (!response.ok) {
-      throw formatHTTPError(response)
-    }
-    const jsonBody = await response.json()
-    if (!jsonBody.parse || !jsonBody.parse.wikitext && jsonBody.parse.wikitext !== "") {
-      throw `No wikitext found for revid ${revid}`
-    }
-    const content = jsonBody.parse.wikitext
-    return getHashSum(content)
+  // CONTENT DATA HASH CALCULATOR
+  const response = await fetchWithToken(
+    `${server}/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`,
+    token
+  )
+  if (!response.ok) {
+    throw formatHTTPError(response)
+  }
+  const jsonBody = await response.json()
+  if (
+    !jsonBody.parse ||
+    (!jsonBody.parse.wikitext && jsonBody.parse.wikitext !== "")
+  ) {
+    throw `No wikitext found for revid ${revid}`
+  }
+  const content = jsonBody.parse.wikitext
+  return getHashSum(content)
 }
 
 /**
@@ -814,7 +817,47 @@ async function* generateVerifyPage(
   }
 }
 
-async function verifyPageCLI(title, server, verbose, doVerifyMerkleProof, token) {
+// Used by the Chrome extension. Will be removed once we migrate to the
+// generator version.
+async function verifyPage(title, server, verbose, doVerifyMerkleProof, token) {
+  const apiURL = getApiURL(server)
+  const [revIdsStatus, res] = await getVerifiedRevIds(apiURL, title, token)
+  if (revIdsStatus === ERROR_VERIFICATION_STATUS) {
+    return [revIdsStatus, res]
+  }
+  const verifiedRevIds = res
+  let count = 0
+  const details = {
+    verified_ids: verifiedRevIds,
+    revision_details: [],
+  }
+  let verificationStatus
+  const isHtml = true
+  for await (const value of generateVerifyPage(
+    verifiedRevIds,
+    server,
+    verbose,
+    isHtml,
+    doVerifyMerkleProof
+  )) {
+    const [isCorrect, detail] = value
+    details.revision_details.push(detail)
+    if (!isCorrect) {
+      return [INVALID_VERIFICATION_STATUS, details]
+    }
+    count += 1
+  }
+  verificationStatus = calculateStatus(count, verifiedRevIds.length)
+  return [verificationStatus, details]
+}
+
+async function verifyPageCLI(
+  title,
+  server,
+  verbose,
+  doVerifyMerkleProof,
+  token
+) {
   if (title.includes("_")) {
     // TODO it's not just underscore, catch all potential errors in page title.
     // This error should not happen in Chrome-Extension because the title has been
@@ -838,7 +881,13 @@ async function verifyPageCLI(title, server, verbose, doVerifyMerkleProof, token)
     console.log(`${count + 1}. Verification of Revision ${verifiedRevIds[0]}.`)
   }
   let verificationStatus
-  for await (const value of generateVerifyPage(verifiedRevIds, server, verbose, false, doVerifyMerkleProof)) {
+  for await (const value of generateVerifyPage(
+    verifiedRevIds,
+    server,
+    verbose,
+    false,
+    doVerifyMerkleProof
+  )) {
     count += 1
     const [isCorrect, detail] = value
     printRevisionInfo(detail)
@@ -853,7 +902,9 @@ async function verifyPageCLI(title, server, verbose, doVerifyMerkleProof, token)
       ).toFixed(1)}%)`
     )
     if (count < verifiedRevIds.length) {
-      console.log(`${count + 1}. Verification of Revision ${verifiedRevIds[count]}.`)
+      console.log(
+        `${count + 1}. Verification of Revision ${verifiedRevIds[count]}.`
+      )
     }
   }
   verificationStatus = calculateStatus(count, verifiedRevIds.length)
@@ -861,6 +912,7 @@ async function verifyPageCLI(title, server, verbose, doVerifyMerkleProof, token)
 }
 
 module.exports = {
+  verifyPage: verifyPage,
   generateVerifyPage: generateVerifyPage,
   verifyPageCLI: verifyPageCLI,
   log_red: log_red,
