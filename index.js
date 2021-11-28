@@ -514,9 +514,13 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
 function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
   if (status === "NORECORD") {
     return "No revision record"
-  }
-  if (status === "N/A" || !details) {
+  } else if (status === "N/A" || !details) {
     return ""
+  } else if (status === ERROR_VERIFICATION_STATUS) {
+    if (details && "error" in details) {
+      return "ERROR: " + details.error
+    }
+    return "ERROR: Unknown cause"
   }
   const _space2 = "&nbsp&nbsp"
   let out = ""
