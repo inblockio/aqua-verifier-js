@@ -346,9 +346,17 @@ async function verifyWitness(
       `${newlineRed}${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match on ${suffix}`
     )
   } else {
+    let errMsg
+    if (etherScanResult === 'Transaction hash not found') {
+      errMsg = `Transaction hash not found on ${suffix}`
+    } else if (etherScanResult.includes('ENETUNREACH')) {
+      errMsg = `Server is unreachable on ${suffix}`
+    } else {
+      errMsg = `Online lookup failed on ${suffix}`
+    }
     detail += redify(
       isHtml,
-      `${newlineRed}${_space4}${CROSSMARK}${WATCH}Online lookup failed on ${suffix}`
+      `${newlineRed}${_space4}${CROSSMARK}${WATCH}${errMsg}`
     )
     detail += redify(
       isHtml,

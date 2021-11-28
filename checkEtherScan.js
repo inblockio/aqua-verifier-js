@@ -53,7 +53,7 @@ async function checkEtherScan(witnessNetwork, txHash, witnessVerificationHash) {
             //console.log(result == witnessVerificationHash)
             status = `${result == witnessVerificationHash}`
           } else {
-            status = 'Online lookup failed'
+            status = 'Transaction hash not found'
           }
           resolve(status)
         })
