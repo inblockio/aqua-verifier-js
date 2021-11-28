@@ -591,7 +591,7 @@ async function getContentHash(server, revid, token) {
  * - Does lookup on the Ethereum blockchain to find the recovered Address.
  * - If the recovered Address equals the current wallet address, sets valid
  *   signature to true.
- * - If witness status is inconsistent, sets isCorrect flag to false.
+ * - If witness status is inconsistent, sets witnessIsCorrect flag to false.
  * @param   {string} apiURL The URL for the API call.
  * @param   {Object} token The OAuth2 token required to make the API call.
  * @param   {string} revid The page revision id.
@@ -600,8 +600,9 @@ async function getContentHash(server, revid, token) {
  * @param   {string} contentHash The page content hash string.
  * @param   {boolean} isHtml Flag to format the log as an HTML string.
  * @param   {boolean} doVerifyMerkleProof Flag for do Verify Merkle Proof.
- * @returns {Array} An array containing verification data, isCorrect flag and
- *                  an array of page revision details.
+ * @returns {Array} An array containing verification data,
+ *                  verification-is-correct flag, and an array of page revision
+ *                  details.
  */
 async function verifyRevision(
   server,
@@ -705,14 +706,21 @@ async function verifyRevision(
   }
   detail.is_witnessed = witnessStatus !== "NO_WITNESS"
 
+  // Specify witness correctness
+  let witnessIsCorrect = true
+  if (detail.is_witnessed && witnessStatus === "INCONSISTENT") {
+    witnessIsCorrect = false
+  }
+
   if (data.signature === "" || data.signature === null) {
     detail.is_signed = false
-    return [data, true, detail]
+    return [data, witnessIsCorrect, detail]
   }
-  detail.is_signed = true
 
+  // Specify signature correctness
+  let signatureIsCorrect = false
+  detail.is_signed = true
   // Signature verification
-  let isCorrect = false
   // The padded message is required
   const paddedMessage =
     "I sign the following page verification_hash: [0x" +
@@ -725,16 +733,11 @@ async function verifyRevision(
     )
     if (recoveredAddress.toLowerCase() === data.wallet_address.toLowerCase()) {
       detail.valid_signature = true
-      isCorrect = true
+      signatureIsCorrect = true
     }
   } catch (e) {}
 
-  // Update isCorrect based on witness status
-  if (detail.is_witnessed && witnessStatus === "INCONSISTENT") {
-    isCorrect = false
-  }
-
-  return [data, isCorrect, detail]
+  return [data, signatureIsCorrect && witnessIsCorrect, detail]
 }
 
 async function getVerifiedRevIds(apiURL, title, token) {
