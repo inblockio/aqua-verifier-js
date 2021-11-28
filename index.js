@@ -523,32 +523,36 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
     return "ERROR: Unknown cause"
   }
   const _space2 = "&nbsp&nbsp"
+  let finalOutput = `Number of Verified Page Revisions: ${details.verified_ids.length}<br>`
   let out = ""
-  out += `Number of Verified Page Revisions: ${details.verified_ids.length}<br>`
   for (let i = 0; i < details.revision_details.length; i++) {
+    let revisionOut = ""
     if (i % 2 == 0) {
-      out += '<div style="background: LightCyan;">'
+      revisionOut += '<div style="background: LightCyan;">'
     } else {
-      out += "<div>"
+      revisionOut += "<div>"
     }
     const revid = details.verified_ids[i]
     const revidURL = `${serverUrl}/index.php?title=${title}&oldid=${revid}`
-    out += `${
+    revisionOut += `${
       i + 1
     }. Verification of <a href='${revidURL}' target="_blank">Revision ID ${revid}<a>.<br>`
-    out += formatRevisionInfo2HTML(
+    revisionOut += formatRevisionInfo2HTML(
       serverUrl,
       details.revision_details[i],
       verbose
     )
     const count = i + 1
-    out += `${_space2}Progress: ${count} / ${details.verified_ids.length} (${(
+    revisionOut += `${_space2}Progress: ${count} / ${details.verified_ids.length} (${(
       (100 * count) /
       details.verified_ids.length
     ).toFixed(1)}%)<br>`
-    out += "</div>"
+    revisionOut += "</div>"
+    // We order the output by the most recent revision shown first.
+    out = revisionOut + out
   }
-  return out
+  finalOutput += out
+  return finalOutput
 }
 
 async function getContentHash(server, revid, token) {
