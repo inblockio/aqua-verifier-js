@@ -84,5 +84,6 @@ async function testCheckEtherScan() {
 
 // testCheckEtherScan()
 module.exports = {
-  checkEtherScan: checkEtherScan
+  checkEtherScan: checkEtherScan,
+  witnessNetworkMap: witnessNetworkMap
 }

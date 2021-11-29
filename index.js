@@ -94,6 +94,11 @@ function clipboardifyHash(hash) {
   return `<button class="clipboard-button" data-clipboard-text="${hash}">${shortened}</button>`
 }
 
+function makeHref(content, url) {
+  const newTabString = ' target="_blank"'
+  return `<a href="${url}"${newTabString}>${content}</a>`
+}
+
 function getHashSum(content) {
   if (content === "") {
     return ""
@@ -331,7 +336,21 @@ async function verifyWitness(
   )
 
   detail += `${_space2}Witness event ${witness_event_id} detected`
-  detail += `${newline}${_space4}Transaction hash: ${witnessData.witness_event_transaction_hash}`
+  let txHash
+  if (isHtml) {
+    const witnessTxUrl =
+      cES.witnessNetworkMap[witnessData.witness_network] +
+      "/" +
+      witnessData.witness_event_transaction_hash
+    txHash = makeHref(
+      shortenHash(witnessData.witness_event_transaction_hash),
+      witnessTxUrl
+    )
+  } else {
+    txHash = witnessData.witness_event_transaction_hash
+  }
+
+  detail += `${newline}${_space4}Transaction hash: ${txHash}`
   // Do online lookup of transaction hash
   const etherScanResult = await cES.checkEtherScan(
     witnessData.witness_network,
@@ -348,9 +367,9 @@ async function verifyWitness(
     )
   } else {
     let errMsg
-    if (etherScanResult === 'Transaction hash not found') {
+    if (etherScanResult === "Transaction hash not found") {
       errMsg = `Transaction hash not found on ${suffix}`
-    } else if (etherScanResult.includes('ENETUNREACH')) {
+    } else if (etherScanResult.includes("ENETUNREACH")) {
       errMsg = `Server is unreachable on ${suffix}`
     } else {
       errMsg = `Online lookup failed on ${suffix}`
@@ -551,10 +570,9 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
       verbose
     )
     const count = i + 1
-    revisionOut += `${_space2}Progress: ${count} / ${details.verified_ids.length} (${(
-      (100 * count) /
+    revisionOut += `${_space2}Progress: ${count} / ${
       details.verified_ids.length
-    ).toFixed(1)}%)<br>`
+    } (${((100 * count) / details.verified_ids.length).toFixed(1)}%)<br>`
     revisionOut += "</div>"
     // We order the output by the most recent revision shown first.
     out = revisionOut + out
