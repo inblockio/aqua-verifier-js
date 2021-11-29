@@ -87,10 +87,11 @@ function shortenHash(hash) {
   return hash.slice(0, 6) + "..." + hash.slice(-6)
 }
 
-function hrefifyHash(hash, newTab = false) {
+function clipboardifyHash(hash) {
+  // We use clipboard.js in the frontend side so that when clicked, the hash is
+  // copied to clipboard.
   const shortened = shortenHash(hash)
-  newTabString = newTab ? ' target="_blank"' : ""
-  return `<a href="${hash}"${newTabString}>${shortened}</a>`
+  return `<button class="clipboard-button" data-clipboard-text="${hash}">${shortened}</button>`
 }
 
 function getHashSum(content) {
@@ -308,7 +309,7 @@ async function verifyWitness(
   const newlineRed = isHtml ? "" : "\n"
   const _space2 = isHtml ? "&nbsp&nbsp" : "  "
   const _space4 = _space2 + _space2
-  const maybeHrefify = (hash) => (isHtml ? hrefifyHash(hash) : hash)
+  const maybeClipboardify = (hash) => (isHtml ? clipboardifyHash(hash) : hash)
   const witnessResponse = await fetchWithToken(
     `${apiURL}/get_witness_data/${witness_event_id}`,
     token
@@ -382,19 +383,19 @@ async function verifyWitness(
     )
     detail += redify(
       isHtml,
-      `${newlineRed}${_space4}Merkle root: ${maybeHrefify(
+      `${newlineRed}${_space4}Merkle root: ${maybeClipboardify(
         witnessData.merkle_root
       )}`
     )
     detail += redify(
       isHtml,
-      `${newlineRed}${_space4}Expected: ${maybeHrefify(
+      `${newlineRed}${_space4}Expected: ${maybeClipboardify(
         witnessData.witness_event_verification_hash
       )}`
     )
     detail += redify(
       isHtml,
-      `${newlineRed}${_space4}Actual: ${maybeHrefify(
+      `${newlineRed}${_space4}Actual: ${maybeClipboardify(
         actual_witness_event_verification_hash
       )}`
     )
@@ -489,10 +490,9 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     )
     return out
   }
-  out += `${_space2}${CHECKMARK} Verification hash matches (${hrefifyHash(
-    detail.verification_hash,
-    true
-  )})<br>`
+  out += `${_space2}${CHECKMARK} Verification hash matches ${clipboardifyHash(
+    detail.verification_hash
+  )}<br>`
   if (!detail.is_witnessed) {
     out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
   }
