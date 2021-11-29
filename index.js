@@ -10,6 +10,9 @@ const ethers = require("ethers")
 
 const cES = require("./checkEtherScan.js")
 
+// Currently supported API version.
+const apiVersion = "0.1.0"
+
 let VERBOSE = undefined
 
 // https://stackoverflow.com/questions/9781218/how-to-change-node-jss-console-font-color
@@ -155,6 +158,23 @@ function fetchWithToken(url, token) {
 
 function getApiURL(server) {
   return `${server}/rest.php/data_accounting/v1`
+}
+
+async function getServerInfo(server) {
+  const url = `${server}/rest.php/data_accounting/get_server_info`
+  return fetch(url)
+}
+
+async function checkAPIVersionCompatibility(server) {
+  const response = await getServerInfo(server)
+  if (!response.ok) {
+    return ["API endpoint not found", false, ""]
+  }
+  const data = await response.json()
+  if (data && data.api_version) {
+    return ["FOUND", data.api_version === apiVersion, data.api_version]
+  }
+  return ["API endpoint found, but API version can't be retrieved", false, ""]
 }
 
 /**
@@ -907,6 +927,18 @@ async function verifyPageCLI(
     return
   }
 
+  const [status, versionMatches, serverVersion] = await checkAPIVersionCompatibility(server)
+  if (status !== "FOUND") {
+    log_red("Incompatible API version: " + status)
+    return
+  }
+  if (!versionMatches) {
+    log_red("Incompatible API version:")
+    log_red(`Current supported version: ${apiVersion}`)
+    log_red(`Server version: ${serverVersion}`)
+    return
+  }
+
   const apiURL = getApiURL(server)
   const [revIdsStatus, res] = await getVerifiedRevIds(apiURL, title, token)
   if (revIdsStatus === ERROR_VERIFICATION_STATUS) {
@@ -959,4 +991,5 @@ module.exports = {
   log_red: log_red,
   formatRevisionInfo2HTML: formatRevisionInfo2HTML,
   formatPageInfo2HTML: formatPageInfo2HTML,
+  apiVersion: apiVersion,
 }
