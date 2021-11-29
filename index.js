@@ -778,6 +778,10 @@ async function getVerifiedRevIds(apiURL, title, token) {
     return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
   }
   if (!response.ok) {
+    if (response.status === 404) {
+      // Simply return empty array when there are no revision id's in the DB.
+      return ["OK", []]
+    }
     errorMsg = "get_page_all_revs: " + formatHTTPError(response)
     return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
   }
@@ -785,7 +789,7 @@ async function getVerifiedRevIds(apiURL, title, token) {
   if (allRevInfo.hasOwnProperty("error")) {
     return [ERROR_VERIFICATION_STATUS, allRevInfo]
   }
-  return ["OK", allRevInfo.map((x) => x.rev_id)]
+  return ["OK", allRevInfo]
 }
 
 function calculateStatus(count, totalLength) {
