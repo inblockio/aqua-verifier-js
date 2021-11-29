@@ -11,7 +11,7 @@ const ethers = require("ethers")
 const cES = require("./checkEtherScan.js")
 
 // Currently supported API version.
-const apiVersion = "0.1.0"
+const apiVersion = "0.2.0"
 
 let VERBOSE = undefined
 
@@ -157,7 +157,7 @@ function fetchWithToken(url, token) {
 }
 
 function getApiURL(server) {
-  return `${server}/rest.php/data_accounting/v1`
+  return `${server}/rest.php/data_accounting`
 }
 
 async function getServerInfo(server) {
