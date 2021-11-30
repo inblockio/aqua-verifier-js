@@ -168,7 +168,7 @@ async function getServerInfo(server) {
 async function checkAPIVersionCompatibility(server) {
   const response = await getServerInfo(server)
   if (!response.ok) {
-    return ["API endpoint not found", false, ""]
+    return [formatHTTPError(response), false, ""]
   }
   const data = await response.json()
   if (data && data.api_version) {
@@ -929,7 +929,7 @@ async function verifyPageCLI(
 
   const [status, versionMatches, serverVersion] = await checkAPIVersionCompatibility(server)
   if (status !== "FOUND") {
-    log_red("Incompatible API version: " + status)
+    log_red("Error checking API version: " + status)
     return
   }
   if (!versionMatches) {
