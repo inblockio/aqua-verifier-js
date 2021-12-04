@@ -1,4 +1,4 @@
-const https = require( 'https' )
+const fetch = require("node-fetch")
 
 const re = /<span id='rawinput'.*<\/span>/
 
@@ -34,42 +34,28 @@ function sleep(ms) {
  */
 async function checkEtherScan(witnessNetwork, txHash, witnessVerificationHash) {
   try {
-    promise = new Promise((resolve, reject) => {
-      const witnessURL = witnessNetworkMap[witnessNetwork]
-      https.get(`${witnessURL}/${txHash}`, (resp) => {
-        let chunks_of_data = [];
-
-        resp.on('data', (fragments) => {
-          chunks_of_data.push(fragments);
-        });
-
-        resp.on('end', () => {
-          let response_body = Buffer.concat(chunks_of_data);
-          const outArray = re.exec(response_body.toString())
-          let status = ''
-          if (!!outArray) {
-            let result = outArray[0].split('0x9cef4ea1')[1]
-            result = result.slice(0, 128)
-            //console.log(result == witnessVerificationHash)
-            status = `${result == witnessVerificationHash}`
-          } else {
-            status = 'Transaction hash not found'
-          }
-          resolve(status)
-        })
-        resp.on('error', reject)
-      }).on('error', (error) => {
-        reject(error.message)
-      })
-    })
-    const out = await promise
+    const witnessURL = witnessNetworkMap[witnessNetwork]
+    const response = await fetch(`${witnessURL}/${txHash}`)
+    if (!response.ok) {
+      return `ERROR HTTP ${response.status} ${response.statusText}`
+    }
+    const body = await response.text()
+    const outArray = re.exec(body)
+    let status = ''
+    if (!!outArray) {
+      let result = outArray[0].split('0x9cef4ea1')[1]
+      result = result.slice(0, 128)
+      //console.log(result == witnessVerificationHash)
+      status = `${result == witnessVerificationHash}`
+    } else {
+      status = 'Transaction hash not found'
+    }
     // To avoid IP banning by etherscan.io
     await sleep(300)
-    return out
+    return status
   }
 	catch(e) {
-		// if the Promise is rejected
-    return e
+    return e.toString()
 	}
 }
 
