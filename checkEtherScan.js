@@ -35,7 +35,10 @@ function sleep(ms) {
 async function checkEtherScan(witnessNetwork, txHash, witnessVerificationHash) {
   try {
     const witnessURL = witnessNetworkMap[witnessNetwork]
-    const response = await fetch(`${witnessURL}/${txHash}`)
+    const options = {
+      timeout: 10000  // 10 seconds
+    }
+    const response = await fetch(`${witnessURL}/${txHash}`, options)
     if (!response.ok) {
       return `ERROR HTTP ${response.status} ${response.statusText}`
     }
