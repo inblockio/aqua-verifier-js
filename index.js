@@ -33,11 +33,11 @@ const INVALID_VERIFICATION_STATUS = "INVALID"
 const VERIFIED_VERIFICATION_STATUS = "VERIFIED"
 const ERROR_VERIFICATION_STATUS = "ERROR"
 
-function formatHTTPError(response) {
+function formatHTTPError(response, message = "") {
   // We use STATUS_CODES mapping instead of response.statusText because
   // apparently in HTTP/2, the statusText is removed. See
   // https://stackoverflow.com/questions/41632077/why-is-the-statustext-of-my-xhr-empty
-  return `HTTP ${response.status}: ${STATUS_CODES[response.status]}`
+  return `HTTP ${response.status}: ${STATUS_CODES[response.status]}.${message}`
 }
 
 function cliRedify(content) {
@@ -178,44 +178,6 @@ async function checkAPIVersionCompatibility(server) {
 }
 
 /**
- * Calls the get_witness_data API, parses the result and then builds and
- * returns the witness hash.
- * Steps:
- * - Calls get_witness_data API passing witness event ID, passes the output to
- *   the next step.
- * - Calculates the witness hash using witness_event_verification_hash,
- *   merkle_root, witness_network and the witness_event_transaction_hash.
- * - Returns the witness hash or an empty string.
- * @param   {string} apiURL The URL for the API call.
- * @param   {Object} token The OAuth2 token required to make the API call.
- * @param   {string} witness_event_id The key for the witness event.
- * @returns {string} The witness hash.
- */
-async function getWitnessHash(apiURL, token, witness_event_id) {
-  if (witness_event_id === null) {
-    return ""
-  }
-  const witnessResponse = await fetchWithToken(
-    `${apiURL}/get_witness_data/${witness_event_id}`,
-    token
-  )
-  if (witnessResponse.status === 404) {
-    return ""
-  }
-  if (!witnessResponse.ok) {
-    return `ERROR HTTP ${witnessResponse.status} ${witnessResponse.statusText}`
-  }
-  const witnessData = await witnessResponse.json()
-  witnessHash = calculateWitnessHash(
-    witnessData.domain_manifest_genesis_hash,
-    witnessData.merkle_root,
-    witnessData.witness_network,
-    witnessData.witness_event_transaction_hash
-  )
-  return witnessHash
-}
-
-/**
  * Verifies the integrity of the merkle branch.
  * Steps:
  * - Traverses the nodes in the passed merkle branch.
@@ -226,6 +188,10 @@ async function getWitnessHash(apiURL, token, witness_event_id) {
  * @returns {boolean} Whether the merkle integrity is OK.
  */
 function verifyMerkleIntegrity(merkleBranch, verificationHash) {
+  if (merkleBranch.length === 0) {
+    return false
+  }
+
   let prevSuccessor = null
   for (const idx in merkleBranch) {
     const node = merkleBranch[idx]
@@ -257,40 +223,7 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
 }
 
 /**
- * Verifies the Merkle proof.
- * Steps:
- * - Calls API request_merkle_proof passing the witness event id and the verification Hash.
- * - Calls function verifyMerkleIntegrity using witnessMerkleProof from API request_merkle_proof.
- * - Returns boolean value from function verifyMerkleIntegrity.
- * @param   {string} apiURL The URL for the API call.
- * @param   {Object} token The OAuth2 token required to make the API call.
- * @param   {string} witness_event_id
- * @param   {string} verificationHash
- * @returns {boolean} Whether the merkle integrity is OK.
- */
-async function verifyWitnessMerkleProof(
-  apiURL,
-  token,
-  witness_event_id,
-  verificationHash
-) {
-  const response = await fetchWithToken(
-    `${apiURL}/request_merkle_proof/${witness_event_id}/${verificationHash}`,
-    token
-  )
-  if (!response.ok) {
-    console.log(response)
-    // TODO better tell the user that there is something wrong.
-    return false
-  }
-  const witnessMerkleProof = await response.json()
-  if (witnessMerkleProof.length === 0) {
-    return false
-  }
-  return verifyMerkleIntegrity(witnessMerkleProof, verificationHash)
-}
-
-/**
+ * TODO THIS DOCSTRING IS OUTDATED!
  * Analyses the witnessing steps for a revision of a page and builds a
  * verification log.
  * Steps:
@@ -304,8 +237,8 @@ async function verifyWitnessMerkleProof(
  * - If checkEtherScan returns true, writes to the log that witness is
  *   verified.
  * - Else logs error from the checkEtherScan call.
- * - If doVerifyMerkleProof is set, calls function verifyWitnessMerkleProof.
- * - Writes the teturned boolean value from verifyWitnessMerkleProof to the
+ * - If doVerifyMerkleProof is set, calls function verifyMerkleIntegrity.
+ * - Writes the teturned boolean value from verifyMerkleIntegrity to the
  *   log.
  * - Returns the log, as an HTML string if the isHtml flag is set, otherwise text.
  * @param   {string} apiURL The URL for the API call.
@@ -319,13 +252,13 @@ async function verifyWitnessMerkleProof(
 async function verifyWitness(
   apiURL,
   token,
-  witness_event_id,
+  witnessData,
   verification_hash,
   doVerifyMerkleProof,
   isHtml
 ) {
   let detail = ""
-  if (witness_event_id === null) {
+  if (witnessData === null) {
     return ["NO_WITNESS", detail]
   }
 
@@ -335,27 +268,13 @@ async function verifyWitness(
   const _space2 = isHtml ? "&nbsp&nbsp" : "  "
   const _space4 = _space2 + _space2
   const maybeClipboardify = (hash) => (isHtml ? clipboardifyHash(hash) : hash)
-  const witnessResponse = await fetchWithToken(
-    `${apiURL}/get_witness_data/${witness_event_id}`,
-    token
-  )
-  if (witnessResponse.status === 404) {
-    return ["NO_WITNESS", detail]
-  }
-  if (!witnessResponse.ok) {
-    return [
-      "ERROR",
-      `${_space4}${CROSSMARK}Error retrieving witness data. Reason: HTTP ${witnessResponse.status} ${witnessResponse.statusText}`,
-    ]
-  }
-  const witnessText = await witnessResponse.text()
 
-  witnessData = JSON.parse(witnessText)
   actual_witness_event_verification_hash = getHashSum(
     witnessData.domain_manifest_genesis_hash + witnessData.merkle_root
   )
 
-  detail += `${_space2}Witness event ${witness_event_id} detected`
+  const wh = isHtml? '' : ' ' + shortenHash(witnessData.witness_hash)
+  detail += `${_space2}Witness event${wh} detected`
   let txHash
   if (isHtml) {
     const witnessTxUrl =
@@ -448,10 +367,8 @@ async function verifyWitness(
       // Corner case when the page is a domain manifest.
       detail += `${newline}${_space4}${CHECKMARK}Domain Manifest; therefore does not require Merkle Proof`
     } else {
-      const merkleProofIsOK = await verifyWitnessMerkleProof(
-        apiURL,
-        token,
-        witness_event_id,
+      const merkleProofIsOK = await verifyMerkleIntegrity(
+        witnessData.structured_merkle_proof,
         verification_hash
       )
       if (merkleProofIsOK) {
@@ -476,8 +393,8 @@ function printRevisionInfo(detail) {
   }
 
   console.log(`  Elapsed: ${detail.elapsed} s`)
-  console.log(`  Timestamp: ${formatDBTimestamp(detail.time_stamp)}`)
-  console.log(`  Domain ID: ${detail.domain_id}`)
+  console.log(`  Timestamp: ${formatDBTimestamp(detail.data.metadata.time_stamp)}`)
+  console.log(`  Domain ID: ${detail.data.metadata.domain_id}`)
   if (detail.verification_status === INVALID_VERIFICATION_STATUS) {
     log_red(`  ${CROSSMARK}` + " verification hash doesn't match")
     return
@@ -485,14 +402,13 @@ function printRevisionInfo(detail) {
   console.log(
     `  ${CHECKMARK} Verification hash matches (${detail.verification_hash})`
   )
-  if (!detail.is_witnessed) {
+  if (detail.is_witnessed) {
+    console.log(detail.witness_detail)
+  } else {
     log_dim(`    ${WARN} Not witnessed`)
   }
-  if (detail.witness_detail !== "") {
-    console.log(detail.witness_detail)
-  }
   if (VERBOSE) {
-    delete detail.witness_detail
+    delete detail.data.witness
     console.log("  VERBOSE backend", detail)
   }
   if (!detail.is_signed) {
@@ -501,7 +417,7 @@ function printRevisionInfo(detail) {
   }
   if (detail.valid_signature) {
     console.log(
-      `    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.wallet_address}`
+      `    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.data.signature.wallet_address}`
     )
   } else {
     log_red(`    ${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`)
@@ -521,8 +437,8 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     return `${_space2}no verification hash`
   }
   let out = `${_space2}Elapsed: ${detail.elapsed} s<br>`
-  out += `${_space2}${formatDBTimestamp(detail.time_stamp)}<br>`
-  out += `${_space2}Domain ID: ${detail.domain_id}<br>`
+  out += `${_space2}${formatDBTimestamp(detail.data.metadata.time_stamp)}<br>`
+  out += `${_space2}Domain ID: ${detail.data.metadata.domain_id}<br>`
   if (detail.verification_status === INVALID_VERIFICATION_STATUS) {
     out += htmlRedify(
       `${_space2}${CROSSMARK}` + " verification hash doesn't match"
@@ -547,8 +463,8 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     return out
   }
   if (detail.valid_signature) {
-    const walletURL = `${server}/index.php/User:${detail.wallet_address}`
-    const walletA = `<a href='${walletURL}' target="_blank">${detail.wallet_address}</a>`
+    const walletURL = `${server}/index.php/User:${detail.data.signature.wallet_address}`
+    const walletA = `<a href='${walletURL}' target="_blank">${detail.data.signature.wallet_address}</a>`
     out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${walletA}<br>`
   } else {
     out += htmlRedify(
@@ -570,7 +486,8 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
     return "ERROR: Unknown cause"
   }
   const _space2 = "&nbsp&nbsp"
-  let finalOutput = `Number of Verified Page Revisions: ${details.verified_ids.length}<br>`
+  const numRevisions = details.verification_hashes.length
+  let finalOutput = `Number of Verified Page Revisions: ${numRevisions}<br>`
   let out = ""
   for (let i = 0; i < details.revision_details.length; i++) {
     let revisionOut = ""
@@ -579,7 +496,7 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
     } else {
       revisionOut += "<div>"
     }
-    const revid = details.verified_ids[i]
+    const revid = details.revision_details[i].data.content.rev_id
     const revidURL = `${serverUrl}/index.php?title=${title}&oldid=${revid}`
     revisionOut += `${
       i + 1
@@ -591,8 +508,8 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
     )
     const count = i + 1
     revisionOut += `${_space2}Progress: ${count} / ${
-      details.verified_ids.length
-    } (${((100 * count) / details.verified_ids.length).toFixed(1)}%)<br>`
+      numRevisions
+    } (${((100 * count) / numRevisions).toFixed(1)}%)<br>`
     revisionOut += "</div>"
     // We order the output by the most recent revision shown first.
     out = revisionOut + out
@@ -601,27 +518,8 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
   return finalOutput
 }
 
-async function getContentHash(server, revid, token) {
-  // CONTENT DATA HASH CALCULATOR
-  const response = await fetchWithToken(
-    `${server}/api.php?action=parse&oldid=${revid}&prop=wikitext&formatversion=2&format=json`,
-    token
-  )
-  if (!response.ok) {
-    throw formatHTTPError(response)
-  }
-  const jsonBody = await response.json()
-  if (
-    !jsonBody.parse ||
-    (!jsonBody.parse.wikitext && jsonBody.parse.wikitext !== "")
-  ) {
-    throw `No wikitext found for revid ${revid}`
-  }
-  const content = jsonBody.parse.wikitext
-  return getHashSum(content)
-}
-
 /**
+ * TODO THIS DOCSTRING IS OUTDATED!
  * Verifies a revision from a page.
  * Steps:
  * - Calls verify_page API passing revision id.
@@ -654,80 +552,88 @@ async function verifyRevision(
   server,
   apiURL,
   token,
-  revid,
+  verificationHash,
   previousVerificationData,
   isHtml,
   doVerifyMerkleProof
 ) {
   let detail = {
-    rev_id: revid,
+    verification_hash: verificationHash,
     verification_status: null,
     is_witnessed: null,
     is_signed: false,
     valid_signature: false,
     witness_detail: null,
   }
-  const response = await fetchWithToken(`${apiURL}/verify_page/${revid}`, token)
-  if (!response.ok) {
-    return [null, false, { error_message: formatHTTPError(response) }]
-  }
+  const response = await fetchWithToken(`${apiURL}/get_revision/${verificationHash}`, token)
   let data = await response.json()
-  detail = Object.assign(detail, data)
+  if (!response.ok) {
+    const serverMessage = data.message
+    return [null, false, { error_message: "get_revision: " + formatHTTPError(response, " " + serverMessage) }]
+  }
+  detail.data = data
 
   // TODO do sanity check on domain id
-  const domainId = data.domain_id
+  const domainId = data.metadata.domain_id
 
-  const previousVerificationHash = previousVerificationData
-    ? previousVerificationData.verification_hash
-    : ""
+  const contentHash = getHashSum(data.content.content)
+  if (contentHash !== data.content.content_hash) {
+    return [null, false, { error_message: "Content hash doesn't match"}]
+  }
+  // To save storage for the cacher, e.g the Chrome extension.
+  delete detail.data.content.content
+
   const metadataHash = calculateMetadataHash(
     domainId,
-    data.time_stamp,
-    previousVerificationHash
+    data.metadata.time_stamp,
+    data.metadata.previous_verification_hash
   )
+  if (metadataHash !== data.metadata.metadata_hash) {
+    return [null, false, { error_message: "Metadata hash doesn't match"}]
+  }
 
   // SIGNATURE DATA HASH CALCULATOR
   let prevSignature = ""
   let prevPublicKey = ""
   let prevWitnessHash = ""
-  if (previousVerificationData !== null) {
+  if (data.verification_context.has_previous_signature) {
     // We have to do these ternary operations because sometimes the signature
     // and public key are nulls, not empty strings.
-    prevSignature = !!previousVerificationData.signature
-      ? previousVerificationData.signature
-      : ""
-    prevPublicKey = !!previousVerificationData.public_key
-      ? previousVerificationData.public_key
-      : ""
-    prevWitnessHash = await getWitnessHash(
-      apiURL,
-      token,
-      previousVerificationData.witness_event_id
-    )
-    if (prevWitnessHash.startsWith("ERROR HTTP ")) {
-      return [
-        null,
-        false,
-        {
-          error_message: `${CROSSMARK}Previous witness hash error: ${prevWitnessHash}`,
-        },
-      ]
-    }
+    prevSignature = previousVerificationData.signature.signature
+    prevPublicKey = previousVerificationData.signature.public_key
   }
   const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
+  if (data.verification_context.has_previous_signature && signatureHash !== previousVerificationData.signature.signature_hash) {
+    return [null, false, { error_message: "Previous signature hash doesn't match"}]
+  }
+
+  if (data.verification_context.has_previous_witness) {
+    if (!previousVerificationData.witness) {
+      return [null, false, { error_message: "Previous witness data not found"}]
+    }
+    prevWitnessHash = calculateWitnessHash(
+      previousVerificationData.witness.domain_manifest_genesis_hash,
+      previousVerificationData.witness.merkle_root,
+      previousVerificationData.witness.witness_network,
+      previousVerificationData.witness.witness_event_transaction_hash
+    )
+    if (prevWitnessHash !== previousVerificationData.witness.witness_hash) {
+      return [null, false, { error_message: "Witness hash doesn't match"}]
+    }
+  }
 
   // WITNESS DATA HASH CALCULATOR
-  const [witnessStatus, witness_detail] = await verifyWitness(
+  const [witnessStatus, witnessDetail] = await verifyWitness(
     apiURL,
     token,
-    data.witness_event_id,
-    data.verification_hash,
+    data.witness,
+    verificationHash,
     doVerifyMerkleProof,
     isHtml
   )
-  detail.witness_detail = witness_detail
+  detail.witness_detail = witnessDetail
+  detail.is_witnessed = witnessStatus !== "NO_WITNESS"
 
-  const contentHash = await getContentHash(server, revid, token)
   const calculatedVerificationHash = calculateVerificationHash(
     contentHash,
     metadataHash,
@@ -735,7 +641,7 @@ async function verifyRevision(
     prevWitnessHash
   )
 
-  if (calculatedVerificationHash !== data.verification_hash) {
+  if (calculatedVerificationHash !== verificationHash) {
     detail.verification_status = INVALID_VERIFICATION_STATUS
     if (VERBOSE) {
       log_red(`  Actual content hash: ${contentHash}`)
@@ -743,7 +649,7 @@ async function verifyRevision(
       log_red(`  Actual signature hash: ${signatureHash}`)
       log_red(`  Witness event id: ${data.witness_event_id}`)
       log_red(`  Actual previous witness hash: ${prevWitnessHash}`)
-      log_red(`  Expected verification hash: ${data.verification_hash}`)
+      log_red(`  Expected verification hash: ${verificationHash}`)
       log_red(`  Actual verification hash: ${calculatedVerificationHash}`)
     }
     return [null, false, detail]
@@ -758,7 +664,8 @@ async function verifyRevision(
     witnessIsCorrect = false
   }
 
-  if (data.signature === "" || data.signature === null) {
+  // TODO comparison with null is probably not needed. Needs testing.
+  if (data.signature.signature === "" || data.signature.signature === null) {
     detail.is_signed = false
     return [data, witnessIsCorrect, detail]
   }
@@ -770,14 +677,14 @@ async function verifyRevision(
   // The padded message is required
   const paddedMessage =
     "I sign the following page verification_hash: [0x" +
-    data.verification_hash +
+    verificationHash +
     "]"
   try {
     const recoveredAddress = ethers.utils.recoverAddress(
       ethers.utils.hashMessage(paddedMessage),
-      data.signature
+      data.signature.signature
     )
-    if (recoveredAddress.toLowerCase() === data.wallet_address.toLowerCase()) {
+    if (recoveredAddress.toLowerCase() === data.signature.wallet_address.toLowerCase()) {
       detail.valid_signature = true
       signatureIsCorrect = true
     }
@@ -786,30 +693,54 @@ async function verifyRevision(
   return [data, signatureIsCorrect && witnessIsCorrect, detail]
 }
 
-async function getVerifiedRevIds(apiURL, title, token) {
-  const url = `${apiURL}/get_page_all_revs/${title}`
+async function doPreliminaryAPICall(endpointName, url, token) {
   let response
   try {
     // We do a try block for our first ever fetch because the server might be
     // down, and we get a connection refused error.
     response = await fetchWithToken(url, token)
   } catch (e) {
-    errorMsg = "get_page_all_revs: " + e
+    errorMsg = `${endpointName}: ` + e
     return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
   }
   if (!response.ok) {
+    let status
     if (response.status === 404) {
-      // Simply return empty array when there are no revision id's in the DB.
+      status = "404"
+    } else {
+      status = ERROR_VERIFICATION_STATUS
+    }
+    errorMsg = `${endpointName}: ` + formatHTTPError(response)
+    return [status, { error: errorMsg }]
+  }
+  const content = await response.json()
+  if (content.hasOwnProperty("error")) {
+    return [ERROR_VERIFICATION_STATUS, content]
+  }
+  return ["OK", content]
+}
+
+async function getRevisionHashes(apiURL, title, token) {
+  const hashChainUrl = `${apiURL}/get_hash_chain_info/title/${title}`
+  const [status, info] = await doPreliminaryAPICall("get_hash_chain_info", hashChainUrl, token)
+  if (status !== "OK") {
+    if (status === "404") {
+      // Simply return empty array when get_hash_chain_info is 404.
+      // Note: this means that the output when a page is hidden from the public
+      // is indistinguishable from when it simply doesn't have a verification
+      // data. We can't confirm nor deny of which is it.
       return ["OK", []]
     }
-    errorMsg = "get_page_all_revs: " + formatHTTPError(response)
-    return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
+    return [status, info]
   }
-  const allRevInfo = await response.json()
-  if (allRevInfo.hasOwnProperty("error")) {
-    return [ERROR_VERIFICATION_STATUS, allRevInfo]
+
+  const revisionHashesUrl = `${apiURL}/get_revision_hashes/${info.genesis_hash}`
+  const [statusHashes, hashes] = await doPreliminaryAPICall("get_revision_hashes", revisionHashesUrl, token)
+  if (statusHashes === "404") {
+    // Same reasoning as the previous 404 handling.
+    return ["OK", []]
   }
-  return ["OK", allRevInfo]
+  return [statusHashes, hashes]
 }
 
 function calculateStatus(count, totalLength) {
@@ -825,6 +756,7 @@ function calculateStatus(count, totalLength) {
 }
 
 /**
+ * TODO THIS DOCSTRING IS OUTDATED!
  * Verifies all of the verified revisions of a page.
  * Steps:
  * - Loops through the revision IDs for the page.
@@ -841,7 +773,7 @@ function calculateStatus(count, totalLength) {
  *                      each revisions.
  */
 async function* generateVerifyPage(
-  verifiedRevIds,
+  verificationHashes,
   server,
   verbose,
   isHtml,
@@ -851,17 +783,17 @@ async function* generateVerifyPage(
   const apiURL = getApiURL(server)
   VERBOSE = verbose
 
-  let previousVerificationData = null
   let elapsed
   let totalElapsed = 0.0
-  for (const revid of verifiedRevIds) {
+  let previousVerificationData
+  for (const vh of verificationHashes) {
     elapsedStart = hrtime()
 
     const [verificationData, isCorrect, detail] = await verifyRevision(
       server,
       apiURL,
       token,
-      revid,
+      vh,
       previousVerificationData,
       isHtml,
       doVerifyMerkleProof
@@ -873,7 +805,11 @@ async function* generateVerifyPage(
       yield [false, detail]
       return
     }
-    previousVerificationData = verificationData
+    previousVerificationData = {
+      witness: detail.data.witness,
+      signature: detail.data.signature,
+      verification_hash: detail.verification_hash
+    }
     yield [true, detail]
   }
 }
@@ -882,20 +818,20 @@ async function* generateVerifyPage(
 // generator version.
 async function verifyPage(title, server, verbose, doVerifyMerkleProof, token) {
   const apiURL = getApiURL(server)
-  const [revIdsStatus, res] = await getVerifiedRevIds(apiURL, title, token)
-  if (revIdsStatus === ERROR_VERIFICATION_STATUS) {
-    return [revIdsStatus, res]
+  const [status, res] = await getRevisionHashes(apiURL, title, token)
+  if (status === ERROR_VERIFICATION_STATUS) {
+    return [status, res]
   }
-  const verifiedRevIds = res
+  const verificationHashes = res
   let count = 0
   const details = {
-    verified_ids: verifiedRevIds,
+    verification_hashes: verificationHashes,
     revision_details: [],
   }
   let verificationStatus
   const isHtml = true
   for await (const value of generateVerifyPage(
-    verifiedRevIds,
+    verificationHashes,
     server,
     verbose,
     isHtml,
@@ -908,7 +844,7 @@ async function verifyPage(title, server, verbose, doVerifyMerkleProof, token) {
     }
     count += 1
   }
-  verificationStatus = calculateStatus(count, verifiedRevIds.length)
+  verificationStatus = calculateStatus(count, verificationHashes.length)
   return [verificationStatus, details]
 }
 
@@ -927,7 +863,13 @@ async function verifyPageCLI(
     return
   }
 
-  const [status, versionMatches, serverVersion] = await checkAPIVersionCompatibility(server)
+  let status, versionMatches, serverVersion
+  try {
+    [status, versionMatches, serverVersion] = await checkAPIVersionCompatibility(server)
+  } catch (e) {
+    log_red("Error checking API version: " + e)
+    return
+  }
   if (status !== "FOUND") {
     log_red("Error checking API version: " + status)
     return
@@ -940,47 +882,47 @@ async function verifyPageCLI(
   }
 
   const apiURL = getApiURL(server)
-  const [revIdsStatus, res] = await getVerifiedRevIds(apiURL, title, token)
-  if (revIdsStatus === ERROR_VERIFICATION_STATUS) {
+  const [statusHashes, res] = await getRevisionHashes(apiURL, title, token)
+  if (statusHashes === ERROR_VERIFICATION_STATUS) {
     log_red(res.error)
     return
   }
-  const verifiedRevIds = res
-  console.log("Verified Page Revisions: ", verifiedRevIds)
+  const verificationHashes = res
+  console.log("Page Verification Hashes: ", verificationHashes)
 
   let count = 0
-  if (verifiedRevIds.length > 0) {
-    // Print out the revision id of the first one.
-    console.log(`${count + 1}. Verification of Revision ${verifiedRevIds[0]}.`)
+  if (verificationHashes.length > 0) {
+    // Print out the verification hash of the first one.
+    console.log(`${count + 1}. Verification of ${verificationHashes[0]}.`)
   }
   let verificationStatus
   for await (const value of generateVerifyPage(
-    verifiedRevIds,
+    verificationHashes,
     server,
     verbose,
     false,
     doVerifyMerkleProof
   )) {
-    count += 1
     const [isCorrect, detail] = value
     printRevisionInfo(detail)
     if (!isCorrect) {
       verificationStatus = INVALID_VERIFICATION_STATUS
       break
     }
+    count += 1
     console.log(
-      `  Progress: ${count} / ${verifiedRevIds.length} (${(
+      `  Progress: ${count} / ${verificationHashes.length} (${(
         (100 * count) /
-        verifiedRevIds.length
+        verificationHashes.length
       ).toFixed(1)}%)`
     )
-    if (count < verifiedRevIds.length) {
+    if (count < verificationHashes.length) {
       console.log(
-        `${count + 1}. Verification of Revision ${verifiedRevIds[count]}.`
+        `${count + 1}. Verification of Revision ${verificationHashes[count]}.`
       )
     }
   }
-  verificationStatus = calculateStatus(count, verifiedRevIds.length)
+  verificationStatus = calculateStatus(count, verificationHashes.length)
   console.log(`Status: ${verificationStatus}`)
 }
 
