@@ -11,7 +11,7 @@ const ethers = require("ethers")
 const cES = require("./checkEtherScan.js")
 
 // Currently supported API version.
-const apiVersion = "0.2.0"
+const apiVersion = "0.3.0"
 
 let VERBOSE = undefined
 
@@ -122,13 +122,13 @@ function calculateSignatureHash(signature, publicKey) {
 }
 
 function calculateWitnessHash(
-  domain_manifest_verification_hash,
+  domain_manifest_genesis_hash,
   merkle_root,
   witness_network,
   witness_tx_hash
 ) {
   return getHashSum(
-    domain_manifest_verification_hash +
+    domain_manifest_genesis_hash +
       merkle_root +
       witness_network +
       witness_tx_hash
@@ -207,7 +207,7 @@ async function getWitnessHash(apiURL, token, witness_event_id) {
   }
   const witnessData = await witnessResponse.json()
   witnessHash = calculateWitnessHash(
-    witnessData.domain_manifest_verification_hash,
+    witnessData.domain_manifest_genesis_hash,
     witnessData.merkle_root,
     witnessData.witness_network,
     witnessData.witness_event_transaction_hash
@@ -295,7 +295,7 @@ async function verifyWitnessMerkleProof(
  * verification log.
  * Steps:
  * - Calls get_witness_data API passing witness event ID.
- * - Calls function getHashSum passing domain_manifest_verification_hash and
+ * - Calls function getHashSum passing domain_manifest_genesis_hash and
  *   merkle_root from the get_witness_data API call.
  * - Writes witness event ID and transaction hash to the log.
  * - Calls function checkEtherScan (see the file checkEtherScan.js) passing
@@ -352,7 +352,7 @@ async function verifyWitness(
 
   witnessData = JSON.parse(witnessText)
   actual_witness_event_verification_hash = getHashSum(
-    witnessData.domain_manifest_verification_hash + witnessData.merkle_root
+    witnessData.domain_manifest_genesis_hash + witnessData.merkle_root
   )
 
   detail += `${_space2}Witness event ${witness_event_id} detected`
@@ -418,7 +418,7 @@ async function verifyWitness(
     )
     detail += redify(
       isHtml,
-      `${newlineRed}${_space4}Page manifest verification hash: ${witnessData.domain_manifest_verification_hash}`
+      `${newlineRed}${_space4}Page manifest verification hash: ${witnessData.domain_manifest_genesis_hash}`
     )
     detail += redify(
       isHtml,
@@ -444,7 +444,7 @@ async function verifyWitness(
   if (doVerifyMerkleProof) {
     // Only verify the witness merkle proof when verifyWitness is successful,
     // because this step is expensive.
-    if (verification_hash === witnessData.domain_manifest_verification_hash) {
+    if (verification_hash === witnessData.domain_manifest_genesis_hash) {
       // Corner case when the page is a domain manifest.
       detail += `${newline}${_space4}${CHECKMARK}Domain Manifest; therefore does not require Merkle Proof`
     } else {
