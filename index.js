@@ -211,7 +211,14 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
       }
     }
 
-    const calculatedSuccessor = getHashSum(node.left_leaf + node.right_leaf)
+    let calculatedSuccessor
+    if (!node.left_leaf) {
+      calculatedSuccessor = node.right_leaf
+    } else if (!node.right_leaf) {
+      calculatedSuccessor = node.left_leaf
+    } else {
+      calculatedSuccessor = getHashSum(node.left_leaf + node.right_leaf)
+    }
     if (calculatedSuccessor !== node.successor) {
       //console.log("Expected successor", calculatedSuccessor)
       //console.log("Actual successor", node.successor)
