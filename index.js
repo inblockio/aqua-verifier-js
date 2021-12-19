@@ -391,7 +391,7 @@ async function verifyWitness(
 
 function printRevisionInfo(detail) {
   if ("error_message" in detail) {
-    console.log(detail.error_message)
+    log_red(detail.error_message)
     return
   }
   if (!detail.hasOwnProperty("verification_hash")) {
