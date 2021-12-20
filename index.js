@@ -328,9 +328,11 @@ async function verifyWitness(
       isHtml,
       `${newlineRed}${_space4}Error code: ${etherScanResult}`
     )
+    // We want the long hash to be shortened in the HTML output.
+    const formattedWEVH = maybeClipboardify(actual_witness_event_verification_hash)
     detail += redify(
       isHtml,
-      `${newlineRed}${_space4}Verify manually: ${actual_witness_event_verification_hash}`
+      `${newlineRed}${_space4}Verify manually: ${formattedWEVH}`
     )
   }
   if (
