@@ -275,7 +275,7 @@ async function verifyWitness(
 ) {
   let detail = ""
   if (witnessData === null) {
-    return ["NO_WITNESS", detail]
+    return ["MISSING", detail]
   }
 
   const newline = isHtml ? "<br>" : "\n"
@@ -375,7 +375,7 @@ async function verifyWitness(
         actual_witness_event_verification_hash
       )}`
     )
-    return ["INCONSISTENT", detail]
+    return ["INVALID", detail]
   }
   // At this point, we know that the witness matches.
   if (doVerifyMerkleProof) {
@@ -393,11 +393,11 @@ async function verifyWitness(
         detail += `${newline}${_space4}${CHECKMARK}${BRANCH}Witness Merkle Proof is OK`
       } else {
         detail += `${newline}${_space4}${CROSSMARK}${BRANCH}Witness Merkle Proof is corrupted`
-        return ["INCONSISTENT", detail]
+        return ["INVALID", detail]
       }
     }
   }
-  return ["MATCHES", detail]
+  return ["VALID", detail]
 }
 
 function printRevisionInfo(detail) {
@@ -420,7 +420,7 @@ function printRevisionInfo(detail) {
   console.log(
     `  ${CHECKMARK} Verification hash matches (${detail.verification_hash})`
   )
-  if (detail.is_witnessed) {
+  if (detail.components_status.witness !== "MISSING") {
     console.log(detail.witness_detail)
   } else {
     log_dim(`    ${WARN} Not witnessed`)
@@ -429,11 +429,11 @@ function printRevisionInfo(detail) {
     delete detail.data.witness
     console.log("  VERBOSE backend", detail)
   }
-  if (!detail.is_signed) {
+  if (detail.components_status.signature === "MISSING") {
     log_dim(`    ${WARN} Not signed`)
     return
   }
-  if (detail.valid_signature) {
+  if (detail.components_status.signature === "VALID") {
     console.log(
       `    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.data.signature.wallet_address}`
     )
@@ -466,7 +466,7 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   out += `${_space2}${CHECKMARK} Verification hash matches ${clipboardifyHash(
     detail.verification_hash
   )}<br>`
-  if (!detail.is_witnessed) {
+  if (detail.components_status === "MISSING") {
     out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
   }
   if (detail.witness_detail !== "") {
@@ -476,11 +476,11 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     delete detail.witness_detail
     out += `${_space2}VERBOSE backend ` + JSON.stringify(detail) + "<br>"
   }
-  if (!detail.is_signed) {
+  if (detail.components_status.signature === "MISSING") {
     out += htmlDimify(`${_space4}${WARN} Not signed<br>`)
     return out
   }
-  if (detail.valid_signature) {
+  if (detail.components_status.signature === "VALID") {
     const walletURL = `${server}/index.php/User:${detail.data.signature.wallet_address}`
     const walletA = `<a href='${walletURL}' target="_blank">${detail.data.signature.wallet_address}</a>`
     out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${walletA}<br>`
@@ -578,10 +578,13 @@ async function verifyRevision(
   let detail = {
     verification_hash: verificationHash,
     verification_status: null,
-    is_witnessed: null,
-    is_signed: false,
-    valid_signature: false,
-    witness_detail: null,
+    components_status: {
+      content: true,  // TODO change to false when content hash is invalid
+      metadata: true, // TODO change to false when metadata hash is invalid
+      signature: "MISSING",
+      witness: "MISSING",
+    },
+    witness_detail: "",  // always in string
   }
   const response = await fetchWithToken(`${apiURL}/get_revision/${verificationHash}`, token)
   let data = await response.json()
@@ -650,7 +653,7 @@ async function verifyRevision(
     isHtml
   )
   detail.witness_detail = witnessDetail
-  detail.is_witnessed = witnessStatus !== "NO_WITNESS"
+  detail.components_status.witness = witnessStatus
 
   const calculatedVerificationHash = calculateVerificationHash(
     contentHash,
@@ -674,23 +677,18 @@ async function verifyRevision(
   } else {
     detail.verification_status = VERIFIED_VERIFICATION_STATUS
   }
-  detail.is_witnessed = witnessStatus !== "NO_WITNESS"
 
   // Specify witness correctness
-  let witnessIsCorrect = true
-  if (detail.is_witnessed && witnessStatus === "INCONSISTENT") {
-    witnessIsCorrect = false
-  }
+  let witnessIsCorrect = detail.components_status.witness !== "INVALID"
 
   // TODO comparison with null is probably not needed. Needs testing.
   if (data.signature.signature === "" || data.signature.signature === null) {
-    detail.is_signed = false
+    detail.components_status.signature = "MISSING"
     return [data, witnessIsCorrect, detail]
   }
 
   // Specify signature correctness
   let signatureIsCorrect = false
-  detail.is_signed = true
   // Signature verification
   // The padded message is required
   const paddedMessage =
@@ -703,10 +701,10 @@ async function verifyRevision(
       data.signature.signature
     )
     if (recoveredAddress.toLowerCase() === data.signature.wallet_address.toLowerCase()) {
-      detail.valid_signature = true
       signatureIsCorrect = true
     }
   } catch (e) {}
+  detail.components_status.signature = signatureIsCorrect ? "VALID" : "INVALID"
 
   return [data, signatureIsCorrect && witnessIsCorrect, detail]
 }
