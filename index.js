@@ -2,7 +2,6 @@ const { STATUS_CODES } = require("http")
 
 const fetch = require("node-fetch")
 const sha3 = require("js-sha3")
-const moment = require("moment")
 const hrtime = require("browser-process-hrtime")
 
 // utilities for verifying signatures
@@ -74,8 +73,18 @@ function formatMwTimestamp(ts) {
 }
 
 function formatDBTimestamp(ts) {
-  // Format 20210927075124 into '27 Sep 2021, 7:51:24 AM'
-  return moment(ts, "YYYYMMDDHHmmss").format("D MMM YYYY, h:mm:ss A") + " UTC"
+  // Format 20210927075124 into 'Sep 27, 2021, 7:51:24 AM UTC'
+  const year = ts.slice(0, 4)
+  const month = ts.slice(4, 6)
+  const day = ts.slice(6, 8)
+  const hour = ts.slice(8, 10)
+  const minute = ts.slice(10, 12)
+  const second = ts.slice(12, 14)
+  // We convert it to string first, because js has a confusing API of the month
+  // being the monthIndex, hence, '09' is interpreted as October!
+  const _date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`)
+  return _date.toLocaleString('en-us', {dateStyle: 'medium', timeStyle: 'medium'}) + " UTC"
+  //return dayjs(ts, "YYYYMMDDHHmmss").format("D MMM YYYY, h:mm:ss A") + " UTC"
 }
 
 function getElapsedTime(start) {
