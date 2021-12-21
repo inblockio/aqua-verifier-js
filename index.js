@@ -413,14 +413,14 @@ function printRevisionInfo(detail) {
   console.log(`  Elapsed: ${detail.elapsed} s`)
   console.log(`  Timestamp: ${formatDBTimestamp(detail.data.metadata.time_stamp)}`)
   console.log(`  Domain ID: ${detail.data.metadata.domain_id}`)
-  if (detail.verification_status === INVALID_VERIFICATION_STATUS) {
+  if (detail.status.verification === INVALID_VERIFICATION_STATUS) {
     log_red(`  ${CROSSMARK}` + " verification hash doesn't match")
     return
   }
   console.log(
     `  ${CHECKMARK} Verification hash matches (${detail.verification_hash})`
   )
-  if (detail.components_status.witness !== "MISSING") {
+  if (detail.status.witness !== "MISSING") {
     console.log(detail.witness_detail)
   } else {
     log_dim(`    ${WARN} Not witnessed`)
@@ -429,11 +429,11 @@ function printRevisionInfo(detail) {
     delete detail.data.witness
     console.log("  VERBOSE backend", detail)
   }
-  if (detail.components_status.signature === "MISSING") {
+  if (detail.status.signature === "MISSING") {
     log_dim(`    ${WARN} Not signed`)
     return
   }
-  if (detail.components_status.signature === "VALID") {
+  if (detail.status.signature === "VALID") {
     console.log(
       `    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.data.signature.wallet_address}`
     )
@@ -457,7 +457,7 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   let out = `${_space2}Elapsed: ${detail.elapsed} s<br>`
   out += `${_space2}${formatDBTimestamp(detail.data.metadata.time_stamp)}<br>`
   out += `${_space2}Domain ID: ${detail.data.metadata.domain_id}<br>`
-  if (detail.verification_status === INVALID_VERIFICATION_STATUS) {
+  if (detail.status.verification === INVALID_VERIFICATION_STATUS) {
     out += htmlRedify(
       `${_space2}${CROSSMARK}` + " verification hash doesn't match"
     )
@@ -466,7 +466,7 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   out += `${_space2}${CHECKMARK} Verification hash matches ${clipboardifyHash(
     detail.verification_hash
   )}<br>`
-  if (detail.components_status === "MISSING") {
+  if (detail.status === "MISSING") {
     out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
   }
   if (detail.witness_detail !== "") {
@@ -476,11 +476,11 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     delete detail.witness_detail
     out += `${_space2}VERBOSE backend ` + JSON.stringify(detail) + "<br>"
   }
-  if (detail.components_status.signature === "MISSING") {
+  if (detail.status.signature === "MISSING") {
     out += htmlDimify(`${_space4}${WARN} Not signed<br>`)
     return out
   }
-  if (detail.components_status.signature === "VALID") {
+  if (detail.status.signature === "VALID") {
     const walletURL = `${server}/index.php/User:${detail.data.signature.wallet_address}`
     const walletA = `<a href='${walletURL}' target="_blank">${detail.data.signature.wallet_address}</a>`
     out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${walletA}<br>`
@@ -577,12 +577,12 @@ async function verifyRevision(
 ) {
   let detail = {
     verification_hash: verificationHash,
-    verification_status: null,
-    components_status: {
+    status: {
       content: true,  // TODO change to false when content hash is invalid
       metadata: true, // TODO change to false when metadata hash is invalid
       signature: "MISSING",
       witness: "MISSING",
+      verification: INVALID_VERIFICATION_STATUS,
     },
     witness_detail: "",  // always in string
   }
@@ -653,7 +653,7 @@ async function verifyRevision(
     isHtml
   )
   detail.witness_detail = witnessDetail
-  detail.components_status.witness = witnessStatus
+  detail.status.witness = witnessStatus
 
   const calculatedVerificationHash = calculateVerificationHash(
     contentHash,
@@ -663,7 +663,7 @@ async function verifyRevision(
   )
 
   if (calculatedVerificationHash !== verificationHash) {
-    detail.verification_status = INVALID_VERIFICATION_STATUS
+    detail.status.verification = INVALID_VERIFICATION_STATUS
     if (VERBOSE) {
       log_red(`  Actual content hash: ${contentHash}`)
       log_red(`  Actual metadata hash: ${metadataHash}`)
@@ -675,15 +675,15 @@ async function verifyRevision(
     }
     return [null, false, detail]
   } else {
-    detail.verification_status = VERIFIED_VERIFICATION_STATUS
+    detail.status.verification = VERIFIED_VERIFICATION_STATUS
   }
 
   // Specify witness correctness
-  let witnessIsCorrect = detail.components_status.witness !== "INVALID"
+  let witnessIsCorrect = detail.status.witness !== "INVALID"
 
   // TODO comparison with null is probably not needed. Needs testing.
   if (data.signature.signature === "" || data.signature.signature === null) {
-    detail.components_status.signature = "MISSING"
+    detail.status.signature = "MISSING"
     return [data, witnessIsCorrect, detail]
   }
 
@@ -704,7 +704,7 @@ async function verifyRevision(
       signatureIsCorrect = true
     }
   } catch (e) {}
-  detail.components_status.signature = signatureIsCorrect ? "VALID" : "INVALID"
+  detail.status.signature = signatureIsCorrect ? "VALID" : "INVALID"
 
   return [data, signatureIsCorrect && witnessIsCorrect, detail]
 }
