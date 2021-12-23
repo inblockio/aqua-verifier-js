@@ -602,7 +602,11 @@ async function verifyRevision(
   // TODO do sanity check on domain id
   const domainId = data.metadata.domain_id
 
-  const contentHash = getHashSum(data.content.content)
+  let content = ''
+  for (const [slot, slotContent] of Object.entries(data.content.content)) {
+    content += slotContent
+  }
+  const contentHash = getHashSum(content)
   if (contentHash !== data.content.content_hash) {
     return [false, { error_message: "Content hash doesn't match"}]
   }
