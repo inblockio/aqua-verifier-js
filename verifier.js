@@ -12,10 +12,10 @@ function usage() {
 verifier.js [OPTIONS] <page title>
 
 Options:
-  -v       Verbose
-  --server <The url of the server, e.g. https://pkc.inblock.io>
-  -m       Verify the witness merkle proof of each revision
-  --token  (Optional) OAuth2 access token to access the API
+  -v                     Verbose
+  --server               <The url of the server, e.g. https://pkc.inblock.io>
+  --ignore-merkle-proof  Ignore verifying the witness merkle proof of each revision
+  --token                (Optional) OAuth2 access token to access the API
 If the --server is not specified, it defaults to http://localhost:9352`)
 }
 
@@ -30,11 +30,11 @@ const title = argv._[0]
 
 const verbose = argv.v
 
-const doVerifyMerkleProof = argv.m
+const ignoreMerkleProof = argv["ignore-merkle-proof"] ?? false
 
 const server = argv.server ?? "http://localhost:9352"
 
 const token = argv.token
 
 console.log(`Verifying ${title}`)
-main.verifyPageCLI(title, server, verbose, doVerifyMerkleProof, token)
+main.verifyPageCLI(title, server, verbose, !ignoreMerkleProof, token)
