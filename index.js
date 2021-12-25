@@ -567,7 +567,6 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
  *                  details.
  */
 async function verifyRevision(
-  server,
   apiURL,
   token,
   verificationHash,
@@ -806,7 +805,6 @@ async function* generateVerifyPage(
     elapsedStart = hrtime()
 
     const [verificationData, isCorrect, detail] = await verifyRevision(
-      server,
       apiURL,
       token,
       vh,
