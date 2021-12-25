@@ -950,4 +950,10 @@ module.exports = {
   formatRevisionInfo2HTML: formatRevisionInfo2HTML,
   formatPageInfo2HTML: formatPageInfo2HTML,
   apiVersion: apiVersion,
+  // For verified_import.js
+  ERROR_VERIFICATION_STATUS,
+  formatHTTPError,
+  getApiURL,
+  getRevisionHashes,
+  fetchWithToken,
 }
