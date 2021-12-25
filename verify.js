@@ -9,7 +9,7 @@ const main = require("./index")
 
 function usage() {
   console.log(`Usage:
-verifier.js [OPTIONS] <page title>
+verify.js [OPTIONS] <page title>
 
 Options:
   -v                     Verbose
