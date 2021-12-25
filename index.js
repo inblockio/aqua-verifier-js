@@ -563,9 +563,8 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
  *                  details.
  */
 async function verifyRevision(
-  apiURL,
-  token,
   verificationHash,
+  input,
   previousVerificationData,
   isHtml,
   doVerifyMerkleProof
@@ -581,11 +580,22 @@ async function verifyRevision(
     },
     witness_detail: "",  // always in string
   }
-  const response = await fetchWithToken(`${apiURL}/get_revision/${verificationHash}`, token)
-  let data = await response.json()
-  if (!response.ok) {
-    const serverMessage = data.message
-    return [null, false, { error_message: "get_revision: " + formatHTTPError(response, " " + serverMessage) }]
+
+  let data
+  if ("apiURL" in input) {
+    // Online verification
+    const response = await fetchWithToken(`${input.apiURL}/get_revision/${verificationHash}`, input.token)
+    data = await response.json()
+    if (!response.ok) {
+      const serverMessage = data.message
+      return [null, false, { error_message: "get_revision: " + formatHTTPError(response, " " + serverMessage) }]
+    }
+  } else {
+    // Offline verification
+    if (!("offline_data" in input)) {
+      return [null, false, { error_message: "get_revision: Either apiURL or offline_data must be in the `input` argument."}]
+    }
+    data = input.offline_data
   }
   detail.data = data
 
@@ -783,13 +793,21 @@ function calculateStatus(count, totalLength) {
  */
 async function* generateVerifyPage(
   verificationHashes,
-  server,
+  input,
   verbose,
   isHtml,
   doVerifyMerkleProof,
-  token = null
 ) {
-  const apiURL = getApiURL(server)
+  let revisionInput
+
+  if ("server" in input) {
+    // Online verification
+    const apiURL = getApiURL(input.server)
+    revisionInput = {
+      apiURL,
+      token: input.token
+    }
+  }
   VERBOSE = verbose
 
   let elapsed
@@ -798,10 +816,16 @@ async function* generateVerifyPage(
   for (const vh of verificationHashes) {
     elapsedStart = hrtime()
 
+    // For offline verification, we simply pass in the data.
+    if ("offline_data" in input) {
+      revisionInput = {
+        offline_data: input.offline_data.revisions[vh]
+      }
+    }
+
     const [verificationData, isCorrect, detail] = await verifyRevision(
-      apiURL,
-      token,
       vh,
+      revisionInput,
       previousVerificationData,
       isHtml,
       doVerifyMerkleProof
@@ -840,7 +864,7 @@ async function verifyPage(title, server, verbose, doVerifyMerkleProof, token) {
   const isHtml = true
   for await (const value of generateVerifyPage(
     verificationHashes,
-    server,
+    {server, token},
     verbose,
     isHtml,
     doVerifyMerkleProof
@@ -857,45 +881,54 @@ async function verifyPage(title, server, verbose, doVerifyMerkleProof, token) {
 }
 
 async function verifyPageCLI(
-  title,
-  server,
+  input,
   verbose,
   doVerifyMerkleProof,
-  token
 ) {
-  if (title.includes("_")) {
-    // TODO it's not just underscore, catch all potential errors in page title.
-    // This error should not happen in Chrome-Extension because the title has been
-    // sanitized.
-    log_red("INVALID TITLE: Do not use underscore in title.")
-    return
-  }
+  let verificationHashes
+  if ("server" in input && "title" in input) {
+    // Online verification
+    if (input.title.includes("_")) {
+      // TODO it's not just underscore, catch all potential errors in page title.
+      // This error should not happen in Chrome-Extension because the title has been
+      // sanitized.
+      log_red("INVALID TITLE: Do not use underscore in title.")
+      return
+    }
 
-  let status, versionMatches, serverVersion
-  try {
-    [status, versionMatches, serverVersion] = await checkAPIVersionCompatibility(server)
-  } catch (e) {
-    log_red("Error checking API version: " + e)
-    return
-  }
-  if (status !== "FOUND") {
-    log_red("Error checking API version: " + status)
-    return
-  }
-  if (!versionMatches) {
-    log_red("Incompatible API version:")
-    log_red(`Current supported version: ${apiVersion}`)
-    log_red(`Server version: ${serverVersion}`)
-    return
-  }
+    let status, versionMatches, serverVersion
+    try {
+      [status, versionMatches, serverVersion] = await checkAPIVersionCompatibility(input.server)
+    } catch (e) {
+      log_red("Error checking API version: " + e)
+      return
+    }
+    if (status !== "FOUND") {
+      log_red("Error checking API version: " + status)
+      return
+    }
+    if (!versionMatches) {
+      log_red("Incompatible API version:")
+      log_red(`Current supported version: ${apiVersion}`)
+      log_red(`Server version: ${serverVersion}`)
+      return
+    }
 
-  const apiURL = getApiURL(server)
-  const [statusHashes, res] = await getRevisionHashes(apiURL, title, token)
-  if (statusHashes === ERROR_VERIFICATION_STATUS) {
-    log_red(res.error)
-    return
+    const apiURL = getApiURL(input.server)
+    const [statusHashes, res] = await getRevisionHashes(apiURL, input.title, input.token)
+    if (statusHashes === ERROR_VERIFICATION_STATUS) {
+      log_red(res.error)
+      return
+    }
+    verificationHashes = res
+  } else {
+    // Offline verification
+    if (!("offline_data" in input)) {
+      log_red("verifyPageCLI: `input` must contain either 'server' and 'title', or 'offline_data'")
+      return
+    }
+    verificationHashes = Object.keys(input.offline_data.revisions)
   }
-  const verificationHashes = res
   console.log("Page Verification Hashes: ", verificationHashes)
 
   let count = 0
@@ -906,7 +939,7 @@ async function verifyPageCLI(
   let verificationStatus
   for await (const value of generateVerifyPage(
     verificationHashes,
-    server,
+    input,
     verbose,
     false,
     doVerifyMerkleProof
