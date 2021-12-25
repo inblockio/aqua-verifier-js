@@ -257,8 +257,6 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
  * - Writes the teturned boolean value from verifyMerkleIntegrity to the
  *   log.
  * - Returns the log, as an HTML string if the isHtml flag is set, otherwise text.
- * @param   {string} apiURL The URL for the API call.
- * @param   {Object} token The OAuth2 token required to make the API call.
  * @param   {string} witness_event_id
  * @param   {string} verificationHash
  * @param   {boolean} doVerifyMerkleProof Flag for do Verify Merkle Proof.
@@ -266,8 +264,6 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
  * @returns {string} The verification log.
  */
 async function verifyWitness(
-  apiURL,
-  token,
   witnessData,
   verification_hash,
   doVerifyMerkleProof,
@@ -644,8 +640,6 @@ async function verifyRevision(
 
   // WITNESS DATA HASH CALCULATOR
   const [witnessStatus, witnessDetail] = await verifyWitness(
-    apiURL,
-    token,
     data.witness,
     verificationHash,
     doVerifyMerkleProof,
