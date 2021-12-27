@@ -205,7 +205,7 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
   for (const idx in merkleBranch) {
     const node = merkleBranch[idx]
     const leaves = [node.left_leaf, node.right_leaf]
-    if (!!prevSuccessor) {
+    if (prevSuccessor) {
       if (!leaves.includes(prevSuccessor)) {
         //console.log("Expected leaf", prevSuccessor)
         //console.log("Actual leaves", leaves)
@@ -281,7 +281,7 @@ async function verifyWitness(
   const _space4 = _space2 + _space2
   const maybeClipboardify = (hash) => (isHtml ? clipboardifyHash(hash) : hash)
 
-  actual_witness_event_verification_hash = getHashSum(
+  const actual_witness_event_verification_hash = getHashSum(
     witnessData.domain_manifest_genesis_hash + witnessData.merkle_root
   )
 
@@ -401,7 +401,7 @@ function printRevisionInfo(detail) {
     log_red(detail.error_message)
     return
   }
-  if (!detail.hasOwnProperty("verification_hash")) {
+  if (!("verification_hash" in detail)) {
     console.log("  no verification hash")
     return
   }
@@ -447,7 +447,7 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   if ("error_message" in detail) {
     return _space2 + detail.error_message
   }
-  if (!detail.hasOwnProperty("verification_hash")) {
+  if (!("verification_hash" in detail)) {
     return `${_space2}no verification hash`
   }
   let out = `${_space2}Elapsed: ${detail.elapsed} s<br>`
@@ -588,12 +588,12 @@ async function verifyRevision(
     data = await response.json()
     if (!response.ok) {
       const serverMessage = data.message
-      return [null, false, { error_message: "get_revision: " + formatHTTPError(response, " " + serverMessage) }]
+      return [false, { error_message: "get_revision: " + formatHTTPError(response, " " + serverMessage) }]
     }
   } else {
     // Offline verification
     if (!("offline_data" in input)) {
-      return [null, false, { error_message: "get_revision: Either apiURL or offline_data must be in the `input` argument."}]
+      return [false, { error_message: "get_revision: Either apiURL or offline_data must be in the `input` argument."}]
     }
     data = input.offline_data
   }
@@ -604,7 +604,7 @@ async function verifyRevision(
 
   const contentHash = getHashSum(data.content.content)
   if (contentHash !== data.content.content_hash) {
-    return [null, false, { error_message: "Content hash doesn't match"}]
+    return [false, { error_message: "Content hash doesn't match"}]
   }
   // To save storage for the cacher, e.g the Chrome extension.
   delete detail.data.content.content
@@ -615,7 +615,7 @@ async function verifyRevision(
     data.metadata.previous_verification_hash
   )
   if (metadataHash !== data.metadata.metadata_hash) {
-    return [null, false, { error_message: "Metadata hash doesn't match"}]
+    return [false, { error_message: "Metadata hash doesn't match"}]
   }
 
   // SIGNATURE DATA HASH CALCULATOR
@@ -630,12 +630,12 @@ async function verifyRevision(
   }
   const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
   if (data.verification_context.has_previous_signature && signatureHash !== previousVerificationData.signature.signature_hash) {
-    return [null, false, { error_message: "Previous signature hash doesn't match"}]
+    return [false, { error_message: "Previous signature hash doesn't match"}]
   }
 
   if (data.verification_context.has_previous_witness) {
     if (!previousVerificationData.witness) {
-      return [null, false, { error_message: "Previous witness data not found"}]
+      return [false, { error_message: "Previous witness data not found"}]
     }
     prevWitnessHash = calculateWitnessHash(
       previousVerificationData.witness.domain_manifest_genesis_hash,
@@ -644,7 +644,7 @@ async function verifyRevision(
       previousVerificationData.witness.witness_event_transaction_hash
     )
     if (prevWitnessHash !== previousVerificationData.witness.witness_hash) {
-      return [null, false, { error_message: "Witness hash doesn't match"}]
+      return [false, { error_message: "Witness hash doesn't match"}]
     }
   }
 
@@ -676,7 +676,7 @@ async function verifyRevision(
       log_red(`  Expected verification hash: ${verificationHash}`)
       log_red(`  Actual verification hash: ${calculatedVerificationHash}`)
     }
-    return [null, false, detail]
+    return [false, detail]
   } else {
     detail.status.verification = VERIFIED_VERIFICATION_STATUS
   }
@@ -687,7 +687,7 @@ async function verifyRevision(
   // TODO comparison with null is probably not needed. Needs testing.
   if (!("signature" in data) || data.signature.signature === "" || data.signature.signature === null) {
     detail.status.signature = "MISSING"
-    return [data, witnessIsCorrect, detail]
+    return [witnessIsCorrect, detail]
   }
 
   // Specify signature correctness
@@ -706,14 +706,16 @@ async function verifyRevision(
     if (recoveredAddress.toLowerCase() === data.signature.wallet_address.toLowerCase()) {
       signatureIsCorrect = true
     }
-  } catch (e) {}
+  } catch (e) {
+    // continue regardless of error
+  }
   detail.status.signature = signatureIsCorrect ? "VALID" : "INVALID"
 
-  return [data, signatureIsCorrect && witnessIsCorrect, detail]
+  return [signatureIsCorrect && witnessIsCorrect, detail]
 }
 
 async function doPreliminaryAPICall(endpointName, url, token) {
-  let response
+  let response, errorMsg
   try {
     // We do a try block for our first ever fetch because the server might be
     // down, and we get a connection refused error.
@@ -733,7 +735,7 @@ async function doPreliminaryAPICall(endpointName, url, token) {
     return [status, { error: errorMsg }]
   }
   const content = await response.json()
-  if (content.hasOwnProperty("error")) {
+  if ("error" in content) {
     return [ERROR_VERIFICATION_STATUS, content]
   }
   return ["OK", content]
@@ -814,7 +816,7 @@ async function* generateVerifyPage(
   let totalElapsed = 0.0
   let previousVerificationData
   for (const vh of verificationHashes) {
-    elapsedStart = hrtime()
+    const elapsedStart = hrtime()
 
     // For offline verification, we simply pass in the data.
     if ("offline_data" in input) {
@@ -823,7 +825,7 @@ async function* generateVerifyPage(
       }
     }
 
-    const [verificationData, isCorrect, detail] = await verifyRevision(
+    const [isCorrect, detail] = await verifyRevision(
       vh,
       revisionInput,
       previousVerificationData,
