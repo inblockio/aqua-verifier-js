@@ -270,7 +270,7 @@ async function verifyWitness(
   isHtml
 ) {
   let detail = ""
-  if (witnessData === null) {
+  if (witnessData === null || witnessData === undefined) {
     return ["MISSING", detail]
   }
 
@@ -685,7 +685,7 @@ async function verifyRevision(
   let witnessIsCorrect = detail.status.witness !== "INVALID"
 
   // TODO comparison with null is probably not needed. Needs testing.
-  if (data.signature.signature === "" || data.signature.signature === null) {
+  if (!("signature" in data) || data.signature.signature === "" || data.signature.signature === null) {
     detail.status.signature = "MISSING"
     return [data, witnessIsCorrect, detail]
   }
