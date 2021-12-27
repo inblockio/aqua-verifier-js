@@ -6,12 +6,13 @@ const opts = {
 }
 const argv = require("minimist")(process.argv.slice(2), opts)
 const main = require("./index")
+const transformer = require("./transform")
 
 function usage() {
   console.log(`Usage:
 verify.js [OPTIONS] <page title>
 or
-verify.js [OPTIONS] --file <offline file.json>
+verify.js [OPTIONS] --file <offline file.json or file.xml>
 
 Options:
   -v                     Verbose
@@ -42,13 +43,25 @@ const token = argv.token
 // For offline JSON file verification
 const file = argv.file
 
-console.log(`Verifying ${title}`)
-let input
-if (file) {
-  const fs = require('fs')
-  const offline_data = JSON.parse(fs.readFileSync(file))
-  input = {offline_data}
-} else {
-  input = {title, server, token}
-}
-main.verifyPageCLI(input, verbose, !ignoreMerkleProof)
+console.log(`Verifying ${title}`);
+(async function() {
+  let input
+  if (file) {
+    const fs = require('fs')
+    const fileContent = fs.readFileSync(file)
+    let offline_data
+    if (file.endsWith(".json")) {
+      offline_data = JSON.parse(fileContent)
+    } else {
+      if (!file.endsWith(".xml")) {
+        main.log_red("Only JSON or XML files are supported.")
+        process.exit(1)
+      }
+      offline_data = await transformer.parseMWXmlString(fileContent)
+    }
+    input = {offline_data}
+  } else {
+    input = {title, server, token}
+  }
+  main.verifyPageCLI(input, verbose, !ignoreMerkleProof)
+})()

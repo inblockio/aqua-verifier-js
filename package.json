@@ -8,7 +8,8 @@
     "ethers": "^5.4.1",
     "js-sha3": "^0.8.0",
     "minimist": "^1.2.5",
-    "node-fetch": "^2.6.2"
+    "node-fetch": "^2.6.2",
+    "xml2js": "^0.4.23"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
