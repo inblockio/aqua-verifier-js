@@ -43,8 +43,7 @@ const token = argv.token
 
 // For offline JSON file verification
 const file = argv.file
-
-console.log(`Verifying ${title}`);
+;
 (async function() {
   let input
   if (file) {
@@ -60,8 +59,10 @@ console.log(`Verifying ${title}`);
       }
       offline_data = await transformer.parseMWXmlString(fileContent)
     }
+    console.log(`Verifying ${offline_data.title}`)
     input = {offline_data}
   } else {
+    console.log(`Verifying ${title}`);
     input = {title, server, token}
   }
   main.verifyPageCLI(input, verbose, !ignoreMerkleProof)
