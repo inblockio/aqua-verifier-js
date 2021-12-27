@@ -40,6 +40,11 @@ function transformMwXmlRevision2PkcJson(rev) {
 function transformRevisions(revisions) {
   const out = {}
   for (const rev of revisions) {
+    if (!("verification" in rev)) {
+      // If the revision does not have verification data, skip to next
+      // revision. Vim tip 99: 'gql' makes your comment look well.
+      continue
+    }
     out[rev.verification.verification_hash] = transformMwXmlRevision2PkcJson(rev)
   }
   return out
