@@ -19,7 +19,8 @@ Options:
   --server               <The url of the server, e.g. https://pkc.inblock.io>
   --ignore-merkle-proof  Ignore verifying the witness merkle proof of each revision
   --token                (Optional) OAuth2 access token to access the API
-If the --server is not specified, it defaults to http://localhost:9352`
+If the --server is not specified, it defaults to http://localhost:9352
+  --file                 (If present) The file to read from for the data`
   )
 }
 
