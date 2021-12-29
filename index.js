@@ -398,6 +398,8 @@ async function verifyWitness(
 }
 
 function printRevisionInfo(detail) {
+  // IMPORTANT! If you update this function, make sure to update
+  // formatRevisionInfo2HTML as well.
   if ("error_message" in detail) {
     log_red(detail.error_message)
     return
