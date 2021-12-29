@@ -26,6 +26,7 @@ const CHECKMARK = "✅"
 const LOCKED_WITH_PEN = "🔏"
 const WATCH = "⌚"
 const BRANCH = "🌿"
+const FILE_GLYPH = "📄"
 
 // Verification status
 const INVALID_VERIFICATION_STATUS = "INVALID"
@@ -416,6 +417,19 @@ function printRevisionInfo(detail) {
   console.log(
     `  ${CHECKMARK} Verification hash matches (${detail.verification_hash})`
   )
+
+  if (detail.status.file === "VERIFIED") {
+    // The alternative value of detail.status.file is "MISSING", where we don't
+    // log anything extra in that situation.
+    console.log(
+      `    ${CHECKMARK}${FILE_GLYPH} File content hash matches (${detail.file_content_hash})`
+    )
+  } else if (detail.status.file === "INVALID") {
+    console.log(
+      `    ${CROSSMARK}${FILE_GLYPH} Invalid file content hash`
+    )
+  }
+
   if (detail.status.witness !== "MISSING") {
     console.log(detail.witness_detail)
   } else {
@@ -462,11 +476,21 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   out += `${_space2}${CHECKMARK} Verification hash matches ${clipboardifyHash(
     detail.verification_hash
   )}<br>`
-  if (detail.status === "MISSING") {
-    out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
+
+  if (detail.status.file === "VERIFIED") {
+    // The alternative value of detail.status.file is "MISSING", where we don't
+    // log anything extra in that situation.
+    out += `${_space4}${CHECKMARK}${FILE_GLYPH} File content hash matches (${clipboardifyHash(
+      detail.file_content_hash
+    )})<br>`
+  } else if (detail.status.file === "INVALID") {
+    out += `${_space4}${CROSSMARK}${FILE_GLYPH} Invalid file content hash<br>`
   }
-  if (detail.witness_detail !== "") {
+
+  if (detail.status.witness !== "MISSING") {
     out += detail.witness_detail + "<br>"
+  } else {
+    out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
   }
   if (verbose) {
     delete detail.witness_detail
@@ -577,8 +601,10 @@ async function verifyRevision(
       signature: "MISSING",
       witness: "MISSING",
       verification: INVALID_VERIFICATION_STATUS,
+      file: "MISSING",
     },
     witness_detail: "",  // always in string
+    file_content_hash: "",
   }
 
   let data
@@ -602,6 +628,20 @@ async function verifyRevision(
   // TODO do sanity check on domain id
   const domainId = data.metadata.domain_id
 
+  if ('file' in data.content) {
+    // This is a file
+    const fileContentHash = data.content.content.file_content_hash || null
+    if (fileContentHash === null) {
+      return [false, { error_message: "Revision contains a file, but no file content hash" }]
+    }
+
+    const rawFileContent = Buffer.from(data.content.file.data || '', 'base64')
+    if (fileContentHash !== getHashSum(rawFileContent)) {
+      return [false, { error_message: "File content hash does not match" }]
+    }
+    detail.status.file = "VERIFIED"
+    detail.file_content_hash = fileContentHash
+  }
   let content = ''
   for (const [slot, slotContent] of Object.entries(data.content.content)) {
     content += slotContent
