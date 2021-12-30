@@ -1,15 +1,30 @@
 const xml2js = require('xml2js')
 
+function makeSureAlwaysArray(x) {
+  return Array.isArray(x) ? x : [x]
+}
+
 function transformMwXmlRevision2PkcJson(rev) {
   if (!(rev.format === 'text/x-wiki' && rev.model === 'wikitext')) {
     throw "We only support parsing wikitext for now"
   }
   const verification = rev.verification
+
+  // Prepare a content hash map of slots starting with the main slot.
+  const contentObj = {
+    // If rev.text['_'] is undefined, it means the revision has empty content.
+    "main": rev.text['_'] ?? ""
+  }
+  // And the rest of the slots.
+  for (const e of makeSureAlwaysArray(rev.content)) {
+    contentObj[e.role] = e.text['_'] ?? ""
+  }
+
   const out = {
     verification_context: JSON.parse(verification.verification_context),
     content: {
       rev_id: rev.id,
-      content: rev.text['_'],
+      content: contentObj,
       content_hash: verification.content_hash,
     },
     metadata: {
@@ -34,6 +49,11 @@ function transformMwXmlRevision2PkcJson(rev) {
     out.witness = verification.witness
     out.witness.structured_merkle_proof = JSON.parse(out.witness.structured_merkle_proof)
   }
+  if ("file_content_hash" in contentObj) {
+    // TODO we set it to empty string because the XML export currently doesn't
+    // contain the file data.
+    out.content.file = {data: ""}
+  }
   return out
 }
 
@@ -53,10 +73,10 @@ function transformRevisions(revisions) {
 async function parseMWXmlString(fileContent) {
   const parsed = await xml2js.parseStringPromise(fileContent, {explicitArray : false})
   // TODO we parse 1 page only for now
-  const pageData = parsed.mediawiki.page
+  const pageData = makeSureAlwaysArray(parsed.mediawiki.page)[0]
   // if pageData.revision is not an array, then it means it contains only 1
   // revision.
-  const revisions = Array.isArray(pageData.revision) ? pageData.revision : [pageData.revision]
+  const revisions = makeSureAlwaysArray(pageData.revision)
   const offline_data = {
     title: pageData.title,
     data_accounting_chain_height: pageData.data_accounting_chain_height,
