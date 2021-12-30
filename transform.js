@@ -54,11 +54,14 @@ async function parseMWXmlString(fileContent) {
   const parsed = await xml2js.parseStringPromise(fileContent, {explicitArray : false})
   // TODO we parse 1 page only for now
   const pageData = parsed.mediawiki.page
+  // if pageData.revision is not an array, then it means it contains only 1
+  // revision.
+  const revisions = Array.isArray(pageData.revision) ? pageData.revision : [pageData.revision]
   const offline_data = {
     title: pageData.title,
     data_accounting_chain_height: pageData.data_accounting_chain_height,
     version: "TODO",
-    revisions: transformRevisions(pageData.revision)
+    revisions: transformRevisions(revisions)
   }
   return offline_data
 }
