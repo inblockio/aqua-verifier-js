@@ -18,6 +18,7 @@ let VERBOSE = undefined
 const Reset = "\x1b[0m"
 const Dim = "\x1b[2m"
 const FgRed = "\x1b[31m"
+const FgYellow = "\x1b[33m"
 const FgWhite = "\x1b[37m"
 const BgGreen = "\x1b[42m"
 const WARN = "⚠️"
@@ -44,6 +45,10 @@ function cliRedify(content) {
   return FgRed + content + Reset
 }
 
+function cliYellowfy(content) {
+  return FgYellow + content + Reset
+}
+
 function htmlRedify(content) {
   return '<div style="color:Crimson;">' + content + "</div>"
 }
@@ -58,6 +63,10 @@ function htmlDimify(content) {
 
 function log_red(content) {
   console.log(cliRedify(content))
+}
+
+function log_yellow(content) {
+  console.log(cliYellowfy(content))
 }
 
 function log_dim(content) {
@@ -975,11 +984,11 @@ async function verifyPageCLI(input, verbose, doVerifyMerkleProof) {
   if ("server" in input && "title" in input) {
     // Online verification
     if (input.title.includes("_")) {
+      input.title = input.title.replace(/_/g, " ")
       // TODO it's not just underscore, catch all potential errors in page title.
       // This error should not happen in Chrome-Extension because the title has been
       // sanitized.
-      log_red("INVALID TITLE: Do not use underscore in title.")
-      return
+      log_yellow("Warning: Underscores in title are converted to spaces.")
     }
 
     let status, versionMatches, serverVersion
