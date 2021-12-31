@@ -84,7 +84,12 @@ function formatDBTimestamp(ts) {
   // We convert it to string first, because js has a confusing API of the month
   // being the monthIndex, hence, '09' is interpreted as October!
   const _date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`)
-  return _date.toLocaleString('en-us', {dateStyle: 'medium', timeStyle: 'medium'}) + " UTC"
+  return (
+    _date.toLocaleString("en-us", {
+      dateStyle: "medium",
+      timeStyle: "medium",
+    }) + " UTC"
+  )
   //return dayjs(ts, "YYYYMMDDHHmmss").format("D MMM YYYY, h:mm:ss A") + " UTC"
 }
 
@@ -286,7 +291,7 @@ async function verifyWitness(
     witnessData.domain_manifest_genesis_hash + witnessData.merkle_root
   )
 
-  const wh = isHtml? '' : ' ' + shortenHash(witnessData.witness_hash)
+  const wh = isHtml ? "" : " " + shortenHash(witnessData.witness_hash)
   detail += `${_space2}Witness event${wh} detected`
   let txHash
   if (isHtml) {
@@ -335,7 +340,9 @@ async function verifyWitness(
       `${newlineRed}${_space4}Error code: ${etherScanResult}`
     )
     // We want the long hash to be shortened in the HTML output.
-    const formattedWEVH = maybeClipboardify(actual_witness_event_verification_hash)
+    const formattedWEVH = maybeClipboardify(
+      actual_witness_event_verification_hash
+    )
     detail += redify(
       isHtml,
       `${newlineRed}${_space4}Verify manually: ${formattedWEVH}`
@@ -410,7 +417,9 @@ function printRevisionInfo(detail) {
   }
 
   console.log(`  Elapsed: ${detail.elapsed} s`)
-  console.log(`  Timestamp: ${formatDBTimestamp(detail.data.metadata.time_stamp)}`)
+  console.log(
+    `  Timestamp: ${formatDBTimestamp(detail.data.metadata.time_stamp)}`
+  )
   console.log(`  Domain ID: ${detail.data.metadata.domain_id}`)
   if (detail.status.verification === INVALID_VERIFICATION_STATUS) {
     log_red(`  ${CROSSMARK}` + " verification hash doesn't match")
@@ -427,9 +436,7 @@ function printRevisionInfo(detail) {
       `    ${CHECKMARK}${FILE_GLYPH} File content hash matches (${detail.file_content_hash})`
     )
   } else if (detail.status.file === "INVALID") {
-    console.log(
-      `    ${CROSSMARK}${FILE_GLYPH} Invalid file content hash`
-    )
+    console.log(`    ${CROSSMARK}${FILE_GLYPH} Invalid file content hash`)
   }
 
   if (detail.status.witness !== "MISSING") {
@@ -547,9 +554,10 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
       verbose
     )
     const count = i + 1
-    revisionOut += `${_space2}Progress: ${count} / ${
+    revisionOut += `${_space2}Progress: ${count} / ${numRevisions} (${(
+      (100 * count) /
       numRevisions
-    } (${((100 * count) / numRevisions).toFixed(1)}%)<br>`
+    ).toFixed(1)}%)<br>`
     revisionOut += "</div>"
     // We order the output by the most recent revision shown first.
     out = revisionOut + out
@@ -598,30 +606,45 @@ async function verifyRevision(
   let detail = {
     verification_hash: verificationHash,
     status: {
-      content: true,  // TODO change to false when content hash is invalid
+      content: true, // TODO change to false when content hash is invalid
       metadata: true, // TODO change to false when metadata hash is invalid
       signature: "MISSING",
       witness: "MISSING",
       verification: INVALID_VERIFICATION_STATUS,
       file: "MISSING",
     },
-    witness_detail: "",  // always in string
+    witness_detail: "", // always in string
     file_content_hash: "",
   }
 
   let data
   if ("apiURL" in input) {
     // Online verification
-    const response = await fetchWithToken(`${input.apiURL}/get_revision/${verificationHash}`, input.token)
+    const response = await fetchWithToken(
+      `${input.apiURL}/get_revision/${verificationHash}`,
+      input.token
+    )
     data = await response.json()
     if (!response.ok) {
       const serverMessage = data.message
-      return [false, { error_message: "get_revision: " + formatHTTPError(response, " " + serverMessage) }]
+      return [
+        false,
+        {
+          error_message:
+            "get_revision: " + formatHTTPError(response, " " + serverMessage),
+        },
+      ]
     }
   } else {
     // Offline verification
     if (!("offline_data" in input)) {
-      return [false, { error_message: "get_revision: Either apiURL or offline_data must be in the `input` argument."}]
+      return [
+        false,
+        {
+          error_message:
+            "get_revision: Either apiURL or offline_data must be in the `input` argument.",
+        },
+      ]
     }
     data = input.offline_data
   }
@@ -630,27 +653,30 @@ async function verifyRevision(
   // TODO do sanity check on domain id
   const domainId = data.metadata.domain_id
 
-  if ('file' in data.content) {
+  if ("file" in data.content) {
     // This is a file
     const fileContentHash = data.content.content.file_content_hash || null
     if (fileContentHash === null) {
-      return [false, { error_message: "Revision contains a file, but no file content hash" }]
+      return [
+        false,
+        { error_message: "Revision contains a file, but no file content hash" },
+      ]
     }
 
-    const rawFileContent = Buffer.from(data.content.file.data || '', 'base64')
+    const rawFileContent = Buffer.from(data.content.file.data || "", "base64")
     if (fileContentHash !== getHashSum(rawFileContent)) {
       return [false, { error_message: "File content hash does not match" }]
     }
     detail.status.file = "VERIFIED"
     detail.file_content_hash = fileContentHash
   }
-  let content = ''
+  let content = ""
   for (const [slot, slotContent] of Object.entries(data.content.content)) {
     content += slotContent
   }
   const contentHash = getHashSum(content)
   if (contentHash !== data.content.content_hash) {
-    return [false, { error_message: "Content hash doesn't match"}]
+    return [false, { error_message: "Content hash doesn't match" }]
   }
   // To save storage for the cacher, e.g the Chrome extension.
   delete detail.data.content.content
@@ -661,7 +687,7 @@ async function verifyRevision(
     data.metadata.previous_verification_hash
   )
   if (metadataHash !== data.metadata.metadata_hash) {
-    return [false, { error_message: "Metadata hash doesn't match"}]
+    return [false, { error_message: "Metadata hash doesn't match" }]
   }
 
   // SIGNATURE DATA HASH CALCULATOR
@@ -675,13 +701,16 @@ async function verifyRevision(
     prevPublicKey = previousVerificationData.signature.public_key
   }
   const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
-  if (data.verification_context.has_previous_signature && signatureHash !== previousVerificationData.signature.signature_hash) {
-    return [false, { error_message: "Previous signature hash doesn't match"}]
+  if (
+    data.verification_context.has_previous_signature &&
+    signatureHash !== previousVerificationData.signature.signature_hash
+  ) {
+    return [false, { error_message: "Previous signature hash doesn't match" }]
   }
 
   if (data.verification_context.has_previous_witness) {
     if (!previousVerificationData.witness) {
-      return [false, { error_message: "Previous witness data not found"}]
+      return [false, { error_message: "Previous witness data not found" }]
     }
     prevWitnessHash = calculateWitnessHash(
       previousVerificationData.witness.domain_manifest_genesis_hash,
@@ -690,7 +719,7 @@ async function verifyRevision(
       previousVerificationData.witness.witness_event_transaction_hash
     )
     if (prevWitnessHash !== previousVerificationData.witness.witness_hash) {
-      return [false, { error_message: "Witness hash doesn't match"}]
+      return [false, { error_message: "Witness hash doesn't match" }]
     }
   }
 
@@ -731,7 +760,11 @@ async function verifyRevision(
   let witnessIsCorrect = detail.status.witness !== "INVALID"
 
   // TODO comparison with null is probably not needed. Needs testing.
-  if (!("signature" in data) || data.signature.signature === "" || data.signature.signature === null) {
+  if (
+    !("signature" in data) ||
+    data.signature.signature === "" ||
+    data.signature.signature === null
+  ) {
     detail.status.signature = "MISSING"
     return [witnessIsCorrect, detail]
   }
@@ -741,15 +774,16 @@ async function verifyRevision(
   // Signature verification
   // The padded message is required
   const paddedMessage =
-    "I sign the following page verification_hash: [0x" +
-    verificationHash +
-    "]"
+    "I sign the following page verification_hash: [0x" + verificationHash + "]"
   try {
     const recoveredAddress = ethers.utils.recoverAddress(
       ethers.utils.hashMessage(paddedMessage),
       data.signature.signature
     )
-    if (recoveredAddress.toLowerCase() === data.signature.wallet_address.toLowerCase()) {
+    if (
+      recoveredAddress.toLowerCase() ===
+      data.signature.wallet_address.toLowerCase()
+    ) {
       signatureIsCorrect = true
     }
   } catch (e) {
@@ -789,7 +823,11 @@ async function doPreliminaryAPICall(endpointName, url, token) {
 
 async function getRevisionHashes(apiURL, title, token) {
   const hashChainUrl = `${apiURL}/get_hash_chain_info/title/${title}`
-  const [status, info] = await doPreliminaryAPICall("get_hash_chain_info", hashChainUrl, token)
+  const [status, info] = await doPreliminaryAPICall(
+    "get_hash_chain_info",
+    hashChainUrl,
+    token
+  )
   if (status !== "OK") {
     if (status === "404") {
       // Simply return empty array when get_hash_chain_info is 404.
@@ -802,7 +840,11 @@ async function getRevisionHashes(apiURL, title, token) {
   }
 
   const revisionHashesUrl = `${apiURL}/get_revision_hashes/${info.genesis_hash}`
-  const [statusHashes, hashes] = await doPreliminaryAPICall("get_revision_hashes", revisionHashesUrl, token)
+  const [statusHashes, hashes] = await doPreliminaryAPICall(
+    "get_revision_hashes",
+    revisionHashesUrl,
+    token
+  )
   if (statusHashes === "404") {
     // Same reasoning as the previous 404 handling.
     return ["OK", []]
@@ -844,7 +886,7 @@ async function* generateVerifyPage(
   input,
   verbose,
   isHtml,
-  doVerifyMerkleProof,
+  doVerifyMerkleProof
 ) {
   let revisionInput
 
@@ -853,7 +895,7 @@ async function* generateVerifyPage(
     const apiURL = getApiURL(input.server)
     revisionInput = {
       apiURL,
-      token: input.token
+      token: input.token,
     }
   }
   VERBOSE = verbose
@@ -867,7 +909,7 @@ async function* generateVerifyPage(
     // For offline verification, we simply pass in the data.
     if ("offline_data" in input) {
       revisionInput = {
-        offline_data: input.offline_data.revisions[vh]
+        offline_data: input.offline_data.revisions[vh],
       }
     }
 
@@ -888,7 +930,7 @@ async function* generateVerifyPage(
     previousVerificationData = {
       witness: detail.data.witness,
       signature: detail.data.signature,
-      verification_hash: detail.verification_hash
+      verification_hash: detail.verification_hash,
     }
     yield [true, detail]
   }
@@ -912,7 +954,7 @@ async function verifyPage(title, server, verbose, doVerifyMerkleProof, token) {
   const isHtml = true
   for await (const value of generateVerifyPage(
     verificationHashes,
-    {server, token},
+    { server, token },
     verbose,
     isHtml,
     doVerifyMerkleProof
@@ -928,11 +970,7 @@ async function verifyPage(title, server, verbose, doVerifyMerkleProof, token) {
   return [verificationStatus, details]
 }
 
-async function verifyPageCLI(
-  input,
-  verbose,
-  doVerifyMerkleProof,
-) {
+async function verifyPageCLI(input, verbose, doVerifyMerkleProof) {
   let verificationHashes
   if ("server" in input && "title" in input) {
     // Online verification
@@ -946,7 +984,8 @@ async function verifyPageCLI(
 
     let status, versionMatches, serverVersion
     try {
-      [status, versionMatches, serverVersion] = await checkAPIVersionCompatibility(input.server)
+      ;[status, versionMatches, serverVersion] =
+        await checkAPIVersionCompatibility(input.server)
     } catch (e) {
       log_red("Error checking API version: " + e)
       return
@@ -963,7 +1002,11 @@ async function verifyPageCLI(
     }
 
     const apiURL = getApiURL(input.server)
-    const [statusHashes, res] = await getRevisionHashes(apiURL, input.title, input.token)
+    const [statusHashes, res] = await getRevisionHashes(
+      apiURL,
+      input.title,
+      input.token
+    )
     if (statusHashes === ERROR_VERIFICATION_STATUS) {
       log_red(res.error)
       return
@@ -972,7 +1015,9 @@ async function verifyPageCLI(
   } else {
     // Offline verification
     if (!("offline_data" in input)) {
-      log_red("verifyPageCLI: `input` must contain either 'server' and 'title', or 'offline_data'")
+      log_red(
+        "verifyPageCLI: `input` must contain either 'server' and 'title', or 'offline_data'"
+      )
       return
     }
     verificationHashes = Object.keys(input.offline_data.revisions)

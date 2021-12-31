@@ -20,8 +20,7 @@ Options:
   --ignore-merkle-proof  Ignore verifying the witness merkle proof of each revision
   --token                (Optional) OAuth2 access token to access the API
 If the --server is not specified, it defaults to http://localhost:9352
-  --file                 (If present) The file to read from for the data`
-  )
+  --file                 (If present) The file to read from for the data`)
 }
 
 // This should be a commandline argument for specifying the title of the page
@@ -43,9 +42,9 @@ const token = argv.token
 
 // For offline JSON file verification
 const file = argv.file
-;
+
 async function readExportFile(filename) {
-  const fs = require('fs')
+  const fs = require("fs")
   const fileContent = fs.readFileSync(filename)
   let offlineData
   if (filename.endsWith(".json")) {
@@ -61,15 +60,15 @@ async function readExportFile(filename) {
 }
 
 // The main function
-(async function() {
+;(async function () {
   let input
   if (file) {
     const offlineData = await readExportFile(file)
     console.log(`Verifying ${offlineData.title}`)
-    input = {offline_data: offlineData}
+    input = { offline_data: offlineData }
   } else {
-    console.log(`Verifying ${title}`);
-    input = {title, server, token}
+    console.log(`Verifying ${title}`)
+    input = { title, server, token }
   }
   main.verifyPageCLI(input, verbose, !ignoreMerkleProof)
 })()

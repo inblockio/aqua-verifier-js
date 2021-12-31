@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const fs = require('fs')
+const fs = require("fs")
 const main = require("./index")
 
 const opts = {}
@@ -18,7 +18,7 @@ if (title.includes("_")) {
   process.exit(1)
 }
 
-(async function() {
+;(async function () {
   const token = null
   // TODO check API version compatibility
   const apiURL = main.getApiURL(server)
@@ -31,19 +31,26 @@ if (title.includes("_")) {
   let output = {
     version: main.apiVersion,
     title: title,
-    revisions: {}
+    revisions: {},
   }
   let count = 1
   // See https://stackoverflow.com/questions/32938213/is-there-a-way-to-erase-the-last-line-of-output
-  const magicWord = '\r\x1b[K'
+  const magicWord = "\r\x1b[K"
 
   console.log()
   for (const verificationHash of verificationHashes) {
-    process.stdout.write(`${magicWord}Downloading revision ${count} / ${verificationHashes.length}`)
-    const response = await main.fetchWithToken(`${apiURL}/get_revision/${verificationHash}`, token)
+    process.stdout.write(
+      `${magicWord}Downloading revision ${count} / ${verificationHashes.length}`
+    )
+    const response = await main.fetchWithToken(
+      `${apiURL}/get_revision/${verificationHash}`,
+      token
+    )
     let data = await response.json()
     if (!response.ok) {
-      main.log_red("get_revision: " + main.formatHTTPError(response, " " + data.message))
+      main.log_red(
+        "get_revision: " + main.formatHTTPError(response, " " + data.message)
+      )
       process.exit(1)
     }
     output.revisions[verificationHash] = data
