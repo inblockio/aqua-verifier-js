@@ -45,6 +45,10 @@ const file = argv.file
 
 async function readExportFile(filename) {
   const fs = require("fs")
+   if (!fs.existsSync(filename)) {
+     main.log_red(`ERROR: The file ${filename} does not exist.`)
+     process.exit(1)
+   }
   const fileContent = fs.readFileSync(filename)
   let offlineData
   if (filename.endsWith(".json")) {
