@@ -44,23 +44,29 @@ const token = argv.token
 // For offline JSON file verification
 const file = argv.file
 ;
+async function readExportFile(filename) {
+  const fs = require('fs')
+  const fileContent = fs.readFileSync(filename)
+  let offlineData
+  if (filename.endsWith(".json")) {
+    offlineData = JSON.parse(fileContent)
+  } else {
+    if (!filename.endsWith(".xml")) {
+      main.log_red("Only JSON or XML files are supported.")
+      process.exit(1)
+    }
+    offlineData = await transformer.parseMWXmlString(fileContent)
+  }
+  return offlineData
+}
+
+// The main function
 (async function() {
   let input
   if (file) {
-    const fs = require('fs')
-    const fileContent = fs.readFileSync(file)
-    let offline_data
-    if (file.endsWith(".json")) {
-      offline_data = JSON.parse(fileContent)
-    } else {
-      if (!file.endsWith(".xml")) {
-        main.log_red("Only JSON or XML files are supported.")
-        process.exit(1)
-      }
-      offline_data = await transformer.parseMWXmlString(fileContent)
-    }
-    console.log(`Verifying ${offline_data.title}`)
-    input = {offline_data}
+    const offlineData = await readExportFile(file)
+    console.log(`Verifying ${offlineData.title}`)
+    input = {offline_data: offlineData}
   } else {
     console.log(`Verifying ${title}`);
     input = {title, server, token}
