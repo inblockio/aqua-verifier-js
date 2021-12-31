@@ -70,20 +70,25 @@ function transformRevisions(revisions) {
   return out
 }
 
+/*
+ * Returns an array of export detail of pages. If the XML string only has one
+ * page, then it is an array of 1 page data.
+ */
 async function parseMWXmlString(fileContent) {
   const parsed = await xml2js.parseStringPromise(fileContent, {explicitArray : false})
-  // TODO we parse 1 page only for now
-  const pageData = makeSureAlwaysArray(parsed.mediawiki.page)[0]
-  // if pageData.revision is not an array, then it means it contains only 1
-  // revision.
-  const revisions = makeSureAlwaysArray(pageData.revision)
-  const offline_data = {
-    title: pageData.title,
-    data_accounting_chain_height: pageData.data_accounting_chain_height,
-    version: "TODO",
-    revisions: transformRevisions(revisions)
-  }
-  return offline_data
+  const pages = makeSureAlwaysArray(parsed.mediawiki.page)
+  return pages.map(page => {
+    // if page.revision is not an array, then it means it contains only 1
+    // revision.
+    const revisions = makeSureAlwaysArray(page.revision)
+    const offline_data = {
+      title: page.title,
+      data_accounting_chain_height: page.data_accounting_chain_height,
+      version: "TODO",
+      revisions: transformRevisions(revisions)
+    }
+    return offline_data
+  })
 }
 
 module.exports = {

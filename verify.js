@@ -52,7 +52,9 @@ async function readExportFile(filename) {
   const fileContent = fs.readFileSync(filename)
   let offlineData
   if (filename.endsWith(".json")) {
-    offlineData = JSON.parse(fileContent)
+    // It is an array of 1 element, because verified_import only imports 1
+    // page.
+    offlineData = [JSON.parse(fileContent)]
   } else {
     if (!filename.endsWith(".xml")) {
       main.log_red("Only JSON or XML files are supported.")
@@ -64,15 +66,19 @@ async function readExportFile(filename) {
 }
 
 // The main function
-;(async function () {
+(async function () {
   let input
   if (file) {
     const offlineData = await readExportFile(file)
-    console.log(`Verifying ${offlineData.title}`)
-    input = { offline_data: offlineData }
+    for (const offlinePageData of offlineData) {
+      console.log(`Verifying ${offlinePageData.title}`)
+      input = { offline_data: offlinePageData }
+      await main.verifyPageCLI(input, verbose, !ignoreMerkleProof)
+      console.log()
+    }
   } else {
     console.log(`Verifying ${title}`)
     input = { title, server, token }
+    main.verifyPageCLI(input, verbose, !ignoreMerkleProof)
   }
-  main.verifyPageCLI(input, verbose, !ignoreMerkleProof)
 })()
