@@ -575,6 +575,23 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
   return finalOutput
 }
 
+function verifyFile(data) {
+  const fileContentHash = data.content.content.file_content_hash || null
+  if (fileContentHash === null) {
+    return [
+      false,
+      { error_message: "Revision contains a file, but no file content hash" },
+    ]
+  }
+
+  const rawFileContent = Buffer.from(data.content.file.data || "", "base64")
+  if (fileContentHash !== getHashSum(rawFileContent)) {
+    return [false, { error_message: "File content hash does not match" }]
+  }
+
+  return [true, { file_content_hash: fileContentHash }]
+}
+
 /**
  * TODO THIS DOCSTRING IS OUTDATED!
  * Verifies a revision from a page.
@@ -664,20 +681,12 @@ async function verifyRevision(
 
   if ("file" in data.content) {
     // This is a file
-    const fileContentHash = data.content.content.file_content_hash || null
-    if (fileContentHash === null) {
-      return [
-        false,
-        { error_message: "Revision contains a file, but no file content hash" },
-      ]
-    }
-
-    const rawFileContent = Buffer.from(data.content.file.data || "", "base64")
-    if (fileContentHash !== getHashSum(rawFileContent)) {
-      return [false, { error_message: "File content hash does not match" }]
+    const [fileIsCorrect, fileOut] = verifyFile(data)
+    if (!fileIsCorrect) {
+      return [fileIsCorrect, fileOut]
     }
     detail.status.file = "VERIFIED"
-    detail.file_content_hash = fileContentHash
+    detail.file_content_hash = fileOut.file_content_hash
   }
   let content = ""
   for (const [slot, slotContent] of Object.entries(data.content.content)) {
