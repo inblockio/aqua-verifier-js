@@ -19,12 +19,18 @@ function transformMwXmlRevision2PkcJson(rev) {
   for (const e of makeSureAlwaysArray(rev.content)) {
     contentObj[e.role] = e.text['_'] ?? ""
   }
+  // Next, we ensure that contentObj is sorted by its keys. This is so that its
+  // stringified representation is consistent with the canonical JSON format.
+  const sortedContentObj = {}
+  for (const k of Object.keys(contentObj).sort()) {
+    sortedContentObj[k] = contentObj[k]
+  }
 
   const out = {
     verification_context: JSON.parse(verification.verification_context),
     content: {
       rev_id: rev.id,
-      content: contentObj,
+      content: sortedContentObj,
       content_hash: verification.content_hash,
     },
     metadata: {
