@@ -999,7 +999,9 @@ async function verifyPageCLI(input, verbose, doVerifyMerkleProof) {
       // sanitized.
       log_yellow("Warning: Underscores in title are converted to spaces.")
     }
-
+    if (input.title.includes(": ")) {
+      log_yellow("Warning: Space after ':' detected. You might need to remove it to match MediaWiki title.")
+    }
     let status, versionMatches, serverVersion
     try {
       ;[status, versionMatches, serverVersion] =
