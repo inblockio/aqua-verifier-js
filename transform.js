@@ -55,7 +55,7 @@ function transformMwXmlRevision2PkcJson(rev) {
     out.witness = verification.witness
     out.witness.structured_merkle_proof = JSON.parse(out.witness.structured_merkle_proof)
   }
-  if ("file_content_hash" in contentObj) {
+  if ("file_hash" in contentObj) {
     // TODO we set it to empty string because the XML export currently doesn't
     // contain the file data.
     out.content.file = {data: ""}

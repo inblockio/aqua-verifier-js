@@ -442,7 +442,7 @@ function printRevisionInfo(detail) {
     // The alternative value of detail.status.file is "MISSING", where we don't
     // log anything extra in that situation.
     console.log(
-      `    ${CHECKMARK}${FILE_GLYPH} File content hash matches (${detail.file_content_hash})`
+      `    ${CHECKMARK}${FILE_GLYPH} File content hash matches (${detail.file_hash})`
     )
   } else if (detail.status.file === "INVALID") {
     console.log(`    ${CROSSMARK}${FILE_GLYPH} Invalid file content hash`)
@@ -499,7 +499,7 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     // The alternative value of detail.status.file is "MISSING", where we don't
     // log anything extra in that situation.
     out += `${_space4}${CHECKMARK}${FILE_GLYPH} File content hash matches (${clipboardifyHash(
-      detail.file_content_hash
+      detail.file_hash
     )})<br>`
   } else if (detail.status.file === "INVALID") {
     out += `${_space4}${CROSSMARK}${FILE_GLYPH} Invalid file content hash<br>`
@@ -576,7 +576,7 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
 }
 
 function verifyFile(data) {
-  const fileContentHash = data.content.content.file_content_hash || null
+  const fileContentHash = data.content.content.file_hash || null
   if (fileContentHash === null) {
     return [
       false,
@@ -589,7 +589,7 @@ function verifyFile(data) {
     return [false, { error_message: "File content hash does not match" }]
   }
 
-  return [true, { file_content_hash: fileContentHash }]
+  return [true, { file_hash: fileContentHash }]
 }
 
 /**
@@ -640,7 +640,7 @@ async function verifyRevision(
       file: "MISSING",
     },
     witness_detail: "", // always in string
-    file_content_hash: "",
+    file_hash: "",
   }
 
   let data
@@ -686,7 +686,7 @@ async function verifyRevision(
       return [fileIsCorrect, fileOut]
     }
     detail.status.file = "VERIFIED"
-    detail.file_content_hash = fileOut.file_content_hash
+    detail.file_hash = fileOut.file_hash
   }
   let content = ""
   for (const [slot, slotContent] of Object.entries(data.content.content)) {
