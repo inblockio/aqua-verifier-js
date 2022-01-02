@@ -954,13 +954,22 @@ async function* generateVerifyPage(
 
 // Used by the Chrome extension. Will be removed once we migrate to the
 // generator version.
-async function verifyPage(title, server, verbose, doVerifyMerkleProof, token) {
-  const apiURL = getApiURL(server)
-  const [status, res] = await getRevisionHashes(apiURL, title, token)
-  if (status === ERROR_VERIFICATION_STATUS) {
-    return [status, res]
+async function verifyPage(input, verbose, doVerifyMerkleProof, token) {
+  let verificationHashes
+  if ("server" in input && "title" in input) {
+    const apiURL = getApiURL(input.server)
+    const [status, res] = await getRevisionHashes(apiURL, input.title, token)
+    if (status === ERROR_VERIFICATION_STATUS) {
+      return [status, res]
+    }
+    verificationHashes = res
+  } else {
+    if (!("offline_data" in input)) {
+      return [ERROR_VERIFICATION_STATUS, { error: "Input must contain 'server' & 'title', or 'offline_data'" }]
+    }
+    verificationHashes = Object.keys(input.offline_data.revisions)
   }
-  const verificationHashes = res
+
   let count = 0
   const details = {
     verification_hashes: verificationHashes,
@@ -970,7 +979,7 @@ async function verifyPage(title, server, verbose, doVerifyMerkleProof, token) {
   const isHtml = true
   for await (const value of generateVerifyPage(
     verificationHashes,
-    { server, token },
+    input,
     verbose,
     isHtml,
     doVerifyMerkleProof
