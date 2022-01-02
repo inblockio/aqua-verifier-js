@@ -435,7 +435,7 @@ function printRevisionInfo(detail) {
     return
   }
   console.log(
-    `  ${CHECKMARK} Verification hash matches (${detail.verification_hash})`
+    `  ${CHECKMARK} Verification hash matches`
   )
 
   if (detail.status.file === "VERIFIED") {
@@ -491,9 +491,7 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     )
     return out
   }
-  out += `${_space2}${CHECKMARK} Verification hash matches ${clipboardifyHash(
-    detail.verification_hash
-  )}<br>`
+  out += `${_space2}${CHECKMARK} Verification hash matches<br>`
 
   if (detail.status.file === "VERIFIED") {
     // The alternative value of detail.status.file is "MISSING", where we don't
