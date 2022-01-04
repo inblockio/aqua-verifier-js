@@ -696,6 +696,7 @@ async function verifyRevision(
   }
   // To save storage for the cacher, e.g the Chrome extension.
   delete detail.data.content.content
+  delete detail.data.content.file
 
   const metadataHash = calculateMetadataHash(
     domainId,
