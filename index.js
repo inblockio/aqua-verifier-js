@@ -396,7 +396,7 @@ async function verifyWitness(
     // because this step is expensive.
     if (verification_hash === witnessData.domain_snapshot_genesis_hash) {
       // Corner case when the page is a Domain Snapshot.
-      detail += `${newline}${_space4}${CHECKMARK}Domain Snapshot, therefore does not require Merkle Proof`
+      detail += `${newline}${_space4}${CHECKMARK}Is a Domain Snapshot, hence not part of Merkle Proof`
     } else {
       const merkleProofIsOK = await verifyMerkleIntegrity(
         witnessData.structured_merkle_proof,
