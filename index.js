@@ -146,13 +146,13 @@ function calculateSignatureHash(signature, publicKey) {
 }
 
 function calculateWitnessHash(
-  domain_manifest_genesis_hash,
+  domain_snapshot_genesis_hash,
   merkle_root,
   witness_network,
   witness_tx_hash
 ) {
   return getHashSum(
-    domain_manifest_genesis_hash +
+    domain_snapshot_genesis_hash +
       merkle_root +
       witness_network +
       witness_tx_hash
@@ -259,7 +259,7 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
  * verification log.
  * Steps:
  * - Calls get_witness_data API passing witness event ID.
- * - Calls function getHashSum passing domain_manifest_genesis_hash and
+ * - Calls function getHashSum passing domain_snapshot_genesis_hash and
  *   merkle_root from the get_witness_data API call.
  * - Writes witness event ID and transaction hash to the log.
  * - Calls function checkEtherScan (see the file checkEtherScan.js) passing
@@ -297,7 +297,7 @@ async function verifyWitness(
   const maybeClipboardify = (hash) => (isHtml ? clipboardifyHash(hash) : hash)
 
   const actual_witness_event_verification_hash = getHashSum(
-    witnessData.domain_manifest_genesis_hash + witnessData.merkle_root
+    witnessData.domain_snapshot_genesis_hash + witnessData.merkle_root
   )
 
   const wh = isHtml ? "" : " " + shortenHash(witnessData.witness_hash)
@@ -368,7 +368,7 @@ async function verifyWitness(
     )
     detail += redify(
       isHtml,
-      `${newlineRed}${_space4}Page manifest verification hash: ${witnessData.domain_manifest_genesis_hash}`
+      `${newlineRed}${_space4}Domain Snapshot genesis hash: ${witnessData.domain_snapshot_genesis_hash}`
     )
     detail += redify(
       isHtml,
@@ -394,9 +394,9 @@ async function verifyWitness(
   if (doVerifyMerkleProof) {
     // Only verify the witness merkle proof when verifyWitness is successful,
     // because this step is expensive.
-    if (verification_hash === witnessData.domain_manifest_genesis_hash) {
-      // Corner case when the page is a domain manifest.
-      detail += `${newline}${_space4}${CHECKMARK}Domain Manifest; therefore does not require Merkle Proof`
+    if (verification_hash === witnessData.domain_snapshot_genesis_hash) {
+      // Corner case when the page is a Domain Snapshot.
+      detail += `${newline}${_space4}${CHECKMARK}Domain Snapshot; therefore does not require Merkle Proof`
     } else {
       const merkleProofIsOK = await verifyMerkleIntegrity(
         witnessData.structured_merkle_proof,
@@ -729,7 +729,7 @@ async function verifyRevision(
       return [false, { error_message: "Previous witness data not found" }]
     }
     prevWitnessHash = calculateWitnessHash(
-      previousVerificationData.witness.domain_manifest_genesis_hash,
+      previousVerificationData.witness.domain_snapshot_genesis_hash,
       previousVerificationData.witness.merkle_root,
       previousVerificationData.witness.witness_network,
       previousVerificationData.witness.witness_event_transaction_hash
