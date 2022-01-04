@@ -995,20 +995,25 @@ async function verifyPage(input, verbose, doVerifyMerkleProof, token) {
   return [verificationStatus, details]
 }
 
+function validateTitle(title) {
+  if (title.includes("_")) {
+    title = title.replace(/_/g, " ")
+    // TODO it's not just underscore, catch all potential errors in page title.
+    // This error should not happen in Chrome-Extension because the title has been
+    // sanitized.
+    log_yellow("Warning: Underscores in title are converted to spaces.")
+  }
+  if (title.includes(": ")) {
+    log_yellow("Warning: Space after ':' detected. You might need to remove it to match MediaWiki title.")
+  }
+  return title
+}
+
 async function verifyPageCLI(input, verbose, doVerifyMerkleProof) {
   let verificationHashes
   if ("server" in input && "title" in input) {
     // Online verification
-    if (input.title.includes("_")) {
-      input.title = input.title.replace(/_/g, " ")
-      // TODO it's not just underscore, catch all potential errors in page title.
-      // This error should not happen in Chrome-Extension because the title has been
-      // sanitized.
-      log_yellow("Warning: Underscores in title are converted to spaces.")
-    }
-    if (input.title.includes(": ")) {
-      log_yellow("Warning: Space after ':' detected. You might need to remove it to match MediaWiki title.")
-    }
+    input.title = validateTitle(input.title)
     let status, versionMatches, serverVersion
     try {
       ;[status, versionMatches, serverVersion] =
@@ -1101,4 +1106,5 @@ module.exports = {
   getApiURL,
   getRevisionHashes,
   fetchWithToken,
+  validateTitle,
 }

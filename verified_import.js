@@ -10,13 +10,10 @@ if (argv._.length < 1) {
   process.exit(1)
 }
 
-const title = argv._[0]
+let title = argv._[0]
 const server = argv.server ?? "http://localhost:9352"
 
-if (title.includes("_")) {
-  main.log_red("INVALID TITLE: Do not use underscore in title.")
-  process.exit(1)
-}
+title = main.validateTitle(title)
 
 ;(async function () {
   const token = null
