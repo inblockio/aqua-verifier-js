@@ -53,6 +53,6 @@ title = main.validateTitle(title)
     output.revisions[verificationHash] = data
     count += 1
   }
-  fs.writeFileSync(`./pkc_${title}.json`, JSON.stringify(output))
+  fs.writeFileSync(`./pkc_${title}.json`, JSON.stringify({pages: [output]}))
   console.log("\nDone!")
 })()

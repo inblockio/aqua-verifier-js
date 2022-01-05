@@ -52,9 +52,12 @@ async function readExportFile(filename) {
   const fileContent = fs.readFileSync(filename)
   let offlineData
   if (filename.endsWith(".json")) {
-    // It is an array of 1 element, because verified_import only imports 1
-    // page.
-    offlineData = [JSON.parse(fileContent)]
+    const parsed = JSON.parse(fileContent)
+    if (!("pages" in parsed)) {
+      main.log_red("The json file doesn't contain 'pages' key.")
+      process.exit(1)
+    }
+    offlineData = parsed.pages
   } else {
     if (!filename.endsWith(".xml")) {
       main.log_red("Only JSON or XML files are supported.")
