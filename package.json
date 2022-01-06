@@ -26,5 +26,12 @@
   "homepage": "https://github.com/inblockio/data-accounting-external-verifier#readme",
   "devDependencies": {
     "prettier": "^2.4.1"
-  }
+  },
+  "files": [
+    "checkEtherScan.js",
+    "index.js",
+    "LICENSE",
+    "package.json",
+    "README.md"
+  ]
 }
