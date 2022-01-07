@@ -1,4 +1,6 @@
-const { STATUS_CODES } = require("http")
+// We use "http-status-codes" instead of STATUS_CODES in the "http" library
+// because we need to use this file in the browser.
+const { getReasonPhrase } = require("http-status-codes")
 
 const fetch = require("node-fetch")
 const sha3 = require("js-sha3")
@@ -35,10 +37,10 @@ const VERIFIED_VERIFICATION_STATUS = "VERIFIED"
 const ERROR_VERIFICATION_STATUS = "ERROR"
 
 function formatHTTPError(response, message = "") {
-  // We use STATUS_CODES mapping instead of response.statusText because
+  // We use status code mapping mapping instead of response.statusText because
   // apparently in HTTP/2, the statusText is removed. See
   // https://stackoverflow.com/questions/41632077/why-is-the-statustext-of-my-xhr-empty
-  return `HTTP ${response.status}: ${STATUS_CODES[response.status]}.${message}`
+  return `HTTP ${response.status}: ${getReasonPhrase(response.status)}.${message}`
 }
 
 function cliRedify(content) {
@@ -960,7 +962,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof, token) {
   if ("server" in input && "title" in input) {
     const apiURL = getApiURL(input.server)
     const [status, res] = await getRevisionHashes(apiURL, input.title, token)
-    if (status === ERROR_VERIFICATION_STATUS) {
+    if (status !== "OK") {
       return [status, res]
     }
     verificationHashes = res
@@ -1040,7 +1042,7 @@ async function verifyPageCLI(input, verbose, doVerifyMerkleProof) {
       input.title,
       input.token
     )
-    if (statusHashes === ERROR_VERIFICATION_STATUS) {
+    if (statusHashes !== "OK") {
       log_red(res.error)
       return
     }
