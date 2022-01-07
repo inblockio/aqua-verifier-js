@@ -1,6 +1,9 @@
+// Compatibility with browsers.
 // We use "http-status-codes" instead of STATUS_CODES in the "http" library
 // because we need to use this file in the browser.
 const { getReasonPhrase } = require("http-status-codes")
+const Buffer = require('buffer/').Buffer
+// End of compatibility with browsers.
 
 const fetch = require("node-fetch")
 const sha3 = require("js-sha3")
