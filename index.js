@@ -436,7 +436,7 @@ function printRevisionInfo(detail) {
   )
   console.log(`  Domain ID: ${detail.data.metadata.domain_id}`)
   if (detail.status.verification === INVALID_VERIFICATION_STATUS) {
-    log_red(`  ${CROSSMARK}` + " verification hash doesn't match")
+    log_red(`  ${CROSSMARK}` + " Verification hash doesn't match")
     return
   }
   console.log(
