@@ -844,7 +844,7 @@ async function doPreliminaryAPICall(endpointName, url, token) {
 }
 
 async function getRevisionHashes(apiURL, title, token) {
-  const hashChainUrl = `${apiURL}/get_hash_chain_info/title/${title}`
+  const hashChainUrl = `${apiURL}/get_hash_chain_info/title?identifier=${title}`
   const [status, info] = await doPreliminaryAPICall(
     "get_hash_chain_info",
     hashChainUrl,
