@@ -487,6 +487,12 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   if (!("verification_hash" in detail)) {
     return `${_space2}no verification hash`
   }
+
+  let summary = ""
+  function makeDetail(detail) {
+    return `<details>${detail}</details>`
+  }
+
   let out = `${_space2}Elapsed: ${detail.elapsed} s<br>`
   out += `${_space2}${formatDBTimestamp(detail.data.metadata.time_stamp)}<br>`
   out += `${_space2}Domain ID: ${detail.data.metadata.domain_id}<br>`
@@ -494,9 +500,10 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     out += htmlRedify(
       `${_space2}${CROSSMARK}` + " verification hash doesn't match"
     )
-    return out
+    return [CROSSMARK, makeDetail(out)]
   }
   out += `${_space2}${CHECKMARK} Verification hash matches<br>`
+  summary += CHECKMARK
 
   if (detail.status.file === "VERIFIED") {
     // The alternative value of detail.status.file is "MISSING", where we don't
@@ -504,12 +511,15 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     out += `${_space4}${CHECKMARK}${FILE_GLYPH} File content hash matches (${clipboardifyHash(
       detail.file_hash
     )})<br>`
+    summary += FILE_GLYPH
   } else if (detail.status.file === "INVALID") {
     out += `${_space4}${CROSSMARK}${FILE_GLYPH} Invalid file content hash<br>`
+    summary += FILE_GLYPH
   }
 
   if (detail.status.witness !== "MISSING") {
     out += detail.witness_detail + "<br>"
+    summary += WATCH
   } else {
     out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
   }
@@ -519,18 +529,19 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   }
   if (detail.status.signature === "MISSING") {
     out += htmlDimify(`${_space4}${WARN} Not signed<br>`)
-    return out
+    return [summary, makeDetail(out)]
   }
+  summary += LOCKED_WITH_PEN
   if (detail.status.signature === "VALID") {
     const walletURL = `${server}/index.php/User:${detail.data.signature.wallet_address}`
-    const walletA = `<a href='${walletURL}' target="_blank">${detail.data.signature.wallet_address}</a>`
+    const walletA = `<a href="${walletURL}" target="_blank">${detail.data.signature.wallet_address}</a>`
     out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${walletA}<br>`
   } else {
     out += htmlRedify(
       `${_space4}${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`
     )
   }
-  return out
+  return [summary, makeDetail(out)]
 }
 
 function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
@@ -557,14 +568,15 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
     }
     const revid = details.revision_details[i].data.content.rev_id
     const revidURL = `${serverUrl}/index.php?title=${title}&oldid=${revid}`
-    revisionOut += `${
-      i + 1
-    }. Verification of <a href='${revidURL}' target="_blank">Revision ID ${revid}<a>.<br>`
-    revisionOut += formatRevisionInfo2HTML(
+    const [summary, formattedRevInfo] = formatRevisionInfo2HTML(
       serverUrl,
       details.revision_details[i],
       verbose
     )
+    revisionOut += `${
+      i + 1
+    }. Verification of <a href='${revidURL}' target="_blank">Revision ID ${revid}<a>.${summary}<br>`
+    revisionOut += formattedRevInfo
     const count = i + 1
     revisionOut += `${_space2}Progress: ${count} / ${numRevisions} (${(
       (100 * count) /
