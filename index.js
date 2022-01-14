@@ -566,6 +566,14 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
     } else {
       revisionOut += "<div>"
     }
+
+    if ("error_message" in details.revision_details[i]) {
+      revisionOut += htmlRedify("ERROR: " + details.revision_details[i].error_message)
+      revisionOut += "</div>"
+      out = revisionOut + out
+      break
+    }
+
     const revid = details.revision_details[i].data.content.rev_id
     const revidURL = `${serverUrl}/index.php?title=${title}&oldid=${revid}`
     const [summary, formattedRevInfo] = formatRevisionInfo2HTML(
