@@ -475,6 +475,10 @@ function printRevisionInfo(detail) {
   }
 }
 
+function checkmarkCrossmark(isCorrect) {
+  return isCorrect ? CHECKMARK : CROSSMARK
+}
+
 function formatRevisionInfo2HTML(server, detail, verbose = false) {
   // Format the info into HTML nicely. Used in VerifyPage Chrome extension, but
   // could be used elsewhere too.
@@ -488,7 +492,6 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     return `${_space2}no verification hash`
   }
 
-  let summary = ""
   function makeDetail(detail) {
     return `<details>${detail}</details>`
   }
@@ -503,23 +506,29 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     return [CROSSMARK, makeDetail(out)]
   }
   out += `${_space2}${CHECKMARK} Verification hash matches<br>`
-  summary += CHECKMARK
+  let isCorrect = true
 
+  let fileSummary = ""
   if (detail.status.file === "VERIFIED") {
     // The alternative value of detail.status.file is "MISSING", where we don't
     // log anything extra in that situation.
     out += `${_space4}${CHECKMARK}${FILE_GLYPH} File content hash matches (${clipboardifyHash(
       detail.file_hash
     )})<br>`
-    summary += FILE_GLYPH
+    fileSummary = FILE_GLYPH
   } else if (detail.status.file === "INVALID") {
     out += `${_space4}${CROSSMARK}${FILE_GLYPH} Invalid file content hash<br>`
-    summary += FILE_GLYPH
+    fileSummary = FILE_GLYPH
+    isCorrect = false
   }
 
+  let witnessSummary = ""
   if (detail.status.witness !== "MISSING") {
     out += detail.witness_detail + "<br>"
-    summary += WATCH
+    witnessSummary = WATCH
+    if (detail.status.witness === "INVALID") {
+      isCorrect = false
+    }
   } else {
     out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
   }
@@ -527,11 +536,11 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     delete detail.witness_detail
     out += `${_space2}VERBOSE backend ` + JSON.stringify(detail) + "<br>"
   }
+
   if (detail.status.signature === "MISSING") {
     out += htmlDimify(`${_space4}${WARN} Not signed<br>`)
-    return [summary, makeDetail(out)]
+    return [checkmarkCrossmark(isCorrect) + fileSummary + witnessSummary, makeDetail(out)]
   }
-  summary += LOCKED_WITH_PEN
   if (detail.status.signature === "VALID") {
     const walletURL = `${server}/index.php/User:${detail.data.signature.wallet_address}`
     const walletA = `<a href="${walletURL}" target="_blank">${detail.data.signature.wallet_address}</a>`
@@ -540,8 +549,9 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     out += htmlRedify(
       `${_space4}${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`
     )
+    isCorrect = false
   }
-  return [summary, makeDetail(out)]
+  return [checkmarkCrossmark(isCorrect) + fileSummary + witnessSummary + LOCKED_WITH_PEN, makeDetail(out)]
 }
 
 function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
