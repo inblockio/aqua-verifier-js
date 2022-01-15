@@ -329,9 +329,9 @@ async function verifyWitness(
     actual_witness_event_verification_hash
   )
   const suffix = `${witnessData.witness_network} via etherscan.io`
-  if (etherScanResult == "true") {
+  if (etherScanResult === "true") {
     detail += `${newline}${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified on ${suffix}`
-  } else if (etherScanResult == "false") {
+  } else if (etherScanResult === "false") {
     detail += redify(
       isHtml,
       `${newlineRed}${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match on ${suffix}`
@@ -414,6 +414,9 @@ async function verifyWitness(
         return ["INVALID", detail]
       }
     }
+  }
+  if (etherScanResult !== "true") {
+    return ["INVALID", detail]
   }
   return ["VALID", detail]
 }
