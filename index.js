@@ -628,6 +628,21 @@ function verifyFile(data) {
   return [true, { file_hash: fileContentHash }]
 }
 
+function verifyPreviousSignature(data, previousVerificationData) {
+  if (!data.verification_context.has_previous_signature) {
+    return null
+  }
+  const prevSignature = previousVerificationData.signature.signature
+  const prevPublicKey = previousVerificationData.signature.public_key
+  const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
+  if (
+    signatureHash !== previousVerificationData.signature.signature_hash
+  ) {
+    return { error_message: "Previous signature hash doesn't match" }
+  }
+  return null
+}
+
 /**
  * TODO THIS DOCSTRING IS OUTDATED!
  * Verifies a revision from a page.
@@ -745,24 +760,13 @@ async function verifyRevision(
     return [false, { error_message: "Metadata hash doesn't match" }]
   }
 
-  // SIGNATURE DATA HASH CALCULATOR
-  let prevSignature = ""
-  let prevPublicKey = ""
-  let prevWitnessHash = ""
-  if (data.verification_context.has_previous_signature) {
-    // We have to do these ternary operations because sometimes the signature
-    // and public key are nulls, not empty strings.
-    prevSignature = previousVerificationData.signature.signature
-    prevPublicKey = previousVerificationData.signature.public_key
-  }
-  const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
-  if (
-    data.verification_context.has_previous_signature &&
-    signatureHash !== previousVerificationData.signature.signature_hash
-  ) {
-    return [false, { error_message: "Previous signature hash doesn't match" }]
+  // Signature verification
+  const error = verifyPreviousSignature(data, previousVerificationData)
+  if (error !== null) {
+    return [false, error]
   }
 
+  let prevWitnessHash = ""
   if (data.verification_context.has_previous_witness) {
     if (!previousVerificationData.witness) {
       return [false, { error_message: "Previous witness data not found" }]
@@ -788,6 +792,10 @@ async function verifyRevision(
   detail.witness_detail = witnessDetail
   detail.status.witness = witnessStatus
 
+  let signatureHash = ""
+  if (previousVerificationData && previousVerificationData.signature) {
+    signatureHash = previousVerificationData.signature.signature_hash
+  }
   const calculatedVerificationHash = calculateVerificationHash(
     contentHash,
     metadataHash,
