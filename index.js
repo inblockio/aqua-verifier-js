@@ -632,6 +632,9 @@ function verifyPreviousSignature(data, previousVerificationData) {
   if (!data.verification_context.has_previous_signature) {
     return null
   }
+  if (!previousVerificationData) {
+    return { error_message: "Revision has previous signature, but no previous revision provided to validate"}
+  }
   const prevSignature = previousVerificationData.signature.signature
   const prevPublicKey = previousVerificationData.signature.public_key
   const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
