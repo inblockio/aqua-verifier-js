@@ -646,6 +646,40 @@ function verifyPreviousSignature(data, previousVerificationData) {
   return null
 }
 
+function verifyCurrentSignature(data, verificationHash) {
+  // TODO comparison with null is probably not needed. Needs testing.
+  if (
+    !("signature" in data) ||
+    data.signature.signature === "" ||
+    data.signature.signature === null
+  ) {
+    return [true, "MISSING"]
+  }
+
+  // Specify signature correctness
+  let signatureIsCorrect = false
+  // Signature verification
+  // The padded message is required
+  const paddedMessage =
+    "I sign the following page verification_hash: [0x" + verificationHash + "]"
+  try {
+    const recoveredAddress = ethers.utils.recoverAddress(
+      ethers.utils.hashMessage(paddedMessage),
+      data.signature.signature
+    )
+    if (
+      recoveredAddress.toLowerCase() ===
+      data.signature.wallet_address.toLowerCase()
+    ) {
+      signatureIsCorrect = true
+    }
+  } catch (e) {
+    // continue regardless of error
+  }
+  const status = signatureIsCorrect ? "VALID" : "INVALID"
+  return [signatureIsCorrect, status]
+}
+
 /**
  * TODO THIS DOCSTRING IS OUTDATED!
  * Verifies a revision from a page.
@@ -825,37 +859,8 @@ async function verifyRevision(
   // Specify witness correctness
   let witnessIsCorrect = detail.status.witness !== "INVALID"
 
-  // TODO comparison with null is probably not needed. Needs testing.
-  if (
-    !("signature" in data) ||
-    data.signature.signature === "" ||
-    data.signature.signature === null
-  ) {
-    detail.status.signature = "MISSING"
-    return [witnessIsCorrect, detail]
-  }
-
-  // Specify signature correctness
-  let signatureIsCorrect = false
-  // Signature verification
-  // The padded message is required
-  const paddedMessage =
-    "I sign the following page verification_hash: [0x" + verificationHash + "]"
-  try {
-    const recoveredAddress = ethers.utils.recoverAddress(
-      ethers.utils.hashMessage(paddedMessage),
-      data.signature.signature
-    )
-    if (
-      recoveredAddress.toLowerCase() ===
-      data.signature.wallet_address.toLowerCase()
-    ) {
-      signatureIsCorrect = true
-    }
-  } catch (e) {
-    // continue regardless of error
-  }
-  detail.status.signature = signatureIsCorrect ? "VALID" : "INVALID"
+  const [signatureIsCorrect, sigStatus] = verifyCurrentSignature(data, verificationHash)
+  detail.status.signature = sigStatus
 
   return [signatureIsCorrect && witnessIsCorrect, detail]
 }
