@@ -720,8 +720,8 @@ async function verifyRevision(
   let detail = {
     verification_hash: verificationHash,
     status: {
-      content: true, // TODO change to false when content hash is invalid
-      metadata: true, // TODO change to false when metadata hash is invalid
+      content: false,
+      metadata: false,
       signature: "MISSING",
       witness: "MISSING",
       verification: INVALID_VERIFICATION_STATUS,
@@ -784,6 +784,9 @@ async function verifyRevision(
   if (contentHash !== data.content.content_hash) {
     return [false, { error_message: "Content hash doesn't match" }]
   }
+  // Mark content as correct
+  detail.status.content = true
+
   // To save storage for the cacher, e.g the Chrome extension.
   delete detail.data.content.content
   delete detail.data.content.file
@@ -796,6 +799,8 @@ async function verifyRevision(
   if (metadataHash !== data.metadata.metadata_hash) {
     return [false, { error_message: "Metadata hash doesn't match" }]
   }
+  // Mark metadata as correct
+  detail.status.metadata = true
 
   // Signature verification
   const error = verifyPreviousSignature(data, previousVerificationData)
