@@ -58,10 +58,6 @@ function htmlRedify(content) {
   return '<div style="color:Crimson;">' + content + "</div>"
 }
 
-function redify(isHtml, content) {
-  return isHtml ? htmlRedify(content) : cliRedify(content)
-}
-
 function htmlDimify(content) {
   return '<div style="color:Gray;">' + content + "</div>"
 }
@@ -295,124 +291,68 @@ function verifyPreviousWitness(data, prev) {
  * - If doVerifyMerkleProof is set, calls function verifyMerkleIntegrity.
  * - Writes the teturned boolean value from verifyMerkleIntegrity to the
  *   log.
- * - Returns the log, as an HTML string if the isHtml flag is set, otherwise text.
+ * - Returns the structured data summary of the witness verification.
  * @param   {string} witness_event_id
  * @param   {string} verificationHash
  * @param   {boolean} doVerifyMerkleProof Flag for do Verify Merkle Proof.
- * @param   {boolean} isHtml Flag to format the log as an HTML string.
  * @returns {string} The verification log.
  */
 async function verifyWitness(
   witnessData,
   verification_hash,
   doVerifyMerkleProof,
-  isHtml
 ) {
-  let detail = ""
   if (witnessData === null || witnessData === undefined) {
-    return ["MISSING", detail]
+    return ["MISSING", null]
   }
-
-  const newline = isHtml ? "<br>" : "\n"
-  // We don't need <br> because redify already wraps the text inside a div.
-  const newlineRed = isHtml ? "" : "\n"
-  const _space2 = isHtml ? "&nbsp&nbsp" : "  "
-  const _space4 = _space2 + _space2
-  const maybeClipboardify = (hash) => (isHtml ? clipboardifyHash(hash) : hash)
 
   const actual_witness_event_verification_hash = getHashSum(
     witnessData.domain_snapshot_genesis_hash + witnessData.merkle_root
   )
 
-  const wh = isHtml ? "" : " " + shortenHash(witnessData.witness_hash)
-  detail += `${_space2}Witness event${wh} detected`
-  let txHash
-  if (isHtml) {
-    const witnessTxUrl =
-      cES.witnessNetworkMap[witnessData.witness_network] +
-      "/" +
-      witnessData.witness_event_transaction_hash
-    txHash = makeHref(
-      shortenHash(witnessData.witness_event_transaction_hash),
-      witnessTxUrl
-    )
-  } else {
-    txHash = witnessData.witness_event_transaction_hash
+  const result = {
+    witness_hash: witnessData.witness_hash,
+    tx_hash: witnessData.witness_event_transaction_hash,
+    witness_network: witnessData.witness_network,
+    etherscan_result: "",
+    etherscan_error_message: "",
+    actual_witness_event_verification_hash: actual_witness_event_verification_hash,
+    witness_event_vh_matches: true,
+    extra: null,
+    doVerifyMerkleProof: doVerifyMerkleProof,
+    merkle_proof_status: "",
   }
 
-  detail += `${newline}${_space4}Transaction hash: ${txHash}`
   // Do online lookup of transaction hash
   const etherScanResult = await cES.checkEtherScan(
     witnessData.witness_network,
     witnessData.witness_event_transaction_hash,
     actual_witness_event_verification_hash
   )
-  const suffix = `${witnessData.witness_network} via etherscan.io`
-  if (etherScanResult === "true") {
-    detail += `${newline}${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified on ${suffix}`
-  } else if (etherScanResult === "false") {
-    detail += redify(
-      isHtml,
-      `${newlineRed}${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match on ${suffix}`
-    )
-  } else {
+  result.etherscan_result = etherScanResult
+
+  if (etherScanResult !== "true" && (etherScanResult !== "false")) {
     let errMsg
     if (etherScanResult === "Transaction hash not found") {
-      errMsg = `Transaction hash not found on ${suffix}`
+      errMsg = "Transaction hash not found"
     } else if (etherScanResult.includes("ENETUNREACH")) {
-      errMsg = `Server is unreachable on ${suffix}`
+      errMsg = "Server is unreachable"
     } else {
-      errMsg = `Online lookup failed on ${suffix}`
+      errMsg = "Online lookup failed"
     }
-    detail += redify(
-      isHtml,
-      `${newlineRed}${_space4}${CROSSMARK}${WATCH}${errMsg}`
-    )
-    detail += redify(
-      isHtml,
-      `${newlineRed}${_space4}Error code: ${etherScanResult}`
-    )
-    // We want the long hash to be shortened in the HTML output.
-    const formattedWEVH = maybeClipboardify(
-      actual_witness_event_verification_hash
-    )
-    detail += redify(
-      isHtml,
-      `${newlineRed}${_space4}Verify manually: ${formattedWEVH}`
-    )
+    result.etherscan_error_message = errMsg
   }
   if (
     actual_witness_event_verification_hash !=
     witnessData.witness_event_verification_hash
   ) {
-    detail += redify(
-      isHtml,
-      `${newlineRed}${_space4}${CROSSMARK}` +
-        "Witness event verification hash doesn't match"
-    )
-    detail += redify(
-      isHtml,
-      `${newlineRed}${_space4}Domain Snapshot genesis hash: ${witnessData.domain_snapshot_genesis_hash}`
-    )
-    detail += redify(
-      isHtml,
-      `${newlineRed}${_space4}Merkle root: ${maybeClipboardify(
-        witnessData.merkle_root
-      )}`
-    )
-    detail += redify(
-      isHtml,
-      `${newlineRed}${_space4}Expected: ${maybeClipboardify(
-        witnessData.witness_event_verification_hash
-      )}`
-    )
-    detail += redify(
-      isHtml,
-      `${newlineRed}${_space4}Actual: ${maybeClipboardify(
-        actual_witness_event_verification_hash
-      )}`
-    )
-    return ["INVALID", detail]
+    result.witness_event_vh_matches = false
+    result.extra = {
+      domain_snapshot_genesis_hash: witnessData.domain_snapshot_genesis_hash,
+      merkle_root: witnessData.merkle_root,
+      witness_event_verification_hash: witnessData.witness_event_verification_hash,
+    }
+    return ["INVALID", result]
   }
   // At this point, we know that the witness matches.
   if (doVerifyMerkleProof) {
@@ -420,24 +360,88 @@ async function verifyWitness(
     // because this step is expensive.
     if (verification_hash === witnessData.domain_snapshot_genesis_hash) {
       // Corner case when the page is a Domain Snapshot.
-      detail += `${newline}${_space4}${CHECKMARK}Is a Domain Snapshot, hence not part of Merkle Proof`
+      result.merkle_proof_status = "DOMAIN_SNAPSHOT"
     } else {
       const merkleProofIsOK = await verifyMerkleIntegrity(
         witnessData.structured_merkle_proof,
         verification_hash
       )
-      if (merkleProofIsOK) {
-        detail += `${newline}${_space4}${CHECKMARK}${BRANCH}Witness Merkle Proof is OK`
-      } else {
-        detail += `${newline}${_space4}${CROSSMARK}${BRANCH}Witness Merkle Proof is corrupted`
-        return ["INVALID", detail]
+      result.merkle_proof_status = merkleProofIsOK ? "VALID": "INVALID"
+      if (!merkleProofIsOK) {
+        return ["INVALID", result]
       }
     }
   }
   if (etherScanResult !== "true") {
-    return ["INVALID", detail]
+    return ["INVALID", result]
   }
-  return ["VALID", detail]
+  return ["VALID", result]
+}
+
+function printWitnessInfo(detail) {
+  if (detail.status.witness === "MISSING") {
+    log_dim(`    ${WARN} Not witnessed`)
+    return
+  }
+  const _space2 = "  "
+  const _space4 = _space2 + _space2
+  const wr = detail.witness_result
+  const wh = shortenHash(wr.witness_hash)
+  let witOut = `${_space2}Witness event${wh} detected`
+  witOut += `\n${_space4}Transaction hash: ${wr.tx_hash}`
+  const suffix = ` on ${wr.witness_network} via etherscan.io`
+  if (wr.etherscan_result === "true") {
+    witOut += `\n${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified${suffix}`
+  } else if (wr.etherscan_result === "false") {
+    witOut += cliRedify(
+      `\n${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match${suffix}`
+    )
+  } else {
+    witOut += cliRedify(
+      `\n${_space4}${CROSSMARK}${WATCH}${wr.etherscan_error_message}${suffix}`
+    )
+    witOut += cliRedify(
+      `\n${_space4}Error code: ${wr.etherscan_result}`
+    )
+    witOut += cliRedify(
+      `\n${_space4}Verify manually: ${wr.actual_witness_event_verification_hash}`
+    )
+  }
+  if (!wr.witness_event_vh_matches) {
+    witOut += cliRedify(
+      `\n${_space4}${CROSSMARK}` +
+        "Witness event verification hash doesn't match"
+    )
+    witOut += cliRedify(
+      `\n${_space4}Domain Snapshot genesis hash: ${wr.extra.domain_snapshot_genesis_hash}`
+    )
+    witOut += cliRedify(
+      `\n${_space4}Merkle root: ${wr.extra.merkle_root}`
+    )
+    witOut += cliRedify(
+      `\n${_space4}Expected: ${wr.extra.witness_event_verification_hash
+}`
+    )
+    witOut += cliRedify(
+      `\n${_space4}Actual: ${wr.actual_witness_event_verification_hash
+}`
+    )
+  }
+
+  if (wr.doVerifyMerkleProof && wr.merkle_proof_status !== "") {
+    switch (wr.merkle_proof_status) {
+      case "DOMAIN_SNAPSHOT":
+        witOut += `\n${_space4}${CHECKMARK}Is a Domain Snapshot, hence not part of Merkle Proof`
+        break
+      case "VALID":
+        witOut += `\n${_space4}${CHECKMARK}${BRANCH}Witness Merkle Proof is OK`
+        break
+      default:
+      witOut += `\n${_space4}${CROSSMARK}${BRANCH}Witness Merkle Proof is corrupted`
+    }
+  }
+
+  console.log(witOut)
 }
 
 function printRevisionInfo(detail) {
@@ -475,11 +479,8 @@ function printRevisionInfo(detail) {
     console.log(`    ${CROSSMARK}${FILE_GLYPH} Invalid file content hash`)
   }
 
-  if (detail.status.witness !== "MISSING") {
-    console.log(detail.witness_detail)
-  } else {
-    log_dim(`    ${WARN} Not witnessed`)
-  }
+  printWitnessInfo(detail)
+
   if (VERBOSE) {
     delete detail.data.witness
     console.log("  VERBOSE backend", detail)
@@ -502,6 +503,87 @@ function printRevisionInfo(detail) {
 
 function checkmarkCrossmark(isCorrect) {
   return isCorrect ? CHECKMARK : CROSSMARK
+}
+
+function formatWitnessInfo2HTML(detail) {
+  const _space2 = "&nbsp&nbsp"
+  const _space4 = _space2 + _space2
+
+  let witOut = `${_space2}Witness event detected`
+
+  const wr = detail.witness_result
+  const witnessTxUrl =
+    cES.witnessNetworkMap[wr.witness_network] +
+      "/" +
+      wr.tx_hash
+
+  const txHash = makeHref(
+    shortenHash(wr.tx_hash),
+    witnessTxUrl
+  )
+  witOut += `<br>${_space4}Transaction hash: ${txHash}`
+  const suffix = ` on ${wr.witness_network} via etherscan.io`
+  if (wr.etherscan_result === "true") {
+    witOut += `<br>${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified${suffix}`
+  } else if (wr.etherscan_result === "false") {
+    // We don't need <br> because redify already wraps the text inside a div.
+    witOut += htmlRedify(
+      `${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match${suffix}`
+    )
+  } else {
+    witOut += htmlRedify(
+      `${_space4}${CROSSMARK}${WATCH}${wr.etherscan_error_message}${suffix}`
+    )
+    witOut += htmlRedify(
+      `${_space4}Error code: ${wr.etherscan_result}`
+    )
+    // We want the long hash to be shortened in the HTML output.
+    const formattedWEVH = clipboardifyHash(
+      wr.actual_witness_event_verification_hash
+    )
+    witOut += htmlRedify(
+      `${_space4}Verify manually: ${formattedWEVH}`
+    )
+  }
+
+  if (!wr.witness_event_vh_matches) {
+    witOut += htmlRedify(
+      `${_space4}${CROSSMARK}` +
+        "Witness event verification hash doesn't match"
+    )
+    witOut += htmlRedify(
+      `${_space4}Domain Snapshot genesis hash: ${wr.extra.domain_snapshot_genesis_hash}`
+    )
+    witOut += htmlRedify(
+      `${_space4}Merkle root: ${clipboardifyHash(
+wr.extra.merkle_root
+)}`
+    )
+    witOut += htmlRedify(
+      `${_space4}Expected: ${clipboardifyHash(
+wr.extra.witness_event_verification_hash
+)}`
+    )
+    witOut += htmlRedify(
+      `${_space4}Actual: ${clipboardifyHash(
+wr.actual_witness_event_verification_hash
+)}`
+    )
+  }
+
+  if (wr.doVerifyMerkleProof && wr.merkle_proof_status !== "") {
+    switch (wr.merkle_proof_status) {
+      case "DOMAIN_SNAPSHOT":
+        witOut += `<br>${_space4}${CHECKMARK}Is a Domain Snapshot, hence not part of Merkle Proof`
+        break
+      case "VALID":
+        witOut += `<br>${_space4}${CHECKMARK}${BRANCH}Witness Merkle Proof is OK`
+        break
+      default:
+      witOut += `<br>${_space4}${CROSSMARK}${BRANCH}Witness Merkle Proof is corrupted`
+    }
+  }
+  return witOut
 }
 
 function formatRevisionInfo2HTML(server, detail, verbose = false) {
@@ -549,7 +631,8 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
 
   let witnessSummary = ""
   if (detail.status.witness !== "MISSING") {
-    out += detail.witness_detail + "<br>"
+    const witOut = formatWitnessInfo2HTML(detail)
+    out += witOut + "<br>"
     witnessSummary = WATCH
     if (detail.status.witness === "INVALID") {
       isCorrect = false
@@ -558,7 +641,7 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
   }
   if (verbose) {
-    delete detail.witness_detail
+    delete detail.witness_result
     out += `${_space2}VERBOSE backend ` + JSON.stringify(detail) + "<br>"
   }
 
@@ -726,7 +809,6 @@ function verifyCurrentSignature(data, verificationHash) {
  * @param   {string} prevRevId The previous page revision id.
  * @param   {string} previousVerificationHash The previous verification hash string.
  * @param   {string} contentHash The page content hash string.
- * @param   {boolean} isHtml Flag to format the log as an HTML string.
  * @param   {boolean} doVerifyMerkleProof Flag for do Verify Merkle Proof.
  * @returns {Array} An array containing verification data,
  *                  verification-is-correct flag, and an array of page revision
@@ -736,7 +818,6 @@ async function verifyRevision(
   verificationHash,
   input,
   previousVerificationData,
-  isHtml,
   doVerifyMerkleProof
 ) {
   let detail = {
@@ -749,7 +830,7 @@ async function verifyRevision(
       verification: INVALID_VERIFICATION_STATUS,
       file: "MISSING",
     },
-    witness_detail: "", // always in string
+    witness_result: {},
     file_hash: "",
   }
 
@@ -836,13 +917,12 @@ async function verifyRevision(
   }
 
   // WITNESS DATA HASH CALCULATOR
-  const [witnessStatus, witnessDetail] = await verifyWitness(
+  const [witnessStatus, witnessResult] = await verifyWitness(
     data.witness,
     verificationHash,
     doVerifyMerkleProof,
-    isHtml
   )
-  detail.witness_detail = witnessDetail
+  detail.witness_result = witnessResult
   detail.status.witness = witnessStatus
 
   let signatureHash = ""
@@ -961,7 +1041,6 @@ function calculateStatus(count, totalLength) {
  * @param   {Array} verifiedRevIds Array of revision ids which have verification detail.
  * @param   {string} server The server URL for the API call.
  * @param   {boolean} verbose
- * @param   {boolean} isHtml
  * @param   {boolean} doVerifyMerkleProof The flag for whether to do rigorous
  *                    verification of the merkle proof. TODO clarify this.
  * @param   {Object} token (Optional) The OAuth2 token required to make the API call.
@@ -972,7 +1051,6 @@ async function* generateVerifyPage(
   verificationHashes,
   input,
   verbose,
-  isHtml,
   doVerifyMerkleProof
 ) {
   let revisionInput
@@ -1004,7 +1082,6 @@ async function* generateVerifyPage(
       vh,
       revisionInput,
       previousVerificationData,
-      isHtml,
       doVerifyMerkleProof
     )
     elapsed = getElapsedTime(elapsedStart)
@@ -1047,12 +1124,10 @@ async function verifyPage(input, verbose, doVerifyMerkleProof, token) {
     revision_details: [],
   }
   let verificationStatus
-  const isHtml = true
   for await (const value of generateVerifyPage(
     verificationHashes,
     input,
     verbose,
-    isHtml,
     doVerifyMerkleProof
   )) {
     const [isCorrect, detail] = value
