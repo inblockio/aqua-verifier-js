@@ -258,6 +258,25 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
   return true
 }
 
+function verifyPreviousWitness(data, prev) {
+  let prevWitnessHash = ""
+  if (data.verification_context.has_previous_witness) {
+    if (!prev.witness) {
+      return [prevWitnessHash, { error_message: "Previous witness data not found" }]
+    }
+    prevWitnessHash = calculateWitnessHash(
+      prev.witness.domain_snapshot_genesis_hash,
+      prev.witness.merkle_root,
+      prev.witness.witness_network,
+      prev.witness.witness_event_transaction_hash
+    )
+    if (prevWitnessHash !== prev.witness.witness_hash) {
+      return [prevWitnessHash, { error_message: "Previous witness hash doesn't match" }]
+    }
+  }
+  return [prevWitnessHash, null]
+}
+
 /**
  * TODO THIS DOCSTRING IS OUTDATED!
  * Analyses the witnessing steps for a revision of a page and builds a
@@ -808,20 +827,9 @@ async function verifyRevision(
     return [false, error]
   }
 
-  let prevWitnessHash = ""
-  if (data.verification_context.has_previous_witness) {
-    if (!previousVerificationData.witness) {
-      return [false, { error_message: "Previous witness data not found" }]
-    }
-    prevWitnessHash = calculateWitnessHash(
-      previousVerificationData.witness.domain_snapshot_genesis_hash,
-      previousVerificationData.witness.merkle_root,
-      previousVerificationData.witness.witness_network,
-      previousVerificationData.witness.witness_event_transaction_hash
-    )
-    if (prevWitnessHash !== previousVerificationData.witness.witness_hash) {
-      return [false, { error_message: "Witness hash doesn't match" }]
-    }
+  const [prevWitnessHash, err] = verifyPreviousWitness(data, previousVerificationData)
+  if (err !== null) {
+    return [false, err]
   }
 
   // WITNESS DATA HASH CALCULATOR
