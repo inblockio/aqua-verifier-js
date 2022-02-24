@@ -484,16 +484,19 @@ function printRevisionInfo(detail) {
     delete detail.data.witness
     console.log("  VERBOSE backend", detail)
   }
-  if (detail.status.signature === "MISSING") {
-    log_dim(`    ${WARN} Not signed`)
-    return
-  }
-  if (detail.status.signature === "VALID") {
-    console.log(
-      `    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.data.signature.wallet_address}`
-    )
-  } else {
-    log_red(`    ${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`)
+
+  // Signature
+  switch (detail.status.signature) {
+    case "MISSING":
+      log_dim(`    ${WARN} Not signed`)
+      break
+    case "VALID":
+      console.log(
+        `    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.data.signature.wallet_address}`
+      )
+      break
+    default:
+      log_red(`    ${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`)
   }
 }
 
