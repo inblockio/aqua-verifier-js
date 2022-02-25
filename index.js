@@ -389,7 +389,7 @@ function printWitnessInfo(detail) {
   const _space4 = _space2 + _space2
   const wr = detail.witness_result
   const wh = shortenHash(wr.witness_hash)
-  let witOut = `${_space2}Witness event${wh} detected`
+  let witOut = `${_space2}Witness event ${wh} detected`
   witOut += `\n${_space4}Transaction hash: ${wr.tx_hash}`
   const suffix = ` on ${wr.witness_network} via etherscan.io`
   if (wr.etherscan_result === "true") {
