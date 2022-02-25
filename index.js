@@ -2,7 +2,7 @@
 // We use "http-status-codes" instead of STATUS_CODES in the "http" library
 // because we need to use this file in the browser.
 const { getReasonPhrase } = require("http-status-codes")
-const Buffer = require('buffer/').Buffer
+const Buffer = require("buffer/").Buffer
 // End of compatibility with browsers.
 
 const fetch = require("node-fetch")
@@ -43,7 +43,9 @@ function formatHTTPError(response, message = "") {
   // We use status code mapping mapping instead of response.statusText because
   // apparently in HTTP/2, the statusText is removed. See
   // https://stackoverflow.com/questions/41632077/why-is-the-statustext-of-my-xhr-empty
-  return `HTTP ${response.status}: ${getReasonPhrase(response.status)}.${message}`
+  return `HTTP ${response.status}: ${getReasonPhrase(
+    response.status
+  )}.${message}`
 }
 
 function cliRedify(content) {
@@ -258,7 +260,10 @@ function verifyPreviousWitness(data, prev) {
   let prevWitnessHash = ""
   if (data.verification_context.has_previous_witness) {
     if (!prev.witness) {
-      return [prevWitnessHash, { error_message: "Previous witness data not found" }]
+      return [
+        prevWitnessHash,
+        { error_message: "Previous witness data not found" },
+      ]
     }
     prevWitnessHash = calculateWitnessHash(
       prev.witness.domain_snapshot_genesis_hash,
@@ -267,7 +272,10 @@ function verifyPreviousWitness(data, prev) {
       prev.witness.witness_event_transaction_hash
     )
     if (prevWitnessHash !== prev.witness.witness_hash) {
-      return [prevWitnessHash, { error_message: "Previous witness hash doesn't match" }]
+      return [
+        prevWitnessHash,
+        { error_message: "Previous witness hash doesn't match" },
+      ]
     }
   }
   return [prevWitnessHash, null]
@@ -300,7 +308,7 @@ function verifyPreviousWitness(data, prev) {
 async function verifyWitness(
   witnessData,
   verification_hash,
-  doVerifyMerkleProof,
+  doVerifyMerkleProof
 ) {
   if (witnessData === null || witnessData === undefined) {
     return ["MISSING", null]
@@ -316,7 +324,8 @@ async function verifyWitness(
     witness_network: witnessData.witness_network,
     etherscan_result: "",
     etherscan_error_message: "",
-    actual_witness_event_verification_hash: actual_witness_event_verification_hash,
+    actual_witness_event_verification_hash:
+      actual_witness_event_verification_hash,
     witness_event_vh_matches: true,
     // `extra` is populated with useful info when the witness event verification
     // doesn't match.
@@ -333,7 +342,7 @@ async function verifyWitness(
   )
   result.etherscan_result = etherScanResult
 
-  if (etherScanResult !== "true" && (etherScanResult !== "false")) {
+  if (etherScanResult !== "true" && etherScanResult !== "false") {
     let errMsg
     if (etherScanResult === "Transaction hash not found") {
       errMsg = "Transaction hash not found"
@@ -352,7 +361,8 @@ async function verifyWitness(
     result.extra = {
       domain_snapshot_genesis_hash: witnessData.domain_snapshot_genesis_hash,
       merkle_root: witnessData.merkle_root,
-      witness_event_verification_hash: witnessData.witness_event_verification_hash,
+      witness_event_verification_hash:
+        witnessData.witness_event_verification_hash,
     }
     return ["INVALID", result]
   }
@@ -368,7 +378,7 @@ async function verifyWitness(
         witnessData.structured_merkle_proof,
         verification_hash
       )
-      result.merkle_proof_status = merkleProofIsOK ? "VALID": "INVALID"
+      result.merkle_proof_status = merkleProofIsOK ? "VALID" : "INVALID"
       if (!merkleProofIsOK) {
         return ["INVALID", result]
       }
@@ -402,9 +412,7 @@ function printWitnessInfo(detail) {
     witOut += cliRedify(
       `\n${_space4}${CROSSMARK}${WATCH}${wr.etherscan_error_message}${suffix}`
     )
-    witOut += cliRedify(
-      `\n${_space4}Error code: ${wr.etherscan_result}`
-    )
+    witOut += cliRedify(`\n${_space4}Error code: ${wr.etherscan_result}`)
     witOut += cliRedify(
       `\n${_space4}Verify manually: ${wr.actual_witness_event_verification_hash}`
     )
@@ -417,16 +425,12 @@ function printWitnessInfo(detail) {
     witOut += cliRedify(
       `\n${_space4}Domain Snapshot genesis hash: ${wr.extra.domain_snapshot_genesis_hash}`
     )
+    witOut += cliRedify(`\n${_space4}Merkle root: ${wr.extra.merkle_root}`)
     witOut += cliRedify(
-      `\n${_space4}Merkle root: ${wr.extra.merkle_root}`
+      `\n${_space4}Expected: ${wr.extra.witness_event_verification_hash}`
     )
     witOut += cliRedify(
-      `\n${_space4}Expected: ${wr.extra.witness_event_verification_hash
-}`
-    )
-    witOut += cliRedify(
-      `\n${_space4}Actual: ${wr.actual_witness_event_verification_hash
-}`
+      `\n${_space4}Actual: ${wr.actual_witness_event_verification_hash}`
     )
   }
 
@@ -439,7 +443,7 @@ function printWitnessInfo(detail) {
         witOut += `\n${_space4}${CHECKMARK}${BRANCH}Witness Merkle Proof is OK`
         break
       default:
-      witOut += `\n${_space4}${CROSSMARK}${BRANCH}Witness Merkle Proof is corrupted`
+        witOut += `\n${_space4}${CROSSMARK}${BRANCH}Witness Merkle Proof is corrupted`
     }
   }
 
@@ -467,9 +471,7 @@ function printRevisionInfo(detail) {
     log_red(`  ${CROSSMARK}` + " Verification hash doesn't match")
     return
   }
-  console.log(
-    `  ${CHECKMARK} Verification hash matches`
-  )
+  console.log(`  ${CHECKMARK} Verification hash matches`)
 
   if (detail.status.file === "VERIFIED") {
     // The alternative value of detail.status.file is "MISSING", where we don't
@@ -515,14 +517,9 @@ function formatWitnessInfo2HTML(detail) {
 
   const wr = detail.witness_result
   const witnessTxUrl =
-    cES.witnessNetworkMap[wr.witness_network] +
-      "/" +
-      wr.tx_hash
+    cES.witnessNetworkMap[wr.witness_network] + "/" + wr.tx_hash
 
-  const txHash = makeHref(
-    shortenHash(wr.tx_hash),
-    witnessTxUrl
-  )
+  const txHash = makeHref(shortenHash(wr.tx_hash), witnessTxUrl)
   witOut += `<br>${_space4}Transaction hash: ${txHash}`
   const suffix = ` on ${wr.witness_network} via etherscan.io`
   if (wr.etherscan_result === "true") {
@@ -536,40 +533,33 @@ function formatWitnessInfo2HTML(detail) {
     witOut += htmlRedify(
       `${_space4}${CROSSMARK}${WATCH}${wr.etherscan_error_message}${suffix}`
     )
-    witOut += htmlRedify(
-      `${_space4}Error code: ${wr.etherscan_result}`
-    )
+    witOut += htmlRedify(`${_space4}Error code: ${wr.etherscan_result}`)
     // We want the long hash to be shortened in the HTML output.
     const formattedWEVH = clipboardifyHash(
       wr.actual_witness_event_verification_hash
     )
-    witOut += htmlRedify(
-      `${_space4}Verify manually: ${formattedWEVH}`
-    )
+    witOut += htmlRedify(`${_space4}Verify manually: ${formattedWEVH}`)
   }
 
   if (!wr.witness_event_vh_matches) {
     witOut += htmlRedify(
-      `${_space4}${CROSSMARK}` +
-        "Witness event verification hash doesn't match"
+      `${_space4}${CROSSMARK}` + "Witness event verification hash doesn't match"
     )
     witOut += htmlRedify(
       `${_space4}Domain Snapshot genesis hash: ${wr.extra.domain_snapshot_genesis_hash}`
     )
     witOut += htmlRedify(
-      `${_space4}Merkle root: ${clipboardifyHash(
-wr.extra.merkle_root
-)}`
+      `${_space4}Merkle root: ${clipboardifyHash(wr.extra.merkle_root)}`
     )
     witOut += htmlRedify(
       `${_space4}Expected: ${clipboardifyHash(
-wr.extra.witness_event_verification_hash
-)}`
+        wr.extra.witness_event_verification_hash
+      )}`
     )
     witOut += htmlRedify(
       `${_space4}Actual: ${clipboardifyHash(
-wr.actual_witness_event_verification_hash
-)}`
+        wr.actual_witness_event_verification_hash
+      )}`
     )
   }
 
@@ -582,7 +572,7 @@ wr.actual_witness_event_verification_hash
         witOut += `<br>${_space4}${CHECKMARK}${BRANCH}Witness Merkle Proof is OK`
         break
       default:
-      witOut += `<br>${_space4}${CROSSMARK}${BRANCH}Witness Merkle Proof is corrupted`
+        witOut += `<br>${_space4}${CROSSMARK}${BRANCH}Witness Merkle Proof is corrupted`
     }
   }
   return witOut
@@ -649,7 +639,10 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
 
   if (detail.status.signature === "MISSING") {
     out += htmlDimify(`${_space4}${WARN} Not signed<br>`)
-    return [checkmarkCrossmark(isCorrect) + fileSummary + witnessSummary, makeDetail(out)]
+    return [
+      checkmarkCrossmark(isCorrect) + fileSummary + witnessSummary,
+      makeDetail(out),
+    ]
   }
   if (detail.status.signature === "VALID") {
     const walletURL = `${server}/index.php/User:${detail.data.signature.wallet_address}`
@@ -661,7 +654,13 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
     )
     isCorrect = false
   }
-  return [checkmarkCrossmark(isCorrect) + fileSummary + witnessSummary + LOCKED_WITH_PEN, makeDetail(out)]
+  return [
+    checkmarkCrossmark(isCorrect) +
+      fileSummary +
+      witnessSummary +
+      LOCKED_WITH_PEN,
+    makeDetail(out),
+  ]
 }
 
 function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
@@ -688,7 +687,9 @@ function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
     }
 
     if ("error_message" in details.revision_details[i]) {
-      revisionOut += htmlRedify("ERROR: " + details.revision_details[i].error_message)
+      revisionOut += htmlRedify(
+        "ERROR: " + details.revision_details[i].error_message
+      )
       revisionOut += "</div>"
       out = revisionOut + out
       break
@@ -740,14 +741,15 @@ function verifyPreviousSignature(data, previousVerificationData) {
     return null
   }
   if (!previousVerificationData) {
-    return { error_message: "Revision has previous signature, but no previous revision provided to validate"}
+    return {
+      error_message:
+        "Revision has previous signature, but no previous revision provided to validate",
+    }
   }
   const prevSignature = previousVerificationData.signature.signature
   const prevPublicKey = previousVerificationData.signature.public_key
   const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
-  if (
-    signatureHash !== previousVerificationData.signature.signature_hash
-  ) {
+  if (signatureHash !== previousVerificationData.signature.signature_hash) {
     return { error_message: "Previous signature hash doesn't match" }
   }
   return null
@@ -913,7 +915,10 @@ async function verifyRevision(
     return [false, error]
   }
 
-  const [prevWitnessHash, err] = verifyPreviousWitness(data, previousVerificationData)
+  const [prevWitnessHash, err] = verifyPreviousWitness(
+    data,
+    previousVerificationData
+  )
   if (err !== null) {
     return [false, err]
   }
@@ -922,7 +927,7 @@ async function verifyRevision(
   const [witnessStatus, witnessResult] = await verifyWitness(
     data.witness,
     verificationHash,
-    doVerifyMerkleProof,
+    doVerifyMerkleProof
   )
   detail.witness_result = witnessResult
   detail.status.witness = witnessStatus
@@ -957,7 +962,10 @@ async function verifyRevision(
   // Specify witness correctness
   let witnessIsCorrect = detail.status.witness !== "INVALID"
 
-  const [signatureIsCorrect, sigStatus] = verifyCurrentSignature(data, verificationHash)
+  const [signatureIsCorrect, sigStatus] = verifyCurrentSignature(
+    data,
+    verificationHash
+  )
   detail.status.signature = sigStatus
 
   return [signatureIsCorrect && witnessIsCorrect, detail]
@@ -1115,7 +1123,10 @@ async function verifyPage(input, verbose, doVerifyMerkleProof, token) {
     verificationHashes = res
   } else {
     if (!("offline_data" in input)) {
-      return [ERROR_VERIFICATION_STATUS, { error: "Input must contain 'server' & 'title', or 'offline_data'" }]
+      return [
+        ERROR_VERIFICATION_STATUS,
+        { error: "Input must contain 'server' & 'title', or 'offline_data'" },
+      ]
     }
     verificationHashes = Object.keys(input.offline_data.revisions)
   }
@@ -1152,7 +1163,9 @@ function validateTitle(title) {
     log_yellow("Warning: Underscores in title are converted to spaces.")
   }
   if (title.includes(": ")) {
-    log_yellow("Warning: Space after ':' detected. You might need to remove it to match MediaWiki title.")
+    log_yellow(
+      "Warning: Space after ':' detected. You might need to remove it to match MediaWiki title."
+    )
   }
   return title
 }
