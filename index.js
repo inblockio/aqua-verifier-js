@@ -300,7 +300,7 @@ function verifyPreviousWitness(data, prev) {
  * - Writes the teturned boolean value from verifyMerkleIntegrity to the
  *   log.
  * - Returns the structured data summary of the witness verification.
- * @param   {string} witness_event_id
+ * @param   {int} witness_event_id
  * @param   {string} verificationHash
  * @param   {boolean} doVerifyMerkleProof Flag for do Verify Merkle Proof.
  * @returns {string} The verification log.
