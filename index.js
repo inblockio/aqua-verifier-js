@@ -772,8 +772,8 @@ function verifyCurrentSignature(data, verificationHash) {
   const paddedMessage =
     "I sign the following page verification_hash: [0x" + verificationHash + "]"
   try {
-    const recoveredAddress = ethers.utils.recoverAddress(
-      ethers.utils.hashMessage(paddedMessage),
+    const recoveredAddress = ethers.recoverAddress(
+      ethers.hashMessage(paddedMessage),
       data.signature.signature
     )
     if (
@@ -1268,4 +1268,10 @@ module.exports = {
   getRevisionHashes,
   fetchWithToken,
   validateTitle,
+  // For notarize.js
+  getHashSum,
+  calculateMetadataHash,
+  calculateVerificationHash,
+  calculateSignatureHash,
+  formatMwTimestamp,
 }
