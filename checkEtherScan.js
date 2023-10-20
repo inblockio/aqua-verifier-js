@@ -1,6 +1,6 @@
 const fetch = require("node-fetch")
 
-const re = /<span id='rawinput'.*<\/span>/
+const re = /<span id="rawinput".*<\/span>/
 
 const witnessNetworkMap = {
   'mainnet': 'https://etherscan.io/tx',
