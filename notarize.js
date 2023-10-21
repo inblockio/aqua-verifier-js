@@ -7,16 +7,19 @@
 
 const opts = {
   // This is required so that -v is position independent.
-  boolean: ["v"],
+  boolean: ["v", "sign-metamask"],
 }
 
-const fs = require('fs')
+const fs = require("fs")
 const argv = require("minimist")(process.argv.slice(2), opts)
 // utilities for signing and witnessing
 const ethers = require("ethers")
+const http = require("http")
+const fetch = require("node-fetch")
 const main = require("./index")
 
 const filename = argv._[0]
+const signMetamask = argv["sign-metamask"]
 
 const doSign = async (wallet, verificationHash) => {
   const message =
@@ -25,24 +28,124 @@ const doSign = async (wallet, verificationHash) => {
   return signature
 }
 
+const signMetamaskHtml = `
+<html>
+  <script>
+const message = "MESSAGETOBESIGNED";
+const localServerUrl= window.location.href;
+const doSignProcess = async () => {
+  const wallet_address = window.ethereum.selectedAddress
+  const signature = await window.ethereum.request({
+    method: 'personal_sign',
+    params: [message, window.ethereum.selectedAddress],
+  })
+  document.getElementById("signature").innerHTML = \`Signature of your file: \${signature} (you may close this tab)\`
+  await fetch(localServerUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({signature, wallet_address})
+  })
+}
+if (window.ethereum && window.ethereum.isMetaMask) {
+  if (window.ethereum.isConnected() && window.ethereum.selectedAddress) {
+    doSignProcess()
+  } else {
+    window.ethereum.request({ method: 'eth_requestAccounts' })
+      .then(doSignProcess)
+      .catch((error) => {
+        console.error(error);
+        alert(error.message);
+      })
+  }
+} else {
+  alert("Metamask not detected")
+}
+  </script>
+<body>
+    <div id="signature"></div>
+</body>
+</html>
+`
+
+const sleep = (ms) => {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+const doSignMetamask = async (verificationHash) => {
+  const port = 8420
+  const host = "localhost"
+  const serverUrl = `http://${host}:${port}`
+  const messageToBeSigned =
+    "I sign the following page verification_hash: [0x" + verificationHash + "]"
+  let output = "{}"
+  const requestListener = async (req, res) => {
+    if (req.method == "POST") {
+      let data = ""
+      req.on("data", (chunk) => {
+        data += chunk
+      })
+      await new Promise((resolve) => {
+        req.on("end", resolve)
+      })
+      output = data
+      res.writeHead(200)
+      res.end()
+    } else {
+      if (req.url === "/result") {
+        res.writeHead(200)
+        res.end(output)
+        return
+      }
+      res.setHeader("Content-Type", "text/html")
+      res.writeHead(200)
+      const html = signMetamaskHtml.replace(
+        "MESSAGETOBESIGNED",
+        messageToBeSigned
+      )
+      res.end(html)
+    }
+  }
+  const server = http.createServer(requestListener)
+  server.listen(port, host, () => {
+    console.log(`Server is running on ${serverUrl}`)
+  })
+  let response, content
+  while (true) {
+    response = await fetch(serverUrl + "/result")
+    content = await response.json()
+    if (content.signature) {
+      const signature = content.signature
+      const walletAddress = content.wallet_address
+      const publicKey = ethers.SigningKey.recoverPublicKey(
+        ethers.hashMessage(messageToBeSigned),
+        signature
+      )
+      server.close()
+      return [signature, walletAddress, publicKey]
+    }
+    console.log("Waiting for the signature...")
+    await sleep(5000)
+  }
+}
+
 const createNewPage = () => {
   return {
-    pages: [
-      {revisions: {}}
-    ],
+    pages: [{ revisions: {} }],
     siteInfo: {
       sitename: "Personal Knowledge Container",
       dbname: "my_wiki",
-      base: "http:\/\/localhost:9352\/index.php\/Main_Page",
+      base: "http://localhost:9352/index.php/Main_Page",
       generator: "MediaWiki 1.37.1",
       case: "first-letter",
       namespaces: {
-        "0": {
+        0: {
           case: true,
           title: "",
         },
-      }
-    }
+      },
+    },
   }
 }
 
@@ -67,7 +170,7 @@ const createNewRevision = async (previousRevision, timestamp) => {
       has_previous_signature: false,
       has_previous_witness: false,
     },
-    content: {rev_id: 0}
+    content: { rev_id: 0 },
   }
 
   let previousVerificationHash = ""
@@ -92,12 +195,20 @@ const createNewRevision = async (previousRevision, timestamp) => {
   }
   verificationData.content.content_hash = contentHash
 
-  const domainId = "TODO"
+  const domainId = "5e5a1ec586" // TODO
 
-  const metadataHash = main.calculateMetadataHash(domainId, timestamp, previousVerificationHash)
+  const metadataHash = main.calculateMetadataHash(
+    domainId,
+    timestamp,
+    previousVerificationHash
+  )
 
-
-  const verificationHash = main.calculateVerificationHash(contentHash, metadataHash, previousSignatureHash, previousWitnessHash)
+  const verificationHash = main.calculateVerificationHash(
+    contentHash,
+    metadataHash,
+    previousSignatureHash,
+    previousWitnessHash
+  )
   verificationData.metadata = {
     domain_id: domainId,
     time_stamp: timestamp,
@@ -106,9 +217,18 @@ const createNewRevision = async (previousRevision, timestamp) => {
     verification_hash: verificationHash,
   }
 
-  const mnemonic = fs.readFileSync("mnemonic.txt", "utf8")
-  const [wallet, walletAddress, publicKey] = getWallet(mnemonic)
-  const signature = await doSign(wallet, verificationHash)
+  let signature, walletAddress, publicKey
+  if (signMetamask) {
+    ;[signature, walletAddress, publicKey] = await doSignMetamask(
+      verificationHash
+    )
+  } else {
+    const mnemonic = fs.readFileSync("mnemonic.txt", "utf8")
+    let wallet
+    ;[wallet, walletAddress, publicKey] = getWallet(mnemonic)
+    signature = await doSign(wallet, verificationHash)
+  }
+
   const signatureHash = main.calculateSignatureHash(signature, publicKey)
   verificationData.signature = {
     signature,
@@ -120,7 +240,7 @@ const createNewRevision = async (previousRevision, timestamp) => {
 }
 
 // The main function
-(async function () {
+;(async function () {
   const metadataFilename = filename + ".aqua.json"
   let page
   let revisions
@@ -138,7 +258,9 @@ const createNewRevision = async (previousRevision, timestamp) => {
 
   const timestamp = getFileTimestamp(filename)
   if (lastRevision && timestamp == lastRevision.metadata.time_stamp) {
-    console.log(`The file ${filename} hasn't been modified since it was last notarized`)
+    console.log(
+      `The file ${filename} hasn't been modified since it was last notarized`
+    )
     process.exit()
   }
 
