@@ -7,7 +7,7 @@
 
 const opts = {
   // This is required so that -v is position independent.
-  boolean: ["v", "sign-metamask"],
+  boolean: ["v", "sign-metamask", "witness-eth"],
 }
 
 const fs = require("fs")
@@ -20,6 +20,11 @@ const main = require("./index")
 
 const filename = argv._[0]
 const signMetamask = argv["sign-metamask"]
+const enableWitnessEth = argv["witness-eth"]
+
+const port = 8420
+const host = "localhost"
+const serverUrl = `http://${host}:${port}`
 
 const doSign = async (wallet, verificationHash) => {
   const message =
@@ -69,16 +74,87 @@ if (window.ethereum && window.ethereum.isMetaMask) {
 </html>
 `
 
+const witnessMetamaskHtml = `
+<html>
+  <script>
+const witnessNetwork = "WITNESSNETWORK"
+const smart_contract_address = "SMARTCONTRACTADDRESS"
+const witness_event_verification_hash = "WITNESSEVENTVERIFICATIONHASH"
+const localServerUrl= window.location.href;
+const ethChainIdMap = {
+  'mainnet': '0x1',
+  'ropsten': '0x3',
+  'rinkeby': '0x4',
+  'goerli': '0x5',
+  'kotti': '0x6',
+  'kovan': '0x42',
+}
+const doWitness = async () => {
+  const chainId = await window.ethereum.request({ method: 'eth_chainId' })
+  const requestedChainId = ethChainIdMap[witnessNetwork]
+  if (requestedChainId !== chainId) {
+    console.log(requestedChainId, chainId)
+    // Switch network if the Wallet network does not match DA
+    // requested network.
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{
+        chainId: requestedChainId,
+      }],
+    })
+  }
+  // Now we do the actual witness process
+  const wallet_address = window.ethereum.selectedAddress
+  const params = [
+    {
+      from: wallet_address,
+      to: smart_contract_address,
+      // gas and gasPrice are optional values which are
+      // automatically set by MetaMask.
+      // gas: '0x7cc0', // 30400
+      // gasPrice: '0x328400000',
+      data: '0x9cef4ea1' + witness_event_verification_hash,
+    },
+  ]
+  const transaction_hash = await window.ethereum.request({
+    method: 'eth_sendTransaction',
+    params: params,
+  })
+  document.getElementById("transaction_hash").innerHTML = \`Transaction hash of the witness network: \${transaction_hash} (you may close this tab)\`
+  await fetch(localServerUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({transaction_hash, wallet_address})
+  })
+}
+if (window.ethereum && window.ethereum.isMetaMask) {
+  if (window.ethereum.isConnected() && window.ethereum.selectedAddress) {
+    doWitness()
+  } else {
+    window.ethereum.request({ method: 'eth_requestAccounts' })
+      .then(doWitness)
+      .catch((error) => {
+        console.error(error);
+        alert(error.message);
+      })
+  }
+} else {
+  alert("Metamask not detected")
+}
+  </script>
+<body>
+  <div id="transaction_hash"></div>
+</body>
+</html>
+`
+
 const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-const doSignMetamask = async (verificationHash) => {
-  const port = 8420
-  const host = "localhost"
-  const serverUrl = `http://${host}:${port}`
-  const messageToBeSigned =
-    "I sign the following page verification_hash: [0x" + verificationHash + "]"
+const commonPrepareListener = (htmlContent) => {
   let output = "{}"
   const requestListener = async (req, res) => {
     if (req.method == "POST") {
@@ -100,13 +176,17 @@ const doSignMetamask = async (verificationHash) => {
       }
       res.setHeader("Content-Type", "text/html")
       res.writeHead(200)
-      const html = signMetamaskHtml.replace(
-        "MESSAGETOBESIGNED",
-        messageToBeSigned
-      )
-      res.end(html)
+      res.end(htmlContent)
     }
   }
+  return requestListener
+}
+
+const doSignMetamask = async (verificationHash) => {
+  const messageToBeSigned =
+    "I sign the following page verification_hash: [0x" + verificationHash + "]"
+  const html = signMetamaskHtml.replace("MESSAGETOBESIGNED", messageToBeSigned)
+  const requestListener = commonPrepareListener(html)
   const server = http.createServer(requestListener)
   server.listen(port, host, () => {
     console.log(`Server is running on ${serverUrl}`)
@@ -122,6 +202,7 @@ const doSignMetamask = async (verificationHash) => {
         ethers.hashMessage(messageToBeSigned),
         signature
       )
+      console.log(`The signature has been retrieved: ${signature}`)
       server.close()
       return [signature, walletAddress, publicKey]
     }
@@ -130,7 +211,85 @@ const doSignMetamask = async (verificationHash) => {
   }
 }
 
-const createNewPage = () => {
+const doWitnessMetamask = async (
+  witnessEventVerificationHash,
+  witnessNetwork,
+  smartContractAddress
+) => {
+  const html = witnessMetamaskHtml
+    .replace("WITNESSNETWORK", witnessNetwork)
+    .replace("SMARTCONTRACTADDRESS", smartContractAddress)
+    .replace("WITNESSEVENTVERIFICATIONHASH", witnessEventVerificationHash)
+  const requestListener = commonPrepareListener(html)
+  const server = http.createServer(requestListener)
+  server.listen(port, host, () => {
+    console.log(`Server is running on ${serverUrl}`)
+  })
+  let response, content
+  while (true) {
+    response = await fetch(serverUrl + "/result")
+    content = await response.json()
+    if (content.transaction_hash) {
+      const transactionHash = content.transaction_hash
+      const walletAddress = content.wallet_address
+      console.log(`The witness tx hash has been retrieved: ${transactionHash}`)
+      server.close()
+      return [transactionHash, walletAddress]
+    }
+    console.log("Waiting for the witness...")
+    await sleep(10000)
+  }
+}
+
+const prepareWitness = async (verificationHash) => {
+  const merkle_root = main.getHashSum(verificationHash + verificationHash)
+  const witness_network = "goerli"
+  const smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
+  const domain_snapshot_genesis_hash =
+    "305ca37488e0d1e20535f08f073290c564040f6574a84ab73fd5d4c6def175bc02260585bae9f6fc4a584a8367881ef5257c364692ff07378b6caa28d1450d9e" // TODO
+  const witness_event_verification_hash = main.getHashSum(
+    domain_snapshot_genesis_hash + merkle_root
+  )
+
+  const [transactionhash, walletAddress] = await doWitnessMetamask(
+    witness_event_verification_hash,
+    witness_network,
+    smart_contract_address
+  )
+  const witness_hash = main.getHashSum(
+    domain_snapshot_genesis_hash +
+      merkle_root +
+      witness_network +
+      transactionHash
+  )
+  const witness = {
+    witness_event_id: "0",
+    domain_id: domainId,
+    domain_snapshot_title:
+      `Data Accounting:DomainSnapshot:${domain_snapshot_genesis_hash}`,
+    witness_hash,
+    domain_snapshot_genesis_hash,
+    merkle_root,
+    witness_event_verification_hash,
+    witness_network,
+    smart_contract_address,
+    witness_event_transaction_hash: transactionHash,
+    sender_account_address: walletAddress,
+    source: "default",
+    structured_merkle_proof: [
+      {
+        witness_event_id: "0",
+        depth: "0",
+        left_leaf: verificationHash,
+        right_leaf: verificationHash,
+        successor: merkle_root,
+      },
+    ],
+  }
+  return witness
+}
+
+const createNewMetaData = () => {
   return {
     pages: [{ revisions: {} }],
     siteInfo: {
@@ -228,8 +387,13 @@ const createNewRevision = async (previousRevision, timestamp) => {
     ;[wallet, walletAddress, publicKey] = getWallet(mnemonic)
     signature = await doSign(wallet, verificationHash)
   }
-
   const signatureHash = main.calculateSignatureHash(signature, publicKey)
+
+  if (enableWitnessEth) {
+    const witness = await prepareWitness(verificationHash)
+    verificationData.witness = witness
+  }
+
   verificationData.signature = {
     signature,
     public_key: publicKey,
@@ -242,16 +406,16 @@ const createNewRevision = async (previousRevision, timestamp) => {
 // The main function
 ;(async function () {
   const metadataFilename = filename + ".aqua.json"
-  let page
+  let metadata
   let revisions
   let lastRevision
   if (fs.existsSync(metadataFilename)) {
-    page = JSON.parse(fs.readFileSync(metadataFilename))
-    revisions = page.pages[0].revisions
+    metadata = JSON.parse(fs.readFileSync(metadataFilename))
+    revisions = metadata.pages[0].revisions
     const verificationHashes = Object.keys(revisions)
     lastRevision = revisions[verificationHashes[verificationHashes.length - 1]]
   } else {
-    page = createNewPage()
+    metadata = createNewMetaData()
     revisions = {}
     lastRevision = null
   }
@@ -269,5 +433,5 @@ const createNewRevision = async (previousRevision, timestamp) => {
   revisions[verificationHash] = verificationData
   console.log(`Writing new revision ${verificationHash}`)
 
-  fs.writeFileSync(metadataFilename, JSON.stringify(page), "utf8")
+  fs.writeFileSync(metadataFilename, JSON.stringify(metadata), "utf8")
 })()
