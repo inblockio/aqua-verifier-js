@@ -10,15 +10,33 @@ const opts = {
   boolean: ["v", "sign-metamask", "witness-eth"],
 }
 
-const fs = require("fs")
+const usage = () => {
+  console.log(`Usage:
+notarize.js [OPTIONS] <filename>
+which generates filename.aqua.json
+
+Options:
+  --sign-metamask    Sign with MetaMask instead of local Ethereum wallet
+  --witness-eth      Witness to Ethereum on-chain with MetaMask
+`)
+}
+
 const argv = require("minimist")(process.argv.slice(2), opts)
+const main = require("./index")
+const filename = argv._[0]
+
+if (!filename) {
+  main.log_red("ERROR: You must specify a file")
+  usage()
+  process.exit(1)
+}
+
+const fs = require("fs")
 // utilities for signing and witnessing
 const ethers = require("ethers")
 const http = require("http")
 const fetch = require("node-fetch")
-const main = require("./index")
 
-const filename = argv._[0]
 const signMetamask = argv["sign-metamask"]
 const enableWitnessEth = argv["witness-eth"]
 
