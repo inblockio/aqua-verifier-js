@@ -241,7 +241,7 @@ const doWitnessMetamask = async (
   }
 }
 
-const prepareWitness = async (verificationHash) => {
+const prepareWitness = async (verificationHash, domainId) => {
   const merkle_root = main.getHashSum(verificationHash + verificationHash)
   const witness_network = "goerli"
   const smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
@@ -251,7 +251,7 @@ const prepareWitness = async (verificationHash) => {
     domain_snapshot_genesis_hash + merkle_root
   )
 
-  const [transactionhash, walletAddress] = await doWitnessMetamask(
+  const [transactionHash, walletAddress] = await doWitnessMetamask(
     witness_event_verification_hash,
     witness_network,
     smart_contract_address
@@ -390,7 +390,7 @@ const createNewRevision = async (previousRevision, timestamp) => {
   const signatureHash = main.calculateSignatureHash(signature, publicKey)
 
   if (enableWitnessEth) {
-    const witness = await prepareWitness(verificationHash)
+    const witness = await prepareWitness(verificationHash, domainId)
     verificationData.witness = witness
   }
 
