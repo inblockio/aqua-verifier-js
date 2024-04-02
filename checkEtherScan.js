@@ -4,10 +4,8 @@ const re = /<span id="rawinput".*<\/span>/
 
 const witnessNetworkMap = {
   'mainnet': 'https://etherscan.io/tx',
-  'ropsten': 'https://ropsten.etherscan.io/tx',
-  'kovan': 'https://kovan.etherscan.io/tx',
-  'rinkeby': 'https://rinkeby.etherscan.io/tx',
-  'goerli': 'https://goerli.etherscan.io/tx',
+  'sepolia': 'https://sepolia.etherscan.io/tx',
+  'holesky': 'https://holesky.etherscan.io/tx',
 }
 
 function sleep(ms) {
@@ -63,11 +61,11 @@ async function checkEtherScan(witnessNetwork, txHash, witnessVerificationHash) {
 }
 
 async function testCheckEtherScan() {
-  let out = await checkEtherScan('goerli', 'stuff', '9e518db9cfdcf9854bb7e5097ef15a77e3409c6ed3e26171ec62a075c4ef179a1651560e11b8bdd3e2ed70a1097afd4744b1dbf07c3c68884b1ebaca3026764d')
+  let out = await checkEtherScan('sepolia', 'stuff', '9e518db9cfdcf9854bb7e5097ef15a77e3409c6ed3e26171ec62a075c4ef179a1651560e11b8bdd3e2ed70a1097afd4744b1dbf07c3c68884b1ebaca3026764d')
   console.log(out)
-  out = await checkEtherScan('goerli', '0x1b35843949a90869a7f79a132afcda0271799afd766140da1b13ae984beb6a80', 'stuff')
+  out = await checkEtherScan('sepolia', '0x1b35843949a90869a7f79a132afcda0271799afd766140da1b13ae984beb6a80', 'stuff')
   console.log(out)
-  out = await checkEtherScan('goerli', '0x1b35843949a90869a7f79a132afcda0271799afd766140da1b13ae984beb6a80', '9e518db9cfdcf9854bb7e5097ef15a77e3409c6ed3e26171ec62a075c4ef179a1651560e11b8bdd3e2ed70a1097afd4744b1dbf07c3c68884b1ebaca3026764d')
+  out = await checkEtherScan('sepolia', '0x1b35843949a90869a7f79a132afcda0271799afd766140da1b13ae984beb6a80', '9e518db9cfdcf9854bb7e5097ef15a77e3409c6ed3e26171ec62a075c4ef179a1651560e11b8bdd3e2ed70a1097afd4744b1dbf07c3c68884b1ebaca3026764d')
   console.log(out)
 }
 
