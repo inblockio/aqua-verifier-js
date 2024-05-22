@@ -759,6 +759,7 @@ function verifyCurrentSignature(data, verificationHash) {
   // TODO comparison with null is probably not needed. Needs testing.
   if (
     !("signature" in data) ||
+    data.signature === null ||
     data.signature.signature === "" ||
     data.signature.signature === null
   ) {
@@ -901,7 +902,7 @@ async function verifyRevision(
   const metadataHash = calculateMetadataHash(
     domainId,
     data.metadata.time_stamp,
-    data.metadata.previous_verification_hash
+    data.metadata.previous_verification_hash ?? ""
   )
   if (metadataHash !== data.metadata.metadata_hash) {
     return [false, { error_message: "Metadata hash doesn't match" }]
