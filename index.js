@@ -902,7 +902,8 @@ async function verifyRevision(
   const metadataHash = calculateMetadataHash(
     domainId,
     data.metadata.time_stamp,
-    data.metadata.previous_verification_hash ?? ""
+    data.metadata.previous_verification_hash ?? "",
+      data.metadata.merge_hash ?? ""
   )
   if (metadataHash !== data.metadata.metadata_hash) {
     return [false, { error_message: "Metadata hash doesn't match" }]
