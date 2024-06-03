@@ -340,10 +340,6 @@ const getWallet = (mnemonic) => {
 
 const createNewRevision = async (previousRevision, timestamp) => {
   let verificationData = {
-    verification_context: {
-      has_previous_signature: false,
-      has_previous_witness: false,
-    },
     content: { rev_id: 0 },
   }
 
@@ -353,11 +349,9 @@ const createNewRevision = async (previousRevision, timestamp) => {
   if (previousRevision) {
     previousVerificationHash = previousRevision.metadata.verificationHash
     if (previousRevision.signature && previousRevision.signature.signature) {
-      verificationData.verification_context.has_previous_signature = true
       previousSignatureHash = previousRevision.signature.signature_hash
     }
     if (previousRevision.witness) {
-      verificationData.verification_context.hast_previous_witness = true
       previousWitnessHash = previousRevision.witness.witness_hash
     }
   }

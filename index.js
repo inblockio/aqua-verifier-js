@@ -258,13 +258,7 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
 
 function verifyPreviousWitness(data, prev) {
   let prevWitnessHash = ""
-  if (data.verification_context.has_previous_witness) {
-    if (!prev.witness) {
-      return [
-        prevWitnessHash,
-        { error_message: "Previous witness data not found" },
-      ]
-    }
+  if (!!prev.witness) {
     prevWitnessHash = calculateWitnessHash(
       prev.witness.domain_snapshot_genesis_hash,
       prev.witness.merkle_root,
@@ -737,7 +731,7 @@ function verifyFile(data) {
 }
 
 function verifyPreviousSignature(data, previousVerificationData) {
-  if (!data.verification_context.has_previous_signature) {
+  if (!!previousVerificationData.signature) {
     return null
   }
   if (!previousVerificationData) {

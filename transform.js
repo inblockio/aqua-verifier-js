@@ -27,7 +27,6 @@ function transformMwXmlRevision2PkcJson(rev) {
   }
 
   const out = {
-    verification_context: JSON.parse(verification.verification_context),
     content: {
       rev_id: rev.id,
       content: sortedContentObj,
