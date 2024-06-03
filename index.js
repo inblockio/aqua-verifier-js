@@ -139,9 +139,10 @@ function getHashSum(content) {
 function calculateMetadataHash(
   domainId,
   timestamp,
-  previousVerificationHash = ""
+  previousVerificationHash = "",
+  mergeHash = ""
 ) {
-  return getHashSum(domainId + timestamp + previousVerificationHash)
+  return getHashSum(domainId + timestamp + previousVerificationHash + mergeHash)
 }
 
 function calculateSignatureHash(signature, publicKey) {
