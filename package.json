@@ -1,6 +1,6 @@
 {
   "name": "data-accounting-external-verifier",
-  "version": "1.0.0",
+  "version": "1.0.8",
   "description": "JS Client for external verifier.  Goal: A shared library supports a commandline execution and a chrome-extension which is implementation independent. So the verify.js will support not only the mediawiki integration but potentially other third party integrations of the verification procedure.",
   "main": "index.js",
   "dependencies": {
@@ -11,7 +11,7 @@
     "js-sha3": "^0.8.0",
     "minimist": "^1.2.8",
     "node-fetch": "^2.6.7",
-    "xml2js": "^0.4.23"
+    "xml2js": "^0.6.2"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
