@@ -1,0 +1,38 @@
+{
+    "pages": [
+        {
+            "genesis_hash": "c8b30dc89daf9a7b0d7a3985d3b830522c9e8dee1b43629e8c5e118a4e4f7c2f073b0e6569391fd92371329d2ff3b739edba6d18f46bc9217bdd2b97a803d62d",
+            "domain_id": "86afe006e9",
+            "title": "Main_Page",
+            "namespace": 0,
+            "chain_height": 1,
+            "revisions": {
+                "c8b30dc89daf9a7b0d7a3985d3b830522c9e8dee1b43629e8c5e118a4e4f7c2f073b0e6569391fd92371329d2ff3b739edba6d18f46bc9217bdd2b97a803d62d": {
+                    "content": {
+                        "rev_id": 9,
+                        "content": {
+                            "main": "Welcome to the Personal Knowledge Container!<br>\n<i>Your place to own and govern your trusted data.<\/i><br>\n<i>Build on and with free and open source software.<\/i><br>\n\n''Follow our [[Interactive_Tutorial]] to learn how to use this product.''<br>\nYou can read about all of the custom Aqua actions in the [[PKC_Documentation]].\n\nThe [[Personal Knowledge Container]] is your private Data Vault.<br>\nData is structured according the [[Aqua Protocol]] to created trusted an [[Verified Data]]. <br> \n\nConfigure Mediawiki 'Data Accounting Extension' and find more information here: <\/i>[[Special:DataAccountingConfig|Configuration \u2699\ufe0f]]<i>",
+                            "transclusion-hashes": "[{\"dbkey\":\"Interactive_Tutorial\",\"ns\":0,\"verification_hash\":\"e27a371d1275d5df7ba69f4e766a16e01a52254041388481b355092d1298511a9b07bee4b91340a800bb4a683db088d58fe3acf3bae9fdd6fa5a42e5297dafec\"},{\"dbkey\":\"PKC_Documentation\",\"ns\":0,\"verification_hash\":null},{\"dbkey\":\"Personal_Knowledge_Container\",\"ns\":0,\"verification_hash\":null},{\"dbkey\":\"Aqua_Protocol\",\"ns\":0,\"verification_hash\":null},{\"dbkey\":\"Verified_Data\",\"ns\":0,\"verification_hash\":null}]"
+                        },
+                        "content_hash": "c90150ad75179341529f5b2bbc8b9eb0c865b899396665f7eca3b16f5081f3ea6e9965323ed52c1b306a365e68e16e6d8f1d166609b9c8b06eee004bd555ac9e"
+                    },
+                    "metadata": {
+                        "domain_id": "86afe006e9",
+                        "time_stamp": "20240623151733",
+                        "previous_verification_hash": "",
+                        "merge_hash": "",
+                        "metadata_hash": "f439c1c8e8dc64f5c365b33b4a867855f3da1d1cb3e2429bc7eea4f48327552b9b1b56fa74cd66d5baa051b2374fa73587de3823635e1d2582ad4feb50c2e545"
+                    },
+                    "signature": null,
+                    "witness": null
+                }
+            }
+        }
+    ],
+    "site_info": {
+        "sitename": "Personal Knowledge Container",
+        "base": "http:\/\/localhost:9352\/index.php\/Main_Page",
+        "generator": "MediaWiki 1.39.4",
+        "version": "0.3.0"
+    }
+}
