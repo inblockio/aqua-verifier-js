@@ -257,23 +257,23 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
   return true
 }
 
-function verifyPreviousWitness(data, prev) {
-  let prevWitnessHash = ""
-  if (!!prev?.witness) {
-    prevWitnessHash = calculateWitnessHash(
-      prev.witness.domain_snapshot_genesis_hash,
-      prev.witness.merkle_root,
-      prev.witness.witness_network,
-      prev.witness.witness_event_transaction_hash
+function verifyWitness(data) {
+  let WitnessHash = ""
+  if (!!data?.witness) {
+    WitnessHash = calculateWitnessHash(
+      data.witness.domain_snapshot_genesis_hash,
+      data.witness.merkle_root,
+      data.witness.witness_network,
+      data.witness.witness_event_transaction_hash
     )
-    if (prevWitnessHash !== prev.witness.witness_hash) {
+    if (WitnessHash !== data.witness.witness_hash) {
       return [
-        prevWitnessHash,
-        { error_message: "Previous witness hash doesn't match" },
+        WitnessHash,
+        { error_message: "Witness hash doesn't match" },
       ]
     }
   }
-  return [prevWitnessHash, null]
+  return [WitnessHash, null]
 }
 
 /**
@@ -731,15 +731,15 @@ function verifyFile(data) {
   return [true, { file_hash: fileContentHash }]
 }
 
-function verifyPreviousSignature(data, previousVerificationData) {
-  if (!previousVerificationData?.signature) {
+function verifySignature(data) {
+  if (!data?.signature) {
     return null
   }
-  const prevSignature = previousVerificationData.signature.signature
-  const prevPublicKey = previousVerificationData.signature.public_key
-  const signatureHash = calculateSignatureHash(prevSignature, prevPublicKey)
-  if (signatureHash !== previousVerificationData.signature.signature_hash) {
-    return { error_message: "Previous signature hash doesn't match" }
+  const Signature = data.signature.signature
+  const PublicKey = data.signature.public_key
+  const signatureHash = calculateSignatureHash(Signature, PublicKey)
+  if (signatureHash !== data.signature.signature_hash) {
+    return { error_message: "Signature hash doesn't match" }
   }
   return null
 }
@@ -901,14 +901,14 @@ async function verifyRevision(
   detail.status.metadata = true
 
   // Signature verification
-  const error = verifyPreviousSignature(data, previousVerificationData)
+  const error = verifySignature(data)
   if (error !== null) {
     return [false, error]
   }
 
-  const [prevWitnessHash, err] = verifyPreviousWitness(
+  const [WitnessHash, err] = verifyWitness(
     data,
-    previousVerificationData
+    data
   )
   if (err !== null) {
     return [false, err]
@@ -924,8 +924,8 @@ async function verifyRevision(
   detail.status.witness = witnessStatus
 
   let signatureHash = ""
-  if (previousVerificationData && previousVerificationData.signature) {
-    signatureHash = previousVerificationData.signature.signature_hash
+  if (VerificationData && VerificationData.signature) {
+    signatureHash = VerificationData.signature.signature_hash
   }
   const calculatedVerificationHash = calculateVerificationHash(
     contentHash,
