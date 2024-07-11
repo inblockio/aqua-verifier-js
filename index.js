@@ -257,25 +257,6 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
   return true
 }
 
-function verifyWitness(data) {
-  let WitnessHash = ""
-  if (!!data?.witness) {
-    WitnessHash = calculateWitnessHash(
-      data.witness.domain_snapshot_genesis_hash,
-      data.witness.merkle_root,
-      data.witness.witness_network,
-      data.witness.witness_event_transaction_hash
-    )
-    if (WitnessHash !== data.witness.witness_hash) {
-      return [
-        WitnessHash,
-        { error_message: "Witness hash doesn't match" },
-      ]
-    }
-  }
-  return [WitnessHash, null]
-}
-
 /**
  * TODO THIS DOCSTRING IS OUTDATED!
  * Analyses the witnessing steps for a revision of a page and builds a
@@ -900,20 +881,6 @@ async function verifyRevision(
   // Mark metadata as correct
   detail.status.metadata = true
 
-  // Signature verification
-  const error = verifySignature(data)
-  if (error !== null) {
-    return [false, error]
-  }
-
-  const [WitnessHash, err] = verifyWitness(
-    data,
-    data
-  )
-  if (err !== null) {
-    return [false, err]
-  }
-
   // WITNESS DATA HASH CALCULATOR
   const [witnessStatus, witnessResult] = await verifyWitness(
     data.witness,
@@ -924,14 +891,14 @@ async function verifyRevision(
   detail.status.witness = witnessStatus
 
   let signatureHash = ""
-  if (VerificationData && VerificationData.signature) {
-    signatureHash = VerificationData.signature.signature_hash
+  if (data && data.signature) {
+    signatureHash = data.signature.signature_hash
   }
   const calculatedVerificationHash = calculateVerificationHash(
     contentHash,
     metadataHash,
     signatureHash,
-    prevWitnessHash
+    data.witness ? data.witness.witness_hash : ""
   )
 
   if (calculatedVerificationHash !== verificationHash) {
@@ -955,7 +922,7 @@ async function verifyRevision(
 
   const [signatureIsCorrect, sigStatus] = verifyCurrentSignature(
     data,
-    verificationHash
+    data.metadata.previous_verification_hash
   )
   detail.status.signature = sigStatus
 
