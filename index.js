@@ -766,20 +766,19 @@ function verifyCurrentSignature(data, verificationHash) {
  * Steps:
  * - Calls verify_page API passing revision id.
  * - Calculates metadata hash using previous verification hash.
- * - If previous revision id is set, calls verify_page API passing previous
- *   revision id, then determines witness hash for the previous revision.
  * - Calls function verifyWitness using data from the verify_page API call.
  * - Calculates the verification hash using content hash, metadata hash,
- *   signature hash and previous witness hash.
+ *   signature hash and witness hash.
  * - If the calculated verification hash is different from the verification
  *   hash returned from the first verify_page API calls then logs a hash
  *   mismatch error, else sets verification status to VERIFIED.
- * - Does lookup on the Ethereum blockchain to find the recovered Address.
+ * - Does lookup on the Ethereum blockchain to find the witness_verification hash for digital timestamping
+ *   stored in a smart contract to verify.
  * - If the recovered Address equals the current wallet address, sets valid
  *   signature to true.
  * - If witness status is inconsistent, sets witnessIsCorrect flag to false.
  * @param   {string} apiURL The URL for the API call.
- * @param   {Object} token The OAuth2 token required to make the API call.
+ * @param   {Object} token The OAuth2 token required to make the API call or PKC must allow any request (LocalSettings.php).
  * @param   {string} revid The page revision id.
  * @param   {string} prevRevId The previous page revision id.
  * @param   {string} previousVerificationHash The previous verification hash string.
