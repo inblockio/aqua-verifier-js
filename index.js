@@ -883,7 +883,9 @@ async function verifyRevision(
   // WITNESS DATA HASH CALCULATOR
   const [witnessStatus, witnessResult] = await verifyWitness(
     data.witness,
-    verificationHash,
+    //as of version v1.2 Aqua protocol it takes always the previous verification hash
+    //as a witness and a signature MUST create a new revision of the Aqua-Chain
+    data.metadata.previous_verification_hash,
     doVerifyMerkleProof
   )
   detail.witness_result = witnessResult
