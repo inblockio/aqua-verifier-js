@@ -1186,7 +1186,6 @@ async function verifyPageCLI(input, verbose, doVerifyMerkleProof) {
     verificationHashes,
     input,
     verbose,
-    false,
     doVerifyMerkleProof
   )) {
     const [isCorrect, detail] = value
