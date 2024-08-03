@@ -1,11 +1,6 @@
-// Compatibility with browsers.
-// We use "http-status-codes" instead of STATUS_CODES in the "http" library
-// because we need to use this file in the browser.
-const { getReasonPhrase } = require("http-status-codes")
 const Buffer = require("buffer/").Buffer
 // End of compatibility with browsers.
 
-const fetch = require("node-fetch")
 const sha3 = require("js-sha3")
 const hrtime = require("browser-process-hrtime")
 
@@ -145,7 +140,7 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
  * @param   {int} witness_event_id
  * @param   {string} verificationHash
  * @param   {boolean} doVerifyMerkleProof Flag for do Verify Merkle Proof.
- * @returns {string} The verification log.
+ * @returns {Promise<string>} The verification log.
  */
 async function verifyWitness(
   witnessData,
@@ -212,7 +207,7 @@ async function verifyWitness(
       // Corner case when the page is a Domain Snapshot.
       result.merkle_proof_status = "DOMAIN_SNAPSHOT"
     } else {
-      const merkleProofIsOK = await verifyMerkleIntegrity(
+      const merkleProofIsOK = verifyMerkleIntegrity(
         witnessData.structured_merkle_proof,
         verification_hash
       )
@@ -308,7 +303,7 @@ function verifyMetadata(data) {
  * @param   {string} previousVerificationHash The previous verification hash string.
  * @param   {string} contentHash The page content hash string.
  * @param   {boolean} doVerifyMerkleProof Flag for do Verify Merkle Proof.
- * @returns {Array} An array containing verification data,
+ * @returns {Promise<Array>} An array containing verification data,
  *                  verification-is-correct flag, and an array of page revision
  *                  details.
  */
