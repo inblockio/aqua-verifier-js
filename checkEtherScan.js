@@ -28,7 +28,7 @@ function sleep(ms) {
  *     possible values.
  * @param {string} txHash the Ethereum transaction hash.
  * @param {string} witnessVerificationHash SHA3 verification hash
- * @returns {boolean} whether the hash in the lookup matches witnessVerificationHash
+ * @returns {Promise<boolean>} whether the hash in the lookup matches witnessVerificationHash
  */
 async function checkEtherScan(witnessNetwork, txHash, witnessVerificationHash) {
   try {

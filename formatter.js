@@ -1,3 +1,8 @@
+// Compatibility with browsers.
+// We use "http-status-codes" instead of STATUS_CODES in the "http" library
+// because we need to use this file in the browser.
+const { getReasonPhrase } = require("http-status-codes")
+const fetch = require("node-fetch")
 
 // https://stackoverflow.com/questions/9781218/how-to-change-node-jss-console-font-color
 const Reset = "\x1b[0m"
