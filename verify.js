@@ -6,6 +6,7 @@ const opts = {
 }
 const argv = require("minimist")(process.argv.slice(2), opts)
 const main = require("./index")
+const formatter = require("./formatter")
 const transformer = require("./transform")
 
 function usage() {
@@ -26,7 +27,7 @@ If the --server is not specified, it defaults to http://localhost:9352
 // This should be a commandline argument for specifying the title of the page
 // which should be verified.
 if (!argv.file && argv._.length < 1) {
-  main.log_red("ERROR: You must specify the page title")
+  formatter.log_red("ERROR: You must specify the page title")
   usage()
   process.exit(1)
 }
@@ -46,7 +47,7 @@ const file = argv.file
 async function readExportFile(filename) {
   const fs = require("fs")
    if (!fs.existsSync(filename)) {
-     main.log_red(`ERROR: The file ${filename} does not exist.`)
+     formatter.log_red(`ERROR: The file ${filename} does not exist.`)
      process.exit(1)
    }
   const fileContent = fs.readFileSync(filename)
@@ -54,13 +55,13 @@ async function readExportFile(filename) {
   if (filename.endsWith(".json")) {
     const parsed = JSON.parse(fileContent)
     if (!("pages" in parsed)) {
-      main.log_red("The json file doesn't contain 'pages' key.")
+      formatter.log_red("The json file doesn't contain 'pages' key.")
       process.exit(1)
     }
     offlineData = parsed.pages
   } else {
     if (!filename.endsWith(".xml")) {
-      main.log_red("Only JSON or XML files are supported.")
+      formatter.log_red("Only JSON or XML files are supported.")
       process.exit(1)
     }
     offlineData = await transformer.parseMWXmlString(fileContent)

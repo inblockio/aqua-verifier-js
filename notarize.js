@@ -323,11 +323,20 @@ const createNewMetaData = () => {
   }
 }
 
+function formatMwTimestamp(ts) {
+  // Format timestamp into the timestamp format found in Mediawiki outputs
+  return ts
+    .replace(/-/g, "")
+    .replace(/:/g, "")
+    .replace("T", "")
+    .replace("Z", "")
+}
+
 const getFileTimestamp = (filename) => {
   const fileStat = fs.statSync(filename)
   // Last modified time
   const mtime = JSON.stringify(fileStat.mtime)
-  const timestamp = main.formatMwTimestamp(mtime.slice(1, mtime.indexOf(".")))
+  const timestamp = formatMwTimestamp(mtime.slice(1, mtime.indexOf(".")))
   return timestamp
 }
 

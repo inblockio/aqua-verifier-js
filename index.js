@@ -12,98 +12,18 @@ const hrtime = require("browser-process-hrtime")
 // utilities for verifying signatures
 const ethers = require("ethers")
 
-const cES = require("./checkEtherScan.js")
+const cES = require("./checkEtherScan")
+const formatter = require("./formatter")
 
 // Currently supported API version.
 const apiVersion = "0.3.0"
 
 let VERBOSE = undefined
 
-// https://stackoverflow.com/questions/9781218/how-to-change-node-jss-console-font-color
-const Reset = "\x1b[0m"
-const Dim = "\x1b[2m"
-const FgRed = "\x1b[31m"
-const FgYellow = "\x1b[33m"
-const FgWhite = "\x1b[37m"
-const BgGreen = "\x1b[42m"
-const WARN = "⚠️"
-const CROSSMARK = "❌"
-const CHECKMARK = "✅"
-const LOCKED_WITH_PEN = "🔏"
-const WATCH = "⌚"
-const BRANCH = "🌿"
-const FILE_GLYPH = "📄"
-
 // Verification status
 const INVALID_VERIFICATION_STATUS = "INVALID"
 const VERIFIED_VERIFICATION_STATUS = "VERIFIED"
 const ERROR_VERIFICATION_STATUS = "ERROR"
-
-function formatHTTPError(response, message = "") {
-  // We use status code mapping mapping instead of response.statusText because
-  // apparently in HTTP/2, the statusText is removed. See
-  // https://stackoverflow.com/questions/41632077/why-is-the-statustext-of-my-xhr-empty
-  return `HTTP ${response.status}: ${getReasonPhrase(
-    response.status
-  )}.${message}`
-}
-
-function cliRedify(content) {
-  return FgRed + content + Reset
-}
-
-function cliYellowfy(content) {
-  return FgYellow + content + Reset
-}
-
-function htmlRedify(content) {
-  return '<div style="color:Crimson;">' + content + "</div>"
-}
-
-function htmlDimify(content) {
-  return '<div style="color:Gray;">' + content + "</div>"
-}
-
-function log_red(content) {
-  console.log(cliRedify(content))
-}
-
-function log_yellow(content) {
-  console.log(cliYellowfy(content))
-}
-
-function log_dim(content) {
-  console.log(Dim + content + Reset)
-}
-
-function formatMwTimestamp(ts) {
-  // Format timestamp into the timestamp format found in Mediawiki outputs
-  return ts
-    .replace(/-/g, "")
-    .replace(/:/g, "")
-    .replace("T", "")
-    .replace("Z", "")
-}
-
-function formatDBTimestamp(ts) {
-  // Format 20210927075124 into 'Sep 27, 2021, 7:51:24 AM UTC'
-  const year = ts.slice(0, 4)
-  const month = ts.slice(4, 6)
-  const day = ts.slice(6, 8)
-  const hour = ts.slice(8, 10)
-  const minute = ts.slice(10, 12)
-  const second = ts.slice(12, 14)
-  // We convert it to string first, because js has a confusing API of the month
-  // being the monthIndex, hence, '09' is interpreted as October!
-  const _date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`)
-  return (
-    _date.toLocaleString("en-us", {
-      dateStyle: "medium",
-      timeStyle: "medium",
-    }) + " UTC"
-  )
-  //return dayjs(ts, "YYYYMMDDHHmmss").format("D MMM YYYY, h:mm:ss A") + " UTC"
-}
 
 function getElapsedTime(start) {
   const precision = 2 // 2 decimal places
@@ -113,27 +33,8 @@ function getElapsedTime(start) {
   return (elapsed[0] + elapsed[1] / 1e9).toFixed(precision)
 }
 
-function shortenHash(hash) {
-  return hash.slice(0, 6) + "..." + hash.slice(-6)
-}
-
-function clipboardifyHash(hash) {
-  // We use clipboard.js in the frontend side so that when clicked, the hash is
-  // copied to clipboard.
-  const shortened = shortenHash(hash)
-  return `<button class="clipboard-button" data-clipboard-text="${hash}">${shortened}</button>`
-}
-
-function makeHref(content, url) {
-  const newTabString = ' target="_blank"'
-  return `<a href="${url}"${newTabString}>${content}</a>`
-}
-
 function getHashSum(content) {
-  if (content === "") {
-    return ""
-  }
-  return sha3.sha3_512(content)
+  return content === "" ? "" : sha3.sha3_512(content)
 }
 
 function calculateMetadataHash(
@@ -172,39 +73,6 @@ function calculateVerificationHash(
   return getHashSum(contentHash + metadataHash + signature_hash + witness_hash)
 }
 
-function fetchWithToken(url, token) {
-  if (!token) {
-    return fetch(url)
-  }
-  return fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  })
-}
-
-function getApiURL(server) {
-  return `${server}/rest.php/data_accounting`
-}
-
-async function getServerInfo(server) {
-  const url = `${server}/rest.php/data_accounting/get_server_info`
-  return fetch(url)
-}
-
-async function checkAPIVersionCompatibility(server) {
-  const response = await getServerInfo(server)
-  if (!response.ok) {
-    return [formatHTTPError(response), false, ""]
-  }
-  const data = await response.json()
-  if (data && data.api_version) {
-    return ["FOUND", data.api_version === apiVersion, data.api_version]
-  }
-  return ["API endpoint found, but API version can't be retrieved", false, ""]
-}
-
 /**
  * Verifies the integrity of the merkle branch.
  * Steps:
@@ -226,8 +94,6 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
     const leaves = [node.left_leaf, node.right_leaf]
     if (prevSuccessor) {
       if (!leaves.includes(prevSuccessor)) {
-        //console.log("Expected leaf", prevSuccessor)
-        //console.log("Actual leaves", leaves)
         return false
       }
     } else {
@@ -366,335 +232,6 @@ async function verifyWitness(
   return ["VALID", result]
 }
 
-function printWitnessInfo(detail) {
-  if (detail.status.witness === "MISSING") {
-    log_dim(`    ${WARN} Not witnessed`)
-    return
-  }
-  const _space2 = "  "
-  const _space4 = _space2 + _space2
-  const wr = detail.witness_result
-  const wh = shortenHash(wr.witness_hash)
-  let witOut = `${_space2}Witness event ${wh} detected`
-  witOut += `\n${_space4}Transaction hash: ${wr.tx_hash}`
-  const suffix = ` on ${wr.witness_network} via etherscan.io`
-  if (wr.etherscan_result === "true") {
-    witOut += `\n${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified${suffix}`
-  } else if (wr.etherscan_result === "false") {
-    witOut += cliRedify(
-      `\n${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match${suffix}`
-    )
-  } else {
-    witOut += cliRedify(
-      `\n${_space4}${CROSSMARK}${WATCH}${wr.etherscan_error_message}${suffix}`
-    )
-    witOut += cliRedify(`\n${_space4}Error code: ${wr.etherscan_result}`)
-    witOut += cliRedify(
-      `\n${_space4}Verify manually: ${wr.actual_witness_event_verification_hash}`
-    )
-  }
-  if (!wr.witness_event_vh_matches) {
-    witOut += cliRedify(
-      `\n${_space4}${CROSSMARK}` +
-        "Witness event verification hash doesn't match"
-    )
-    witOut += cliRedify(
-      `\n${_space4}Domain Snapshot genesis hash: ${wr.extra.domain_snapshot_genesis_hash}`
-    )
-    witOut += cliRedify(`\n${_space4}Merkle root: ${wr.extra.merkle_root}`)
-    witOut += cliRedify(
-      `\n${_space4}Expected: ${wr.extra.witness_event_verification_hash}`
-    )
-    witOut += cliRedify(
-      `\n${_space4}Actual: ${wr.actual_witness_event_verification_hash}`
-    )
-  }
-
-  if (wr.doVerifyMerkleProof && wr.merkle_proof_status !== "") {
-    switch (wr.merkle_proof_status) {
-      case "DOMAIN_SNAPSHOT":
-        witOut += `\n${_space4}${CHECKMARK}Is a Domain Snapshot, hence not part of Merkle Proof`
-        break
-      case "VALID":
-        witOut += `\n${_space4}${CHECKMARK}${BRANCH}Witness Merkle Proof is OK`
-        break
-      default:
-        witOut += `\n${_space4}${CROSSMARK}${BRANCH}Witness Merkle Proof is corrupted`
-    }
-  }
-
-  console.log(witOut)
-}
-
-function printRevisionInfo(detail) {
-  // IMPORTANT! If you update this function, make sure to update
-  // formatRevisionInfo2HTML as well.
-  if ("error_message" in detail) {
-    log_red(detail.error_message)
-    return
-  }
-  if (!("verification_hash" in detail)) {
-    console.log("  no verification hash")
-    return
-  }
-
-  console.log(`  Elapsed: ${detail.elapsed} s`)
-  console.log(
-    `  Timestamp: ${formatDBTimestamp(detail.data.metadata.time_stamp)}`
-  )
-  console.log(`  Domain ID: ${detail.data.metadata.domain_id}`)
-  if (detail.status.verification === INVALID_VERIFICATION_STATUS) {
-    log_red(`  ${CROSSMARK}` + " Verification hash doesn't match")
-    return
-  }
-  console.log(`  ${CHECKMARK} Verification hash matches`)
-
-  if (detail.status.file === "VERIFIED") {
-    // The alternative value of detail.status.file is "MISSING", where we don't
-    // log anything extra in that situation.
-    console.log(
-      `    ${CHECKMARK}${FILE_GLYPH} File content hash matches (${detail.file_hash})`
-    )
-  } else if (detail.status.file === "INVALID") {
-    console.log(`    ${CROSSMARK}${FILE_GLYPH} Invalid file content hash`)
-  }
-
-  printWitnessInfo(detail)
-
-  if (VERBOSE) {
-    delete detail.data.witness
-    console.log("  VERBOSE backend", detail)
-  }
-
-  // Signature
-  switch (detail.status.signature) {
-    case "MISSING":
-      log_dim(`    ${WARN} Not signed`)
-      break
-    case "VALID":
-      console.log(
-        `    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.data.signature.wallet_address}`
-      )
-      break
-    default:
-      log_red(`    ${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`)
-  }
-}
-
-function checkmarkCrossmark(isCorrect) {
-  return isCorrect ? CHECKMARK : CROSSMARK
-}
-
-function formatWitnessInfo2HTML(detail) {
-  const _space2 = "&nbsp&nbsp"
-  const _space4 = _space2 + _space2
-
-  let witOut = `${_space2}Witness event detected`
-
-  const wr = detail.witness_result
-  const witnessTxUrl =
-    cES.witnessNetworkMap[wr.witness_network] + "/" + wr.tx_hash
-
-  const txHash = makeHref(shortenHash(wr.tx_hash), witnessTxUrl)
-  witOut += `<br>${_space4}Transaction hash: ${txHash}`
-  const suffix = ` on ${wr.witness_network} via etherscan.io`
-  if (wr.etherscan_result === "true") {
-    witOut += `<br>${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified${suffix}`
-  } else if (wr.etherscan_result === "false") {
-    // We don't need <br> because redify already wraps the text inside a div.
-    witOut += htmlRedify(
-      `${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match${suffix}`
-    )
-  } else {
-    witOut += htmlRedify(
-      `${_space4}${CROSSMARK}${WATCH}${wr.etherscan_error_message}${suffix}`
-    )
-    witOut += htmlRedify(`${_space4}Error code: ${wr.etherscan_result}`)
-    // We want the long hash to be shortened in the HTML output.
-    const formattedWEVH = clipboardifyHash(
-      wr.actual_witness_event_verification_hash
-    )
-    witOut += htmlRedify(`${_space4}Verify manually: ${formattedWEVH}`)
-  }
-
-  if (!wr.witness_event_vh_matches) {
-    witOut += htmlRedify(
-      `${_space4}${CROSSMARK}` + "Witness event verification hash doesn't match"
-    )
-    witOut += htmlRedify(
-      `${_space4}Domain Snapshot genesis hash: ${wr.extra.domain_snapshot_genesis_hash}`
-    )
-    witOut += htmlRedify(
-      `${_space4}Merkle root: ${clipboardifyHash(wr.extra.merkle_root)}`
-    )
-    witOut += htmlRedify(
-      `${_space4}Expected: ${clipboardifyHash(
-        wr.extra.witness_event_verification_hash
-      )}`
-    )
-    witOut += htmlRedify(
-      `${_space4}Actual: ${clipboardifyHash(
-        wr.actual_witness_event_verification_hash
-      )}`
-    )
-  }
-
-  if (wr.doVerifyMerkleProof && wr.merkle_proof_status !== "") {
-    switch (wr.merkle_proof_status) {
-      case "DOMAIN_SNAPSHOT":
-        witOut += `<br>${_space4}${CHECKMARK}Is a Domain Snapshot, hence not part of Merkle Proof`
-        break
-      case "VALID":
-        witOut += `<br>${_space4}${CHECKMARK}${BRANCH}Witness Merkle Proof is OK`
-        break
-      default:
-        witOut += `<br>${_space4}${CROSSMARK}${BRANCH}Witness Merkle Proof is corrupted`
-    }
-  }
-  return witOut
-}
-
-function formatRevisionInfo2HTML(server, detail, verbose = false) {
-  // Format the info into HTML nicely. Used in VerifyPage Chrome extension, but
-  // could be used elsewhere too.
-  const _space = "&nbsp"
-  const _space2 = _space + _space
-  const _space4 = _space2 + _space2
-  if ("error_message" in detail) {
-    return _space2 + detail.error_message
-  }
-  if (!("verification_hash" in detail)) {
-    return `${_space2}no verification hash`
-  }
-
-  function makeDetail(detail) {
-    return `<details>${detail}</details>`
-  }
-
-  let out = `${_space2}Elapsed: ${detail.elapsed} s<br>`
-  out += `${_space2}${formatDBTimestamp(detail.data.metadata.time_stamp)}<br>`
-  out += `${_space2}Domain ID: ${detail.data.metadata.domain_id}<br>`
-  if (detail.status.verification === INVALID_VERIFICATION_STATUS) {
-    out += htmlRedify(
-      `${_space2}${CROSSMARK}` + " verification hash doesn't match"
-    )
-    return [CROSSMARK, makeDetail(out)]
-  }
-  out += `${_space2}${CHECKMARK} Verification hash matches<br>`
-  let isCorrect = true
-
-  let fileSummary = ""
-  if (detail.status.file === "VERIFIED") {
-    // The alternative value of detail.status.file is "MISSING", where we don't
-    // log anything extra in that situation.
-    out += `${_space4}${CHECKMARK}${FILE_GLYPH} File content hash matches (${clipboardifyHash(
-      detail.file_hash
-    )})<br>`
-    fileSummary = FILE_GLYPH
-  } else if (detail.status.file === "INVALID") {
-    out += `${_space4}${CROSSMARK}${FILE_GLYPH} Invalid file content hash<br>`
-    fileSummary = FILE_GLYPH
-    isCorrect = false
-  }
-
-  let witnessSummary = ""
-  if (detail.status.witness !== "MISSING") {
-    const witOut = formatWitnessInfo2HTML(detail)
-    out += witOut + "<br>"
-    witnessSummary = WATCH
-    if (detail.status.witness === "INVALID") {
-      isCorrect = false
-    }
-  } else {
-    out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
-  }
-  if (verbose) {
-    delete detail.witness_result
-    out += `${_space2}VERBOSE backend ` + JSON.stringify(detail) + "<br>"
-  }
-
-  if (detail.status.signature === "MISSING") {
-    out += htmlDimify(`${_space4}${WARN} Not signed<br>`)
-    return [
-      checkmarkCrossmark(isCorrect) + fileSummary + witnessSummary,
-      makeDetail(out),
-    ]
-  }
-  if (detail.status.signature === "VALID") {
-    const walletURL = `${server}/index.php/User:${detail.data.signature.wallet_address}`
-    const walletA = `<a href="${walletURL}" target="_blank">${detail.data.signature.wallet_address}</a>`
-    out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${walletA}<br>`
-  } else {
-    out += htmlRedify(
-      `${_space4}${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`
-    )
-    isCorrect = false
-  }
-  return [
-    checkmarkCrossmark(isCorrect) +
-      fileSummary +
-      witnessSummary +
-      LOCKED_WITH_PEN,
-    makeDetail(out),
-  ]
-}
-
-function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
-  if (status === "NORECORD") {
-    return "No revision record"
-  } else if (status === "N/A" || !details) {
-    return ""
-  } else if (status === ERROR_VERIFICATION_STATUS) {
-    if (details && "error" in details) {
-      return "ERROR: " + details.error
-    }
-    return "ERROR: Unknown cause"
-  }
-  const _space2 = "&nbsp&nbsp"
-  const numRevisions = details.verification_hashes.length
-  let finalOutput = `Number of Verified Page Revisions: ${numRevisions}<br>`
-  let out = ""
-  for (let i = 0; i < details.revision_details.length; i++) {
-    let revisionOut = ""
-    if (i % 2 == 0) {
-      revisionOut += '<div style="background: LightCyan;">'
-    } else {
-      revisionOut += "<div>"
-    }
-
-    if ("error_message" in details.revision_details[i]) {
-      revisionOut += htmlRedify(
-        "ERROR: " + details.revision_details[i].error_message
-      )
-      revisionOut += "</div>"
-      out = revisionOut + out
-      break
-    }
-
-    const revid = details.revision_details[i].data.content.rev_id
-    const revidURL = `${serverUrl}/index.php?title=${title}&oldid=${revid}`
-    const [summary, formattedRevInfo] = formatRevisionInfo2HTML(
-      serverUrl,
-      details.revision_details[i],
-      verbose
-    )
-    revisionOut += `${
-      i + 1
-    }. Verification of <a href='${revidURL}' target="_blank">Revision ID ${revid}<a>.${summary}<br>`
-    revisionOut += formattedRevInfo
-    const count = i + 1
-    revisionOut += `${_space2}Progress: ${count} / ${numRevisions} (${(
-      (100 * count) /
-      numRevisions
-    ).toFixed(1)}%)<br>`
-    revisionOut += "</div>"
-    // We order the output by the most recent revision shown first.
-    out = revisionOut + out
-  }
-  finalOutput += out
-  return finalOutput
-}
-
 function verifyFile(data) {
   const fileContentHash = data.content.content.file_hash || null
   if (fileContentHash === null) {
@@ -712,20 +249,7 @@ function verifyFile(data) {
   return [true, { file_hash: fileContentHash }]
 }
 
-function verifySignature(data) {
-  if (!data?.signature) {
-    return null
-  }
-  const Signature = data.signature.signature
-  const PublicKey = data.signature.public_key
-  const signatureHash = calculateSignatureHash(Signature, PublicKey)
-  if (signatureHash !== data.signature.signature_hash) {
-    return { error_message: "Signature hash doesn't match" }
-  }
-  return null
-}
-
-function verifyCurrentSignature(data, verificationHash) {
+function verifySignature(data, verificationHash) {
   // TODO comparison with null is probably not needed. Needs testing.
   if (
     !("signature" in data) ||
@@ -737,27 +261,22 @@ function verifyCurrentSignature(data, verificationHash) {
   }
 
   // Specify signature correctness
-  let signatureIsCorrect = false
+  let signatureOk = false
   // Signature verification
   // The padded message is required
   const paddedMessage =
-    "I sign the following page verification_hash: [0x" + verificationHash + "]"
+    `I sign the following page verification_hash: [0x${verificationHash}]`
   try {
     const recoveredAddress = ethers.recoverAddress(
       ethers.hashMessage(paddedMessage),
       data.signature.signature
     )
-    if (
-      recoveredAddress.toLowerCase() ===
-      data.signature.wallet_address.toLowerCase()
-    ) {
-      signatureIsCorrect = true
-    }
+    signatureOk = recoveredAddress.toLowerCase() === data.signature.wallet_address.toLowerCase()
   } catch (e) {
     // continue regardless of error
   }
-  const status = signatureIsCorrect ? "VALID" : "INVALID"
-  return [signatureIsCorrect, status]
+  const status = signatureOk ? "VALID" : "INVALID"
+  return [signatureOk, status]
 }
 
 /**
@@ -791,10 +310,9 @@ function verifyCurrentSignature(data, verificationHash) {
 async function verifyRevision(
   verificationHash,
   input,
-  previousVerificationData,
   doVerifyMerkleProof
 ) {
-  let detail = {
+  let result = {
     verification_hash: verificationHash,
     status: {
       content: false,
@@ -806,43 +324,8 @@ async function verifyRevision(
     },
     witness_result: {},
     file_hash: "",
+    data: input.offline_data
   }
-
-  let data
-  if ("apiURL" in input) {
-    // Online verification
-    const response = await fetchWithToken(
-      `${input.apiURL}/get_revision/${verificationHash}`,
-      input.token
-    )
-    data = await response.json()
-    if (!response.ok) {
-      const serverMessage = data.message
-      return [
-        false,
-        {
-          error_message:
-            "get_revision: " + formatHTTPError(response, " " + serverMessage),
-        },
-      ]
-    }
-  } else {
-    // Offline verification
-    if (!("offline_data" in input)) {
-      return [
-        false,
-        {
-          error_message:
-            "get_revision: Either apiURL or offline_data must be in the `input` argument.",
-        },
-      ]
-    }
-    data = input.offline_data
-  }
-  detail.data = data
-
-  // TODO do sanity check on domain id
-  const domainId = data.metadata.domain_id
 
   if ("file" in data.content) {
     // This is a file
@@ -850,11 +333,11 @@ async function verifyRevision(
     if (!fileIsCorrect) {
       return [fileIsCorrect, fileOut]
     }
-    detail.status.file = "VERIFIED"
-    detail.file_hash = fileOut.file_hash
+    result.status.file = "VERIFIED"
+    result.file_hash = fileOut.file_hash
   }
   let content = ""
-  for (const [slot, slotContent] of Object.entries(data.content.content)) {
+  for (const slotContent of Object.values(data.content.content)) {
     content += slotContent
   }
   const contentHash = getHashSum(content)
@@ -862,14 +345,14 @@ async function verifyRevision(
     return [false, { error_message: "Content hash doesn't match" }]
   }
   // Mark content as correct
-  detail.status.content = true
+  result.status.content = true
 
   // To save storage for the cacher, e.g the Chrome extension.
-  delete detail.data.content.content
-  delete detail.data.content.file
+  delete result.data.content.content
+  delete result.data.content.file
 
   const metadataHash = calculateMetadataHash(
-    domainId,
+    data.metadata.domain_id,
     data.metadata.time_stamp,
     data.metadata.previous_verification_hash ?? "",
       data.metadata.merge_hash ?? ""
@@ -878,7 +361,7 @@ async function verifyRevision(
     return [false, { error_message: "Metadata hash doesn't match" }]
   }
   // Mark metadata as correct
-  detail.status.metadata = true
+  result.status.metadata = true
 
   // WITNESS DATA HASH CALCULATOR
   const [witnessStatus, witnessResult] = await verifyWitness(
@@ -888,8 +371,8 @@ async function verifyRevision(
     data.metadata.previous_verification_hash,
     doVerifyMerkleProof
   )
-  detail.witness_result = witnessResult
-  detail.status.witness = witnessStatus
+  result.witness_result = witnessResult
+  result.status.witness = witnessStatus
 
   let signatureHash = ""
   if (data && data.signature) {
@@ -903,89 +386,22 @@ async function verifyRevision(
   )
 
   if (calculatedVerificationHash !== verificationHash) {
-    detail.status.verification = INVALID_VERIFICATION_STATUS
-    if (VERBOSE) {
-      log_red(`  Actual content hash: ${contentHash}`)
-      log_red(`  Actual metadata hash: ${metadataHash}`)
-      log_red(`  Actual signature hash: ${signatureHash}`)
-      log_red(`  Witness event id: ${data.witness_event_id}`)
-      log_red(`  Actual previous witness hash: ${prevWitnessHash}`)
-      log_red(`  Expected verification hash: ${verificationHash}`)
-      log_red(`  Actual verification hash: ${calculatedVerificationHash}`)
-    }
-    return [false, detail]
+    result.status.verification = INVALID_VERIFICATION_STATUS
+    return [false, result]
   } else {
-    detail.status.verification = VERIFIED_VERIFICATION_STATUS
+    result.status.verification = VERIFIED_VERIFICATION_STATUS
   }
 
   // Specify witness correctness
-  let witnessIsCorrect = detail.status.witness !== "INVALID"
+  let witnessIsCorrect = result.status.witness !== "INVALID"
 
-  const [signatureIsCorrect, sigStatus] = verifyCurrentSignature(
+  const [signatureOk, sigStatus] = verifySignature(
     data,
     data.metadata.previous_verification_hash
   )
-  detail.status.signature = sigStatus
+  result.status.signature = sigStatus
 
-  return [signatureIsCorrect && witnessIsCorrect, detail]
-}
-
-async function doPreliminaryAPICall(endpointName, url, token) {
-  let response, errorMsg
-  try {
-    // We do a try block for our first ever fetch because the server might be
-    // down, and we get a connection refused error.
-    response = await fetchWithToken(url, token)
-  } catch (e) {
-    errorMsg = `${endpointName}: ` + e
-    return [ERROR_VERIFICATION_STATUS, { error: errorMsg }]
-  }
-  if (!response.ok) {
-    let status
-    if (response.status === 404) {
-      status = "404"
-    } else {
-      status = ERROR_VERIFICATION_STATUS
-    }
-    errorMsg = `${endpointName}: ` + formatHTTPError(response)
-    return [status, { error: errorMsg }]
-  }
-  const content = await response.json()
-  if ("error" in content) {
-    return [ERROR_VERIFICATION_STATUS, content]
-  }
-  return ["OK", content]
-}
-
-async function getRevisionHashes(apiURL, title, token) {
-  const hashChainUrl = `${apiURL}/get_hash_chain_info/title?identifier=${title}`
-  const [status, info] = await doPreliminaryAPICall(
-    "get_hash_chain_info",
-    hashChainUrl,
-    token
-  )
-  if (status !== "OK") {
-    if (status === "404") {
-      // Simply return empty array when get_hash_chain_info is 404.
-      // Note: this means that the output when a page is hidden from the public
-      // is indistinguishable from when it simply doesn't have a verification
-      // data. We can't confirm nor deny of which is it.
-      return ["OK", []]
-    }
-    return [status, info]
-  }
-
-  const revisionHashesUrl = `${apiURL}/get_revision_hashes/${info.genesis_hash}`
-  const [statusHashes, hashes] = await doPreliminaryAPICall(
-    "get_revision_hashes",
-    revisionHashesUrl,
-    token
-  )
-  if (statusHashes === "404") {
-    // Same reasoning as the previous 404 handling.
-    return ["OK", []]
-  }
-  return [statusHashes, hashes]
+  return [signatureOk && witnessIsCorrect, result]
 }
 
 function calculateStatus(count, totalLength) {
@@ -1024,19 +440,10 @@ async function* generateVerifyPage(
 ) {
   let revisionInput
 
-  if ("server" in input) {
-    // Online verification
-    const apiURL = getApiURL(input.server)
-    revisionInput = {
-      apiURL,
-      token: input.token,
-    }
-  }
   VERBOSE = verbose
 
   let elapsed
   let totalElapsed = 0.0
-  let previousVerificationData
   for (const vh of verificationHashes) {
     const elapsedStart = hrtime()
 
@@ -1050,7 +457,6 @@ async function* generateVerifyPage(
     const [isCorrect, detail] = await verifyRevision(
       vh,
       revisionInput,
-      previousVerificationData,
       doVerifyMerkleProof
     )
     elapsed = getElapsedTime(elapsedStart)
@@ -1060,120 +466,13 @@ async function* generateVerifyPage(
       yield [false, detail]
       return
     }
-    previousVerificationData = {
-      witness: detail.data.witness,
-      signature: detail.data.signature,
-      verification_hash: detail.verification_hash,
-    }
     yield [true, detail]
   }
 }
 
-// Used by the Chrome extension. Will be removed once we migrate to the
-// generator version.
-async function verifyPage(input, verbose, doVerifyMerkleProof, token) {
-  let verificationHashes
-  if ("server" in input && "title" in input) {
-    const apiURL = getApiURL(input.server)
-    const [status, res] = await getRevisionHashes(apiURL, input.title, token)
-    if (status !== "OK") {
-      return [status, res]
-    }
-    verificationHashes = res
-  } else {
-    if (!("offline_data" in input)) {
-      return [
-        ERROR_VERIFICATION_STATUS,
-        { error: "Input must contain 'server' & 'title', or 'offline_data'" },
-      ]
-    }
-    verificationHashes = Object.keys(input.offline_data.revisions)
-  }
-
-  let count = 0
-  const details = {
-    verification_hashes: verificationHashes,
-    revision_details: [],
-  }
-  let verificationStatus
-  for await (const value of generateVerifyPage(
-    verificationHashes,
-    input,
-    verbose,
-    doVerifyMerkleProof
-  )) {
-    const [isCorrect, detail] = value
-    details.revision_details.push(detail)
-    if (!isCorrect) {
-      return [INVALID_VERIFICATION_STATUS, details]
-    }
-    count += 1
-  }
-  verificationStatus = calculateStatus(count, verificationHashes.length)
-  return [verificationStatus, details]
-}
-
-function validateTitle(title) {
-  if (title.includes("_")) {
-    title = title.replace(/_/g, " ")
-    // TODO it's not just underscore, catch all potential errors in page title.
-    // This error should not happen in Chrome-Extension because the title has been
-    // sanitized.
-    log_yellow("Warning: Underscores in title are converted to spaces.")
-  }
-  if (title.includes(": ")) {
-    log_yellow(
-      "Warning: Space after ':' detected. You might need to remove it to match MediaWiki title."
-    )
-  }
-  return title
-}
-
 async function verifyPageCLI(input, verbose, doVerifyMerkleProof) {
   let verificationHashes
-  if ("server" in input && "title" in input) {
-    // Online verification
-    input.title = validateTitle(input.title)
-    let status, versionMatches, serverVersion
-    try {
-      ;[status, versionMatches, serverVersion] =
-        await checkAPIVersionCompatibility(input.server)
-    } catch (e) {
-      log_red("Error checking API version: " + e)
-      return
-    }
-    if (status !== "FOUND") {
-      log_red("Error checking API version: " + status)
-      return
-    }
-    if (!versionMatches) {
-      log_red("Incompatible API version:")
-      log_red(`Current supported version: ${apiVersion}`)
-      log_red(`Server version: ${serverVersion}`)
-      return
-    }
-
-    const apiURL = getApiURL(input.server)
-    const [statusHashes, res] = await getRevisionHashes(
-      apiURL,
-      input.title,
-      input.token
-    )
-    if (statusHashes !== "OK") {
-      log_red(res.error)
-      return
-    }
-    verificationHashes = res
-  } else {
-    // Offline verification
-    if (!("offline_data" in input)) {
-      log_red(
-        "verifyPageCLI: `input` must contain either 'server' and 'title', or 'offline_data'"
-      )
-      return
-    }
-    verificationHashes = Object.keys(input.offline_data.revisions)
-  }
+  verificationHashes = Object.keys(input.offline_data.revisions)
   console.log("Page Verification Hashes: ", verificationHashes)
 
   let count = 0
@@ -1189,7 +488,7 @@ async function verifyPageCLI(input, verbose, doVerifyMerkleProof) {
     doVerifyMerkleProof
   )) {
     const [isCorrect, detail] = value
-    printRevisionInfo(detail)
+    formatter.printRevisionInfo(detail, verbose)
     if (!isCorrect) {
       verificationStatus = INVALID_VERIFICATION_STATUS
       break
@@ -1212,24 +511,14 @@ async function verifyPageCLI(input, verbose, doVerifyMerkleProof) {
 }
 
 module.exports = {
-  verifyPage: verifyPage,
-  generateVerifyPage: generateVerifyPage,
-  verifyPageCLI: verifyPageCLI,
-  log_red: log_red,
-  formatRevisionInfo2HTML: formatRevisionInfo2HTML,
-  formatPageInfo2HTML: formatPageInfo2HTML,
-  apiVersion: apiVersion,
+  generateVerifyPage,
+  verifyPageCLI,
+  apiVersion,
   // For verified_import.js
   ERROR_VERIFICATION_STATUS,
-  formatHTTPError,
-  getApiURL,
-  getRevisionHashes,
-  fetchWithToken,
-  validateTitle,
   // For notarize.js
   getHashSum,
   calculateMetadataHash,
   calculateVerificationHash,
   calculateSignatureHash,
-  formatMwTimestamp,
 }
