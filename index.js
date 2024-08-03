@@ -58,9 +58,9 @@ function calculateWitnessHash(
 ) {
   return getHashSum(
     domain_snapshot_genesis_hash +
-      merkle_root +
-      witness_network +
-      witness_tx_hash
+    merkle_root +
+    witness_network +
+    witness_tx_hash
   )
 }
 
@@ -152,10 +152,6 @@ async function verifyWitness(
   verification_hash,
   doVerifyMerkleProof
 ) {
-  if (witnessData === null || witnessData === undefined) {
-    return ["MISSING", null]
-  }
-
   const actual_witness_event_verification_hash = getHashSum(
     witnessData.domain_snapshot_genesis_hash + witnessData.merkle_root
   )
@@ -250,16 +246,6 @@ function verifyFile(data) {
 }
 
 function verifySignature(data, verificationHash) {
-  // TODO comparison with null is probably not needed. Needs testing.
-  if (
-    !("signature" in data) ||
-    data.signature === null ||
-    data.signature.signature === "" ||
-    data.signature.signature === null
-  ) {
-    return [true, "MISSING"]
-  }
-
   // Specify signature correctness
   let signatureOk = false
   // Signature verification
@@ -279,6 +265,25 @@ function verifySignature(data, verificationHash) {
   return [signatureOk, status]
 }
 
+function verifyContent(data) {
+  let content = ""
+  for (const slotContent of Object.values(data.content.content)) {
+    content += slotContent
+  }
+  const contentHash = getHashSum(content)
+  return [contentHash === data.content.content_hash, contentHash]
+}
+
+function verifyMetadata(data) {
+  const metadataHash = calculateMetadataHash(
+    data.metadata.domain_id,
+    data.metadata.time_stamp,
+    data.metadata.previous_verification_hash ?? "",
+    data.metadata.merge_hash ?? ""
+  )
+  return [metadataHash === data.metadata.metadata_hash, metadataHash]
+}
+
 /**
  * TODO THIS DOCSTRING IS OUTDATED!
  * Verifies a revision from a page.
@@ -295,7 +300,7 @@ function verifySignature(data, verificationHash) {
  *   stored in a smart contract to verify.
  * - If the recovered Address equals the current wallet address, sets valid
  *   signature to true.
- * - If witness status is inconsistent, sets witnessIsCorrect flag to false.
+ * - If witness status is inconsistent, sets witnessOk flag to false.
  * @param   {string} apiURL The URL for the API call.
  * @param   {Object} token The OAuth2 token required to make the API call or PKC must allow any request (LocalSettings.php).
  * @param   {string} revid The page revision id.
@@ -326,7 +331,9 @@ async function verifyRevision(
     file_hash: "",
     data: input.offline_data
   }
+  const data = result.data
 
+  // File
   if ("file" in data.content) {
     // This is a file
     const [fileIsCorrect, fileOut] = verifyFile(data)
@@ -336,48 +343,65 @@ async function verifyRevision(
     result.status.file = "VERIFIED"
     result.file_hash = fileOut.file_hash
   }
-  let content = ""
-  for (const slotContent of Object.values(data.content.content)) {
-    content += slotContent
-  }
-  const contentHash = getHashSum(content)
-  if (contentHash !== data.content.content_hash) {
+
+  // Content
+  let [ok, contentHash] = verifyContent(data)
+  if (!ok) {
     return [false, { error_message: "Content hash doesn't match" }]
   }
   // Mark content as correct
   result.status.content = true
-
   // To save storage for the cacher, e.g the Chrome extension.
   delete result.data.content.content
   delete result.data.content.file
 
-  const metadataHash = calculateMetadataHash(
-    data.metadata.domain_id,
-    data.metadata.time_stamp,
-    data.metadata.previous_verification_hash ?? "",
-      data.metadata.merge_hash ?? ""
-  )
-  if (metadataHash !== data.metadata.metadata_hash) {
+  // Metadata
+  let metadataHash
+  [ok, metadataHash] = verifyMetadata(data)
+  if (!ok) {
     return [false, { error_message: "Metadata hash doesn't match" }]
   }
   // Mark metadata as correct
   result.status.metadata = true
 
-  // WITNESS DATA HASH CALCULATOR
-  const [witnessStatus, witnessResult] = await verifyWitness(
-    data.witness,
-    //as of version v1.2 Aqua protocol it takes always the previous verification hash
-    //as a witness and a signature MUST create a new revision of the Aqua-Chain
-    data.metadata.previous_verification_hash,
-    doVerifyMerkleProof
+  // TODO comparison with null is probably not needed. Needs testing.
+  const hasSignature = !(
+    !("signature" in data) ||
+    data.signature === null ||
+    data.signature.signature === "" ||
+    data.signature.signature === null
   )
-  result.witness_result = witnessResult
-  result.status.witness = witnessStatus
+  const hasWitness = !(data.witness === null || data.witness === undefined)
+
+  if (hasSignature && hasWitness) {
+    return [false, { error_message: "Signature and witness must not both be present"}]
+  }
 
   let signatureHash = ""
-  if (data && data.signature) {
+  if (hasSignature) {
+    let sigStatus
+    [ok, sigStatus] = verifySignature(
+      data,
+      data.metadata.previous_verification_hash
+    )
+    result.status.signature = sigStatus
     signatureHash = data.signature.signature_hash
+  } else if (hasWitness) {
+    // Witness
+    const [witnessStatus, witnessResult] = await verifyWitness(
+      data.witness,
+      //as of version v1.2 Aqua protocol it takes always the previous verification hash
+      //as a witness and a signature MUST create a new revision of the Aqua-Chain
+      data.metadata.previous_verification_hash,
+      doVerifyMerkleProof
+    )
+    result.witness_result = witnessResult
+    result.status.witness = witnessStatus
+
+    // Specify witness correctness
+    ok = result.status.witness !== "INVALID"
   }
+
   const calculatedVerificationHash = calculateVerificationHash(
     contentHash,
     metadataHash,
@@ -392,16 +416,7 @@ async function verifyRevision(
     result.status.verification = VERIFIED_VERIFICATION_STATUS
   }
 
-  // Specify witness correctness
-  let witnessIsCorrect = result.status.witness !== "INVALID"
-
-  const [signatureOk, sigStatus] = verifySignature(
-    data,
-    data.metadata.previous_verification_hash
-  )
-  result.status.signature = sigStatus
-
-  return [signatureOk && witnessIsCorrect, result]
+  return [ok, result]
 }
 
 function calculateStatus(count, totalLength) {

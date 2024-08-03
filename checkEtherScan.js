@@ -55,9 +55,9 @@ async function checkEtherScan(witnessNetwork, txHash, witnessVerificationHash) {
     await sleep(300)
     return status
   }
-	catch(e) {
+  catch (e) {
     return e.toString()
-	}
+  }
 }
 
 async function testCheckEtherScan() {
