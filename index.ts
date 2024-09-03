@@ -1,14 +1,15 @@
-const Buffer = require("buffer/").Buffer
+// @ts-nocheck
+import { Buffer } from "buffer"
 // End of compatibility with browsers.
 
-const sha3 = require("js-sha3")
-const hrtime = require("browser-process-hrtime")
+import sha3 from "js-sha3"
+import hrtime from "browser-process-hrtime"
 
 // utilities for verifying signatures
-const ethers = require("ethers")
+import * as ethers from "ethers"
 
-const cES = require("./checkEtherScan")
-const formatter = require("./formatter")
+import * as cES from "./checkEtherScan.js"
+import * as formatter from "./formatter.js"
 
 // Currently supported API version.
 const apiVersion = "0.3.0"
@@ -28,28 +29,28 @@ function getElapsedTime(start) {
   return (elapsed[0] + elapsed[1] / 1e9).toFixed(precision)
 }
 
-function getHashSum(content) {
+function getHashSum(content: string) {
   return content === "" ? "" : sha3.sha3_512(content)
 }
 
 function calculateMetadataHash(
-  domainId,
-  timestamp,
-  previousVerificationHash = "",
-  mergeHash = ""
+  domainId: string,
+  timestamp: string,
+  previousVerificationHash: string = "",
+  mergeHash: string = ""
 ) {
   return getHashSum(domainId + timestamp + previousVerificationHash + mergeHash)
 }
 
-function calculateSignatureHash(signature, publicKey) {
+function calculateSignatureHash(signature: string, publicKey: string) {
   return getHashSum(signature + publicKey)
 }
 
 function calculateWitnessHash(
-  domain_snapshot_genesis_hash,
-  merkle_root,
-  witness_network,
-  witness_tx_hash
+  domain_snapshot_genesis_hash: string,
+  merkle_root: string,
+  witness_network: string,
+  witness_tx_hash: string,
 ) {
   return getHashSum(
     domain_snapshot_genesis_hash +
@@ -60,10 +61,10 @@ function calculateWitnessHash(
 }
 
 function calculateVerificationHash(
-  contentHash,
-  metadataHash,
-  signature_hash,
-  witness_hash
+  contentHash: string,
+  metadataHash: string,
+  signature_hash: string,
+  witness_hash: string,
 ) {
   return getHashSum(contentHash + metadataHash + signature_hash + witness_hash)
 }
@@ -78,7 +79,7 @@ function calculateVerificationHash(
  * @param   {string} verificationHash
  * @returns {boolean} Whether the merkle integrity is OK.
  */
-function verifyMerkleIntegrity(merkleBranch, verificationHash) {
+function verifyMerkleIntegrity(merkleBranch, verificationHash: string) {
   if (merkleBranch.length === 0) {
     return false
   }
@@ -100,7 +101,7 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
       }
     }
 
-    let calculatedSuccessor
+    let calculatedSuccessor: string
     if (!node.left_leaf) {
       calculatedSuccessor = node.right_leaf
     } else if (!node.right_leaf) {
@@ -144,8 +145,8 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash) {
  */
 async function verifyWitness(
   witnessData,
-  verification_hash,
-  doVerifyMerkleProof
+  verification_hash: string,
+  doVerifyMerkleProof: boolean,
 ) {
   const actual_witness_event_verification_hash = getHashSum(
     witnessData.domain_snapshot_genesis_hash + witnessData.merkle_root
@@ -240,7 +241,7 @@ function verifyFile(data) {
   return [true, { file_hash: fileContentHash }]
 }
 
-function verifySignature(data, verificationHash) {
+function verifySignature(data: object, verificationHash: string) {
   // Specify signature correctness
   let signatureOk = false
   // Signature verification
@@ -308,9 +309,9 @@ function verifyMetadata(data) {
  *                  details.
  */
 async function verifyRevision(
-  verificationHash,
+  verificationHash: string,
   input,
-  doVerifyMerkleProof
+  doVerifyMerkleProof: boolean
 ) {
   let result = {
     verification_hash: verificationHash,
@@ -414,7 +415,7 @@ async function verifyRevision(
   return [ok, result]
 }
 
-function calculateStatus(count, totalLength) {
+function calculateStatus(count: number, totalLength: number) {
   if (count == totalLength) {
     if (count === 0) {
       return "NORECORD"
@@ -445,8 +446,8 @@ function calculateStatus(count, totalLength) {
 async function* generateVerifyPage(
   verificationHashes,
   input,
-  verbose,
-  doVerifyMerkleProof
+  verbose: boolean | undefined,
+  doVerifyMerkleProof: boolean
 ) {
   let revisionInput
 
@@ -520,7 +521,7 @@ async function verifyPageCLI(input, verbose, doVerifyMerkleProof) {
   console.log(`Status: ${verificationStatus}`)
 }
 
-module.exports = {
+export {
   generateVerifyPage,
   verifyPageCLI,
   apiVersion,

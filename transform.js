@@ -1,4 +1,4 @@
-const xml2js = require('xml2js')
+import * as xml2js from 'xml2js'
 
 function makeSureAlwaysArray(x) {
   return Array.isArray(x) ? x : [x]
@@ -96,6 +96,4 @@ async function parseMWXmlString(fileContent) {
   })
 }
 
-module.exports = {
-  parseMWXmlString
-}
+export { parseMWXmlString }
