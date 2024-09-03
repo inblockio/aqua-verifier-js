@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 
+import * as main from "./index.js"
+import minimist from "minimist"
+import * as formatter from "./formatter.js"
+import * as transformer from "./transform.js"
+import * as fs from "fs"
+
 const opts = {
   // This is required so that -v and -m are position independent.
   boolean: ["v", "m"],
 }
-const argv = require("minimist")(process.argv.slice(2), opts)
-const main = require("./index")
-const formatter = require("./formatter")
-const transformer = require("./transform")
+const argv = minimist(process.argv.slice(2), opts)
 
 function usage() {
   console.log(`Usage:
@@ -45,7 +48,6 @@ const token = argv.token
 const file = argv.file
 
 async function readExportFile(filename) {
-  const fs = require("fs")
    if (!fs.existsSync(filename)) {
      formatter.log_red(`ERROR: The file ${filename} does not exist.`)
      process.exit(1)

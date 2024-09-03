@@ -1,8 +1,8 @@
 // Compatibility with browsers.
 // We use "http-status-codes" instead of STATUS_CODES in the "http" library
 // because we need to use this file in the browser.
-const { getReasonPhrase } = require("http-status-codes")
-const fetch = require("node-fetch")
+import getReasonPhrase from "http-status-codes"
+import fetch from "node-fetch"
 
 // https://stackoverflow.com/questions/9781218/how-to-change-node-jss-console-font-color
 const Reset = "\x1b[0m"
@@ -576,7 +576,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof, token) {
   verificationStatus = calculateStatus(count, verificationHashes.length)
   return [verificationStatus, details]
 }
-module.exports = {
+export {
   log_red,
   formatRevisionInfo2HTML,
   formatPageInfo2HTML,

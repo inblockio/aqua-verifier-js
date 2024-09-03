@@ -1,4 +1,4 @@
-const fetch = require("node-fetch")
+import fetch from "node-fetch"
 
 const re = /<span id="rawinput".*<\/span>/
 
@@ -70,7 +70,4 @@ async function testCheckEtherScan() {
 }
 
 // testCheckEtherScan()
-module.exports = {
-  checkEtherScan: checkEtherScan,
-  witnessNetworkMap: witnessNetworkMap
-}
+export { checkEtherScan, witnessNetworkMap}
