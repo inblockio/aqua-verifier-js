@@ -5,6 +5,7 @@ import minimist from "minimist"
 import * as formatter from "./formatter.js"
 import * as transformer from "./transform.js"
 import * as fs from "fs"
+import fetch from "node-fetch"
 
 const opts = {
   // This is required so that -v and -m are position independent.
@@ -22,9 +23,8 @@ Options:
   -v                     Verbose
   --server               <The url of the server, e.g. https://pkc.inblock.io>
   --ignore-merkle-proof  Ignore verifying the witness merkle proof of each revision
-  --token                (Optional) OAuth2 access token to access the API
-If the --server is not specified, it defaults to http://localhost:9352
-  --file                 (If present) The file to read from for the data`)
+  --file                 (If present) The file to read from for the data
+If the --server is not specified, it defaults to http://localhost:9352`)
 }
 
 // This should be a commandline argument for specifying the title of the page
@@ -41,8 +41,6 @@ const verbose = argv.v
 const ignoreMerkleProof = argv["ignore-merkle-proof"] ?? false
 
 const server = argv.server ?? "http://localhost:9352"
-
-const token = argv.token
 
 // For offline JSON file verification
 const file = argv.file
@@ -71,6 +69,31 @@ async function readExportFile(filename) {
   return offlineData
 }
 
+async function readFromMediaWikiAPI(server, title) {
+  let response, data
+  response = await fetch(
+    `${server}/rest.php/data_accounting/get_page_last_rev?page_title=${title}`,
+  )
+  data = await response.json()
+  if (!response.ok) {
+    formatter.log_red(`Error: get_page_last_rev: ${data.message}`)
+  }
+  const verificationHash = data.verification_hash
+  response = await fetch(
+    `${server}/rest.php/data_accounting/get_branch/${verificationHash}`
+  )
+  data = await response.json()
+  const hashes = data.hashes
+  const revisions = {}
+  for (const vh of hashes) {
+    response = await fetch(
+      `${server}/rest.php/data_accounting/get_revision/${vh}`
+    )
+    revisions[vh] = await response.json()
+  }
+  return revisions
+}
+
 // The main function
 (async function () {
   let input
@@ -84,7 +107,11 @@ async function readExportFile(filename) {
     }
   } else {
     console.log(`Verifying ${title}`)
-    input = { title, server, token }
-    main.verifyPageCLI(input, verbose, !ignoreMerkleProof)
+    const revisions = await readFromMediaWikiAPI(server, title)
+    const exported = {
+      revisions
+    }
+    input = { offline_data: exported}
+    await main.verifyPageCLI(input, verbose, !ignoreMerkleProof)
   }
 })()
