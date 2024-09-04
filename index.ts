@@ -566,4 +566,5 @@ export {
   calculateSignatureHash,
   // For the VerifyPage Chrome extension and CLI
   verifyPageFromMwAPI,
+  formatter,
 }
