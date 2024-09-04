@@ -505,7 +505,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   )) {
     const [isCorrect, detail] = value
     formatter.printRevisionInfo(detail, verbose)
-    details.revision_details.push(detail)
+    details.revision_details.unshift(detail)
     if (!isCorrect) {
       verificationStatus = INVALID_VERIFICATION_STATUS
       break
