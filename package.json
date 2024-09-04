@@ -3,6 +3,7 @@
   "version": "1.0.8",
   "description": "JS Client for external verifier.  Goal: A shared library supports a commandline execution and a chrome-extension which is implementation independent. So the verify.js will support not only the mediawiki integration but potentially other third party integrations of the verification procedure.",
   "main": "index.js",
+  "types": "index.d.ts",
   "type": "module",
   "dependencies": {
     "browser-process-hrtime": "git+https://git@github.com/rht/browser-process-hrtime.git",
