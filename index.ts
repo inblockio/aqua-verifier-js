@@ -492,6 +492,11 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
     // Print out the verification hash of the first one.
     console.log(`${count + 1}. Verification of ${verificationHashes[0]}.`)
   }
+  let count = 0
+  const details = {
+    verification_hashes: verificationHashes,
+    revision_details: [],
+  }
   let verificationStatus
   for await (const value of generateVerifyPage(
     verificationHashes,
@@ -501,6 +506,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   )) {
     const [isCorrect, detail] = value
     formatter.printRevisionInfo(detail, verbose)
+    details.revision_details.push(detail)
     if (!isCorrect) {
       verificationStatus = INVALID_VERIFICATION_STATUS
       break
@@ -520,6 +526,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   }
   verificationStatus = calculateStatus(count, verificationHashes.length)
   console.log(`Status: ${verificationStatus}`)
+  return [verificationStatus, details]
 }
 
 async function readFromMediaWikiAPI(server, title) {
@@ -550,7 +557,7 @@ async function readFromMediaWikiAPI(server, title) {
 async function verifyPageFromMwAPI(server, title, verbose, ignoreMerkleProof) {
   const verifiedContent = await readFromMediaWikiAPI(server, title)
   const input = { offline_data: verifiedContent}
-  await verifyPage(input, verbose, !ignoreMerkleProof)
+  return await verifyPage(input, verbose, !ignoreMerkleProof)
 }
 
 export {
