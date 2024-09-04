@@ -486,6 +486,13 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   let verificationHashes
   verificationHashes = Object.keys(input.offline_data.revisions)
   console.log("Page Verification Hashes: ", verificationHashes)
+  let verificationStatus
+
+  if (!(input.offline_data.genesis_hash in verificationHashes)) {
+    verificationStatus = INVALID_VERIFICATION_STATUS
+    console.log(`Status: ${verificationStatus}`)
+    return [verificationStatus, null]
+  }
 
   let count = 0
   if (verificationHashes.length > 0) {
@@ -496,7 +503,6 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
     verification_hashes: verificationHashes,
     revision_details: [],
   }
-  let verificationStatus
   for await (const value of generateVerifyPage(
     verificationHashes,
     input,
