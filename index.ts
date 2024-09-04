@@ -553,6 +553,23 @@ async function readFromMediaWikiAPI(server, title) {
   return { revisions }
 }
 
+async function getServerInfo(server) {
+  const url = `${server}/rest.php/data_accounting/get_server_info`
+  return fetch(url)
+}
+
+async function checkAPIVersionCompatibility(server) {
+  const response = await getServerInfo(server)
+  if (!response.ok) {
+    return [formatHTTPError(response), false, ""]
+  }
+  const data = await response.json()
+  if (data && data.api_version) {
+    return ["FOUND", data.api_version === apiVersion, data.api_version]
+  }
+  return ["API endpoint found, but API version can't be retrieved", false, ""]
+}
+
 async function verifyPageFromMwAPI(server, title, verbose, ignoreMerkleProof) {
   const verifiedContent = await readFromMediaWikiAPI(server, title)
   const input = { offline_data: verifiedContent}
@@ -573,4 +590,5 @@ export {
   // For the VerifyPage Chrome extension and CLI
   verifyPageFromMwAPI,
   formatter,
+  checkAPIVersionCompatibility,
 }
