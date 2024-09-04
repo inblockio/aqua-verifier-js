@@ -34,7 +34,7 @@
   },
   "files": [
     "checkEtherScan.js",
-    "index.js",
+    "index.ts",
     "LICENSE",
     "package.json",
     "README.md"
