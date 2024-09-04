@@ -5,7 +5,6 @@ import minimist from "minimist"
 import * as formatter from "./formatter.js"
 import * as transformer from "./transform.js"
 import * as fs from "fs"
-import fetch from "node-fetch"
 
 const opts = {
   // This is required so that -v and -m are position independent.
@@ -69,31 +68,6 @@ async function readExportFile(filename) {
   return offlineData
 }
 
-async function readFromMediaWikiAPI(server, title) {
-  let response, data
-  response = await fetch(
-    `${server}/rest.php/data_accounting/get_page_last_rev?page_title=${title}`,
-  )
-  data = await response.json()
-  if (!response.ok) {
-    formatter.log_red(`Error: get_page_last_rev: ${data.message}`)
-  }
-  const verificationHash = data.verification_hash
-  response = await fetch(
-    `${server}/rest.php/data_accounting/get_branch/${verificationHash}`
-  )
-  data = await response.json()
-  const hashes = data.hashes
-  const revisions = {}
-  for (const vh of hashes) {
-    response = await fetch(
-      `${server}/rest.php/data_accounting/get_revision/${vh}`
-    )
-    revisions[vh] = await response.json()
-  }
-  return revisions
-}
-
 // The main function
 (async function () {
   let input
@@ -102,16 +76,11 @@ async function readFromMediaWikiAPI(server, title) {
     for (const offlinePageData of offlineData) {
       console.log(`Verifying ${offlinePageData.title}`)
       input = { offline_data: offlinePageData }
-      await main.verifyPageCLI(input, verbose, !ignoreMerkleProof)
+      await main.verifyPage(input, verbose, !ignoreMerkleProof)
       console.log()
     }
   } else {
     console.log(`Verifying ${title}`)
-    const revisions = await readFromMediaWikiAPI(server, title)
-    const exported = {
-      revisions
-    }
-    input = { offline_data: exported}
-    await main.verifyPageCLI(input, verbose, !ignoreMerkleProof)
+    await main.verifyPageFromMwAPI(server, title, verbose, !ignoreMerkleProof)
   }
 })()
