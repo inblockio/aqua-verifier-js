@@ -488,7 +488,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   console.log("Page Verification Hashes: ", verificationHashes)
   let verificationStatus
 
-  if (!(input.offline_data.genesis_hash in verificationHashes)) {
+  if (!(verificationHashes.includes(input.offline_data.genesis_hash))) {
     verificationStatus = INVALID_VERIFICATION_STATUS
     console.log(`Status: ${verificationStatus}`)
     return [verificationStatus, null]
