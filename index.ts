@@ -4,6 +4,7 @@ import { Buffer } from "buffer"
 
 import sha3 from "js-sha3"
 import hrtime from "browser-process-hrtime"
+import fetch from "node-fetch"
 
 // utilities for verifying signatures
 import * as ethers from "ethers"
@@ -481,7 +482,7 @@ async function* generateVerifyPage(
   }
 }
 
-async function verifyPageCLI(input, verbose, doVerifyMerkleProof) {
+async function verifyPage(input, verbose, doVerifyMerkleProof) {
   let verificationHashes
   verificationHashes = Object.keys(input.offline_data.revisions)
   console.log("Page Verification Hashes: ", verificationHashes)
@@ -521,9 +522,40 @@ async function verifyPageCLI(input, verbose, doVerifyMerkleProof) {
   console.log(`Status: ${verificationStatus}`)
 }
 
+async function readFromMediaWikiAPI(server, title) {
+  let response, data
+  response = await fetch(
+    `${server}/rest.php/data_accounting/get_page_last_rev?page_title=${title}`,
+  )
+  data = await response.json()
+  if (!response.ok) {
+    formatter.log_red(`Error: get_page_last_rev: ${data.message}`)
+  }
+  const verificationHash = data.verification_hash
+  response = await fetch(
+    `${server}/rest.php/data_accounting/get_branch/${verificationHash}`
+  )
+  data = await response.json()
+  const hashes = data.hashes
+  const revisions = {}
+  for (const vh of hashes) {
+    response = await fetch(
+      `${server}/rest.php/data_accounting/get_revision/${vh}`
+    )
+    revisions[vh] = await response.json()
+  }
+  return { revisions }
+}
+
+async function verifyPageFromMwAPI(server, title, verbose, ignoreMerkleProof) {
+  const verifiedContent = await readFromMediaWikiAPI(server, title)
+  const input = { offline_data: verifiedContent}
+  await verifyPage(input, verbose, !ignoreMerkleProof)
+}
+
 export {
   generateVerifyPage,
-  verifyPageCLI,
+  verifyPage,
   apiVersion,
   // For verified_import.js
   ERROR_VERIFICATION_STATUS,
@@ -532,4 +564,6 @@ export {
   calculateMetadataHash,
   calculateVerificationHash,
   calculateSignatureHash,
+  // For the VerifyPage Chrome extension and CLI
+  verifyPageFromMwAPI,
 }
