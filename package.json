@@ -36,6 +36,7 @@
   },
   "files": [
     "checkEtherScan.js",
+    "formatter.js",
     "index.js",
     "index.d.ts",
     "LICENSE",
