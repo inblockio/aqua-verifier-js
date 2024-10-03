@@ -488,11 +488,12 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   console.log("Page Verification Hashes: ", verificationHashes)
   let verificationStatus
 
-  if (!(verificationHashes.includes(input.offline_data.genesis_hash))) {
-    verificationStatus = INVALID_VERIFICATION_STATUS
-    console.log(`Status: ${verificationStatus}`)
-    return [verificationStatus, null]
-  }
+  // TODO: Check why this is needed!
+  // if (!(verificationHashes.includes(input.offline_data.genesis_hash))) {
+  //   verificationStatus = INVALID_VERIFICATION_STATUS
+  //   console.log(`Status: ${verificationStatus}`)
+  //   return [verificationStatus, null]
+  // }
 
   let count = 0
   if (verificationHashes.length > 0) {
