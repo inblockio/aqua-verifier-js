@@ -3,6 +3,7 @@
 // because we need to use this file in the browser.
 import getReasonPhrase from "http-status-codes"
 import fetch from "node-fetch"
+import * as cES from "./checkEtherScan.js"
 
 // https://stackoverflow.com/questions/9781218/how-to-change-node-jss-console-font-color
 const Reset = "\x1b[0m"
