@@ -488,7 +488,9 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   console.log("Page Verification Hashes: ", verificationHashes)
   let verificationStatus
 
-  // TODO: Check why this is needed!
+  // TODO: Add back in
+  // This security feature is needed, to detected chains which are deteched from the first revision which contains the genesis_hash.
+  // They should not be detected as valid chains if the chain is detached.
   // if (!(verificationHashes.includes(input.offline_data.genesis_hash))) {
   //   verificationStatus = INVALID_VERIFICATION_STATUS
   //   console.log(`Status: ${verificationStatus}`)
