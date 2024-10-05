@@ -350,18 +350,7 @@ const createNewRevision = async (previousRevision, timestamp) => {
     content: { rev_id: 0 },
   }
 
-  let previousVerificationHash = ""
-  let previousSignatureHash = ""
-  let previousWitnessHash = ""
-  if (previousRevision) {
-    previousVerificationHash = previousRevision.metadata.verificationHash
-    if (previousRevision.signature && previousRevision.signature.signature) {
-      previousSignatureHash = previousRevision.signature.signature_hash
-    }
-    if (previousRevision.witness) {
-      previousWitnessHash = previousRevision.witness.witness_hash
-    }
-  }
+  let previousVerificationHash = previousRevision ? previousRevision.metadata.verificationHash : ""
 
   const fileContent = fs.readFileSync(filename, "utf8")
   const contentHash = main.getHashSum(fileContent)
@@ -378,11 +367,30 @@ const createNewRevision = async (previousRevision, timestamp) => {
     previousVerificationHash
   )
 
+  let signature, walletAddress, publicKey
+  if (signMetamask) {
+    ;[signature, walletAddress, publicKey] = await doSignMetamask(
+      previousVerificationHash
+    )
+  } else {
+    const mnemonic = fs.readFileSync("mnemonic.txt", "utf8")
+    let wallet
+    ;[wallet, walletAddress, publicKey] = getWallet(mnemonic)
+    signature = await doSign(wallet, previousVerificationHash)
+  }
+  const signatureHash = main.calculateSignatureHash(signature, publicKey)
+
+  if (enableWitnessEth) {
+    const witness = await prepareWitness(verificationHash, domainId)
+    verificationData.witness = witness
+  }
+  const witnessHash = verificationData.witness ? verificationData.witness.witness_hash : ""
+
   const verificationHash = main.calculateVerificationHash(
     contentHash,
     metadataHash,
-    previousSignatureHash,
-    previousWitnessHash
+    signatureHash,
+    witnessHash,
   )
   verificationData.metadata = {
     domain_id: domainId,
@@ -390,24 +398,6 @@ const createNewRevision = async (previousRevision, timestamp) => {
     previous_verification_hash: previousVerificationHash,
     metadata_hash: metadataHash,
     verification_hash: verificationHash,
-  }
-
-  let signature, walletAddress, publicKey
-  if (signMetamask) {
-    ;[signature, walletAddress, publicKey] = await doSignMetamask(
-      verificationHash
-    )
-  } else {
-    const mnemonic = fs.readFileSync("mnemonic.txt", "utf8")
-    let wallet
-    ;[wallet, walletAddress, publicKey] = getWallet(mnemonic)
-    signature = await doSign(wallet, verificationHash)
-  }
-  const signatureHash = main.calculateSignatureHash(signature, publicKey)
-
-  if (enableWitnessEth) {
-    const witness = await prepareWitness(verificationHash, domainId)
-    verificationData.witness = witness
   }
 
   verificationData.signature = {
@@ -432,7 +422,7 @@ const createNewRevision = async (previousRevision, timestamp) => {
     lastRevision = revisions[verificationHashes[verificationHashes.length - 1]]
   } else {
     metadata = createNewMetaData()
-    revisions = {}
+    revisions = metadata.pages[0].revisions
     lastRevision = null
   }
 
