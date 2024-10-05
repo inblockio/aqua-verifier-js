@@ -350,7 +350,7 @@ const createNewRevision = async (previousRevision, timestamp) => {
     content: { rev_id: 0 },
   }
 
-  let previousVerificationHash = previousRevision ? previousRevision.metadata.verificationHash : ""
+  let previousVerificationHash = previousRevision ? previousRevision.metadata.verification_hash : ""
 
   const fileContent = fs.readFileSync(filename, "utf8")
   const contentHash = main.getHashSum(fileContent)
