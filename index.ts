@@ -488,8 +488,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   console.log("Page Verification Hashes: ", verificationHashes)
   let verificationStatus
 
-  // This security feature is needed:
-  // The chain should not be detected as valid chains if it is detached.
+  // Secure feature to detect detached chain, missing genesis revision
   const firstRevision = input.offline_data.revisions[verificationHashes[verificationHashes.length - 1]]
   if (!firstRevision.metadata.previous_verification_hash === '') {
     verificationStatus = INVALID_VERIFICATION_STATUS
