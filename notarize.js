@@ -261,14 +261,8 @@ const prepareWitness = async (verificationHash, domainId) => {
   //const merkle_root = main.getHashSum(verificationHash + verificationHash)
   const witness_network = "sepolia"
   const smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
-  const domain_snapshot_genesis_hash = ""
-    //TODO: Purge domain_snapshot from witness data, make it the merkle root.
-    //Set it to empty string for now.
-  const witness_event_verification_hash = merkle_root
-    console.log(merkle_root)
-
   const [transactionHash, walletAddress] = await doWitnessMetamask(
-    witness_event_verification_hash,
+    merkle_root,
     witness_network,
     smart_contract_address
   )
@@ -281,12 +275,8 @@ const prepareWitness = async (verificationHash, domainId) => {
   const witness = {
     witness_event_id: "0",
     domain_id: domainId,
-    domain_snapshot_title:
-      `Data Accounting:DomainSnapshot:${domain_snapshot_genesis_hash}`,
     witness_hash,
-    domain_snapshot_genesis_hash,
     merkle_root,
-    witness_event_verification_hash,
     witness_network,
     smart_contract_address,
     witness_event_transaction_hash: transactionHash,
