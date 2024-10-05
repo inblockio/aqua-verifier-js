@@ -20,6 +20,7 @@ notarize.js [OPTIONS] <filename>
 which generates filename.aqua.json
 
 Options:
+  --sign-cli         Sign with the seed phrase provided in mnemonic.txt
   --sign-metamask    Sign with MetaMask instead of local Ethereum wallet
   --witness-eth      Witness to Ethereum on-chain with MetaMask
 `)
@@ -35,6 +36,8 @@ if (!filename) {
 }
 
 const signMetamask = argv["sign-metamask"]
+const signCli = argv["sign-cli"]
+const enableSignature = signMetamask || signCli
 const enableWitnessEth = argv["witness-eth"]
 
 const port = 8420
@@ -346,6 +349,11 @@ const getWallet = (mnemonic) => {
 }
 
 const createNewRevision = async (previousRevision, timestamp, includeSignature) => {
+  if (includeSignature && enableWitnessEth) {
+    formatter.log_red("ERROR: you cannot sign & witness at the same time")
+    process.exit(1)
+  }
+
   let verificationData = {
     content: { rev_id: 0 },
   }
@@ -384,7 +392,7 @@ const createNewRevision = async (previousRevision, timestamp, includeSignature) 
   }
 
   if (enableWitnessEth) {
-    const witness = await prepareWitness(verificationHash, domainId)
+    const witness = await prepareWitness(previousVerificationHash, domainId)
     verificationData.witness = witness
   }
   const witnessHash = verificationData.witness ? verificationData.witness.witness_hash : ""
@@ -443,7 +451,7 @@ const createNewRevision = async (previousRevision, timestamp, includeSignature) 
   //  process.exit()
   //}
 
-  const verificationData = await createNewRevision(lastRevision, timestamp, true)
+  const verificationData = await createNewRevision(lastRevision, timestamp, enableSignature)
   const verificationHash = verificationData.metadata.verification_hash
   revisions[verificationHash] = verificationData
   console.log(`Writing new revision ${verificationHash}`)
