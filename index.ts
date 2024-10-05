@@ -243,8 +243,14 @@ function verifyFile(data) {
 }
 
 function verifySignature(data: object, verificationHash: string) {
+  // TODO enforce that the verificationHash is a correct SHA3 sum string
   // Specify signature correctness
   let signatureOk = false
+  if (verificationHash === "") {
+    // The verificationHash MUST NOT be empty. This also implies that a genesis revision cannot
+    // contain a signature.
+    return [signatureOk, "INVALID"]
+  }
   // Signature verification
   // The padded message is required
   const paddedMessage =
