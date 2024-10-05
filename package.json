@@ -31,7 +31,7 @@
   },
   "homepage": "https://github.com/inblockio/data-accounting-external-verifier#readme",
   "devDependencies": {
-    "prettier": "^2.4.1",
+    "prettier": "^3.3.3",
     "typescript": "5.1.6"
   },
   "files": [
