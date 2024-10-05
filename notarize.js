@@ -11,7 +11,7 @@ import * as formatter from "./formatter.js"
 
 const opts = {
   // This is required so that -v is position independent.
-  boolean: ["v", "sign-metamask", "witness-eth"],
+  boolean: ["v", "sign-cli", "sign-metamask", "witness-eth"],
 }
 
 const usage = () => {
