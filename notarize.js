@@ -345,7 +345,7 @@ const getWallet = (mnemonic) => {
   return [wallet, walletAddress, wallet.publicKey]
 }
 
-const createNewRevision = async (previousRevision, timestamp) => {
+const createNewRevision = async (previousRevision, timestamp, includeSignature) => {
   let verificationData = {
     content: { rev_id: 0 },
   }
@@ -367,18 +367,21 @@ const createNewRevision = async (previousRevision, timestamp) => {
     previousVerificationHash
   )
 
+  let signatureHash = ""  // MUST be the default
   let signature, walletAddress, publicKey
-  if (signMetamask) {
-    ;[signature, walletAddress, publicKey] = await doSignMetamask(
-      previousVerificationHash
-    )
-  } else {
-    const mnemonic = fs.readFileSync("mnemonic.txt", "utf8")
-    let wallet
-    ;[wallet, walletAddress, publicKey] = getWallet(mnemonic)
-    signature = await doSign(wallet, previousVerificationHash)
+  if (includeSignature) {
+    if (signMetamask) {
+      ;[signature, walletAddress, publicKey] = await doSignMetamask(
+        previousVerificationHash
+      )
+    } else {
+      const mnemonic = fs.readFileSync("mnemonic.txt", "utf8")
+      let wallet
+      ;[wallet, walletAddress, publicKey] = getWallet(mnemonic)
+      signature = await doSign(wallet, previousVerificationHash)
+    }
+    signatureHash = main.calculateSignatureHash(signature, publicKey)
   }
-  const signatureHash = main.calculateSignatureHash(signature, publicKey)
 
   if (enableWitnessEth) {
     const witness = await prepareWitness(verificationHash, domainId)
@@ -400,11 +403,14 @@ const createNewRevision = async (previousRevision, timestamp) => {
     verification_hash: verificationHash,
   }
 
-  verificationData.signature = {
-    signature,
-    public_key: publicKey,
-    wallet_address: walletAddress,
-    signature_hash: signatureHash,
+  verificationData.signature = null
+  if (includeSignature) {
+    verificationData.signature = {
+      signature,
+      public_key: publicKey,
+      wallet_address: walletAddress,
+      signature_hash: signatureHash,
+    }
   }
   return verificationData
 }
@@ -412,6 +418,7 @@ const createNewRevision = async (previousRevision, timestamp) => {
 // The main function
 ;(async function () {
   const metadataFilename = filename + ".aqua.json"
+  const timestamp = getFileTimestamp(filename)
   let metadata
   let revisions
   let lastRevision
@@ -423,18 +430,20 @@ const createNewRevision = async (previousRevision, timestamp) => {
   } else {
     metadata = createNewMetaData()
     revisions = metadata.pages[0].revisions
-    lastRevision = null
+    const genesisRevision = await createNewRevision(null, timestamp, false)
+    revisions[genesisRevision.metadata.verification_hash] = genesisRevision
+    lastRevision = genesisRevision
   }
 
-  const timestamp = getFileTimestamp(filename)
-  if (lastRevision && timestamp == lastRevision.metadata.time_stamp) {
-    console.log(
-      `The file ${filename} hasn't been modified since it was last notarized`
-    )
-    process.exit()
-  }
+  // TODO: replace this with checking if the signature already exists in the last revision
+  //if (lastRevision && timestamp == lastRevision.metadata.time_stamp) {
+  //  console.log(
+  //    `The file ${filename} hasn't been modified since it was last notarized`
+  //  )
+  //  process.exit()
+  //}
 
-  const verificationData = await createNewRevision(lastRevision, timestamp)
+  const verificationData = await createNewRevision(lastRevision, timestamp, true)
   const verificationHash = verificationData.metadata.verification_hash
   revisions[verificationHash] = verificationData
   console.log(`Writing new revision ${verificationHash}`)
