@@ -256,14 +256,16 @@ const doWitnessMetamask = async (
 }
 
 const prepareWitness = async (verificationHash, domainId) => {
-  const merkle_root = main.getHashSum(verificationHash + verificationHash)
+  const merkle_root = verificationHash
+  console.log(verificationHash)
+  //const merkle_root = main.getHashSum(verificationHash + verificationHash)
   const witness_network = "sepolia"
   const smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
-  const domain_snapshot_genesis_hash =
-    "305ca37488e0d1e20535f08f073290c564040f6574a84ab73fd5d4c6def175bc02260585bae9f6fc4a584a8367881ef5257c364692ff07378b6caa28d1450d9e" // TODO
-  const witness_event_verification_hash = main.getHashSum(
-    domain_snapshot_genesis_hash + merkle_root
-  )
+  const domain_snapshot_genesis_hash = ""
+    //TODO: Purge domain_snapshot from witness data, make it the merkle root.
+    //Set it to empty string for now.
+  const witness_event_verification_hash = merkle_root
+    console.log(merkle_root)
 
   const [transactionHash, walletAddress] = await doWitnessMetamask(
     witness_event_verification_hash,
