@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 
-// import * as fs from 'fs'
-// import * as ethers from 'ethers'
-// import minimist from 'minimist'
-// import * as main from './index.js'
+import * as fs from 'fs'
+import * as ethers from 'ethers'
+import minimist from 'minimist'
+import * as http from 'http'
+import fetch from "node-fetch"
+
+import * as main from './index.js'
+import * as formatter from "./formatter.js"
 
 const opts = {
   // This is required so that -v is position independent.
@@ -21,21 +25,14 @@ Options:
 `)
 }
 
-const argv = require("minimist")(process.argv.slice(2), opts)
-const main = require("./index")
+const argv = minimist(process.argv.slice(2), opts)
 const filename = argv._[0]
 
 if (!filename) {
-  main.log_red("ERROR: You must specify a file")
+  formatter.log_red("ERROR: You must specify a file")
   usage()
   process.exit(1)
 }
-
-const fs = require("fs")
-// utilities for signing and witnessing
-const ethers = require("ethers")
-const http = require("http")
-const fetch = require("node-fetch")
 
 const signMetamask = argv["sign-metamask"]
 const enableWitnessEth = argv["witness-eth"]
@@ -341,7 +338,8 @@ const getFileTimestamp = (filename) => {
 }
 
 const getWallet = (mnemonic) => {
-  const wallet = ethers.Wallet.fromPhrase(mnemonic)
+  // Always trim the last new line
+  const wallet = ethers.Wallet.fromPhrase(mnemonic.trim())
   const walletAddress = wallet.address.toLowerCase()
   console.log("Wallet address", walletAddress)
   return [wallet, walletAddress, wallet.publicKey]
