@@ -4,7 +4,6 @@ import { Buffer } from "buffer"
 
 import sha3 from "js-sha3"
 import hrtime from "browser-process-hrtime"
-import fetch from "node-fetch"
 
 // utilities for verifying signatures
 import * as ethers from "ethers"
