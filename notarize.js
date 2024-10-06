@@ -265,7 +265,6 @@ const prepareWitness = async (verificationHash, domainId) => {
     smart_contract_address
   )
   const witness_hash = main.getHashSum(
-    domain_snapshot_genesis_hash +
       merkle_root +
       witness_network +
       transactionHash
@@ -284,7 +283,7 @@ const prepareWitness = async (verificationHash, domainId) => {
         witness_event_id: "0",
         depth: "0",
         left_leaf: verificationHash,
-        right_leaf:,
+        right_leaf:"",
         successor: merkle_root,
       },
     ],
@@ -371,10 +370,14 @@ const createNewRevision = async (previousRevision, timestamp, includeSignature) 
         previousVerificationHash
       )
     } else {
+      try {
       const mnemonic = fs.readFileSync("mnemonic.txt", "utf8")
-      let wallet
-      ;[wallet, walletAddress, publicKey] = getWallet(mnemonic)
+      let wallet;[wallet, walletAddress, publicKey] = getWallet(mnemonic)
       signature = await doSign(wallet, previousVerificationHash)
+    } catch (error) {
+      console.error("Failed to read mnemonic:", error);
+      process.exit(1);
+    }
     }
     signatureHash = main.calculateSignatureHash(signature, publicKey)
   }
