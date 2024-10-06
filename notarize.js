@@ -8,6 +8,9 @@ import * as http from 'http'
 import * as main from './index.js'
 import * as formatter from "./formatter.js"
 
+// Witness support for nostr network
+import * as witnessNostr from "./witness_nostr.js"
+
 const opts = {
   // This is required so that -v is position independent.
   boolean: ["v", "sign-cli", "sign-metamask", "witness-eth"],
@@ -22,6 +25,7 @@ Options:
   --sign-cli         Sign with the seed phrase provided in mnemonic.txt
   --sign-metamask    Sign with MetaMask instead of local Ethereum wallet
   --witness-eth      Witness to Ethereum on-chain with MetaMask
+  --witness-nostr    Witness to Nostr network
 `)
 }
 
@@ -38,6 +42,8 @@ const signMetamask = argv["sign-metamask"]
 const signCli = argv["sign-cli"]
 const enableSignature = signMetamask || signCli
 const enableWitnessEth = argv["witness-eth"]
+const enableWitnessNostr = argv["witness-nostr"]
+const enableWitness = enableWitnessEth || enableWitnessNostr
 
 const port = 8420
 const host = "localhost"
@@ -257,18 +263,32 @@ const doWitnessMetamask = async (
 
 const prepareWitness = async (verificationHash) => {
   const merkle_root = verificationHash
-  const witness_network = "sepolia"
-  const smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
-  const [transactionHash, walletAddress] = await doWitnessMetamask(
-    merkle_root,
-    witness_network,
-    smart_contract_address
-  )
-  const witness_hash = main.getHashSum(
+  let witness_hash, witness_network, smart_contract_address, transactionHash, publisher
+  if (enableWitnessNostr) {
+    // publisher is a public key used for nostr
+    // transaction hash is an event identifier for nostr
+    [publisher, transactionHash] = await witnessNostr.doWitnessNostr(merkle_root)
+    witness_network = "nostr"
+    witness_hash = main.getHashSum(
+        merkle_root +
+        witness_network +
+        transactionHash
+    )
+    smart_contract_address = "N/A"
+  } else {
+    witness_network = "sepolia"
+    smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
+    [transactionHash, publisher] = await doWitnessMetamask(
+      merkle_root,
+      witness_network,
+      smart_contract_address
+    )
+    witness_hash = main.getHashSum(
       merkle_root +
-      witness_network +
-      transactionHash
-  )
+        witness_network +
+        transactionHash
+    )
+  }
   const witness = {
     witness_hash,
     merkle_root,
@@ -279,7 +299,7 @@ const prepareWitness = async (verificationHash) => {
     // Transaction hash to locate the verification hash
     transaction_hash: transactionHash,
     // Publisher / Identifier for publisher
-    sender_account_address: walletAddress,
+    sender_account_address: publisher,
     // Optional for aggregated witness hashes
     structured_merkle_proof: [
       {
@@ -323,7 +343,7 @@ const getWallet = (mnemonic) => {
 }
 
 const createNewRevision = async (previousRevision, timestamp, includeSignature) => {
-  if (includeSignature && enableWitnessEth) {
+  if (includeSignature && enableWitness) {
     formatter.log_red("ERROR: you cannot sign & witness at the same time")
     process.exit(1)
   }
@@ -369,7 +389,7 @@ const createNewRevision = async (previousRevision, timestamp, includeSignature) 
     signatureHash = main.calculateSignatureHash(signature, publicKey)
   }
 
-  if (enableWitnessEth) {
+  if (enableWitness) {
     const witness = await prepareWitness(previousVerificationHash)
     verificationData.witness = witness
   }
