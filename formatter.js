@@ -141,22 +141,24 @@ function printWitnessInfo(detail) {
   const wh = shortenHash(wr.witness_hash)
   let witOut = `${_space2}Witness event ${wh} detected`
   witOut += `\n${_space4}Transaction hash: ${wr.tx_hash}`
-  const suffix = ` on ${wr.witness_network} via etherscan.io`
-  if (wr.etherscan_result === "true") {
+  const suffix = ` on ${wr.witness_network}`
+  if (wr.isValid) {
     witOut += `\n${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified${suffix}`
-  } else if (wr.etherscan_result === "false") {
+  } else {
     witOut += cliRedify(
       `\n${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match${suffix}`
     )
-  } else {
-    witOut += cliRedify(
-      `\n${_space4}${CROSSMARK}${WATCH}${wr.etherscan_error_message}${suffix}`
-    )
-    witOut += cliRedify(`\n${_space4}Error code: ${wr.etherscan_result}`)
-    witOut += cliRedify(
-      `\n${_space4}Verify manually: ${wr.merkle_root}`
-    )
   }
+  // TODO
+  // else {
+  //   witOut += cliRedify(
+  //     `\n${_space4}${CROSSMARK}${WATCH}${wr.etherscan_error_message}${suffix}`
+  //   )
+  //   witOut += cliRedify(`\n${_space4}Error code: ${wr.etherscan_result}`)
+  //   witOut += cliRedify(
+  //     `\n${_space4}Verify manually: ${wr.merkle_root}`
+  //   )
+  // }
 
   if (wr.doVerifyMerkleProof && wr.merkle_proof_status !== "") {
     switch (wr.merkle_proof_status) {

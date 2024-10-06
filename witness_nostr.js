@@ -14,8 +14,38 @@ useWebSocketImplementation(WebSocket)
 
 const credentials = JSON.parse(fs.readFileSync("credentials.json", "utf8"))
 const skHex = credentials.nostr_sk
+const relayUrl = 'wss://relay.damus.io'
 
-const doWitnessNostr = async (witnessEventVerificationHash) => {
+const waitForEventAuthor = async (relay, pk) => {
+  return new Promise((resolve) => {
+    relay.subscribe([
+      {
+        kinds: [1],
+        authors: [pk],
+      },
+    ], {
+      onevent(event) {
+        resolve(event); // Resolve the promise when the event is received
+      }
+    });
+  });
+}
+
+const waitForEventId = async (relay, id) => {
+  return new Promise((resolve) => {
+    relay.subscribe([
+      {
+        ids: [id],
+      },
+    ], {
+      onevent(event) {
+        resolve(event); // Resolve the promise when the event is received
+      }
+    });
+  });
+}
+
+const witness = async (witnessEventVerificationHash) => {
   const sk = hexToBytes(skHex)
   const pk = getPublicKey(sk)
   const npub = nip19.npubEncode(pk)
@@ -27,32 +57,30 @@ const doWitnessNostr = async (witnessEventVerificationHash) => {
     tags: [],
     content: witnessEventVerificationHash,
   }, sk)
-  const url = 'wss://relay.damus.io'
-  const relay = await Relay.connect(url)
+  const relay = await Relay.connect(relayUrl)
   console.log(`connected to ${relay.url}`)
 
-  const waitForEvent = async (relay, pk) => {
-    return new Promise((resolve) => {
-      relay.subscribe([
-        {
-          kinds: [1],
-          authors: [pk],
-        },
-      ], {
-        onevent(event) {
-          resolve(event); // Resolve the promise when the event is received
-        }
-      });
-    });
-  }
   await relay.publish(event)
-  const publishEvent = await waitForEvent(relay, pk);
+  const publishEvent = await waitForEventAuthor(relay, pk);
   relay.close()
   const nevent = nip19.neventEncode(publishEvent)
   console.log(`got event https://snort.social/${nevent}`)
   return [npub, nevent]
 }
 
+const verify = async (transactionHash, expectedMR) => {
+  const { type, data } = nip19.decode(transactionHash)
+  if (type !== "nevent") {
+    return false
+  }
+  const relay = await Relay.connect(relayUrl)
+  const publishEvent = await waitForEventId(relay, data.id)
+  relay.close()
+  const merkleRoot = publishEvent.content
+  return merkleRoot === expectedMR
+}
+
 export {
-  doWitnessNostr,
+  witness,
+  verify,
 }

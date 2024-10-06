@@ -267,7 +267,7 @@ const prepareWitness = async (verificationHash) => {
   if (enableWitnessNostr) {
     // publisher is a public key used for nostr
     // transaction hash is an event identifier for nostr
-    [publisher, transactionHash] = await witnessNostr.doWitnessNostr(merkle_root)
+    [publisher, transactionHash] = await witnessNostr.witness(merkle_root)
     witness_network = "nostr"
     witness_hash = main.getHashSum(
         merkle_root +

@@ -10,6 +10,7 @@ import * as ethers from "ethers"
 
 import * as cES from "./checkEtherScan.js"
 import * as formatter from "./formatter.js"
+import * as witnessNostr from "./witness_nostr.js"
 
 // Currently supported API version.
 const apiVersion = "0.3.0"
@@ -143,25 +144,32 @@ async function verifyWitness(
     merkle_proof_status: "",
   }
 
-  // Do online lookup of transaction hash
-  const etherScanResult = await cES.checkEtherScan(
-    witnessData.witness_network,
-    witnessData.transaction_hash,
-    witnessData.merkle_root,
-  )
-  result.etherscan_result = etherScanResult
+  let isValid: boolean
+  if (witnessData.witness_network === "nostr") {
+    isValid = await witnessNostr.verify(witnessData.transaction_hash, witnessData.merkle_root)
+  } else {
+    // Do online lookup of transaction hash
+    const etherScanResult = await cES.checkEtherScan(
+      witnessData.witness_network,
+      witnessData.transaction_hash,
+      witnessData.merkle_root,
+    )
+    result.etherscan_result = etherScanResult
 
-  if (etherScanResult !== "true" && etherScanResult !== "false") {
-    let errMsg
-    if (etherScanResult === "Transaction hash not found") {
-      errMsg = "Transaction hash not found"
-    } else if (etherScanResult.includes("ENETUNREACH")) {
-      errMsg = "Server is unreachable"
-    } else {
-      errMsg = "Online lookup failed"
+    if (etherScanResult !== "true" && etherScanResult !== "false") {
+      let errMsg
+      if (etherScanResult === "Transaction hash not found") {
+        errMsg = "Transaction hash not found"
+      } else if (etherScanResult.includes("ENETUNREACH")) {
+        errMsg = "Server is unreachable"
+      } else {
+        errMsg = "Online lookup failed"
+      }
+      result.etherscan_error_message = errMsg
     }
-    result.etherscan_error_message = errMsg
+    isValid = etherScanResult === "true"
   }
+  result.isValid = isValid
 
   // At this point, we know that the witness matches.
   if (doVerifyMerkleProof) {
@@ -176,10 +184,7 @@ async function verifyWitness(
       return ["INVALID", result]
     }
   }
-  if (etherScanResult !== "true") {
-    return ["INVALID", result]
-  }
-  return ["VALID", result]
+  return [isValid ? "VALID" : "INVALID", result]
 }
 
 function verifyFile(data) {
