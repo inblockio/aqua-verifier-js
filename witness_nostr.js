@@ -1,3 +1,7 @@
+#!/usr/bin/env node
+
+import * as fs from 'fs'
+
 import { generateSecretKey, getPublicKey } from 'nostr-tools/pure'
 import { finalizeEvent } from 'nostr-tools/pure'
 import { Relay, useWebSocketImplementation } from 'nostr-tools/relay'
