@@ -255,7 +255,7 @@ const doWitnessMetamask = async (
   }
 }
 
-const prepareWitness = async (verificationHash, domainId) => {
+const prepareWitness = async (verificationHash) => {
   const merkle_root = verificationHash
   const witness_network = "sepolia"
   const smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
@@ -270,12 +270,12 @@ const prepareWitness = async (verificationHash, domainId) => {
       transactionHash
   )
   const witness = {
-    domain_id: domainId,
     witness_hash,
     merkle_root,
     // Where is it stored: ChainID for ethereum, btc, nostr
     witness_network,
     smart_contract_address,
+    // Transaction hash to locate the verification hash
     witness_event_transaction_hash: transactionHash,
     //Publisher
     sender_account_address: walletAddress,
@@ -384,7 +384,7 @@ const createNewRevision = async (previousRevision, timestamp, includeSignature) 
   }
 
   if (enableWitnessEth) {
-    const witness = await prepareWitness(previousVerificationHash, domainId)
+    const witness = await prepareWitness(previousVerificationHash)
     verificationData.witness = witness
   }
   const witnessHash = verificationData.witness ? verificationData.witness.witness_hash : ""
