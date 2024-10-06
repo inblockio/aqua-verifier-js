@@ -584,7 +584,14 @@ async function checkAPIVersionCompatibility(server) {
 }
 
 async function verifyPageFromMwAPI(server, title, verbose, ignoreMerkleProof) {
-  const verifiedContent = await readFromMediaWikiAPI(server, title)
+  let verifiedContent
+  try {
+    verifiedContent = await readFromMediaWikiAPI(server, title)
+  } catch (e) {
+    // TODO: be more specific than just returning empty revisions
+    // NORECORD
+    verifiedContent = { revisions: {} }
+  }
   const input = { offline_data: verifiedContent}
   return await verifyPage(input, verbose, !ignoreMerkleProof)
 }
