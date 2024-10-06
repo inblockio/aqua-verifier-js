@@ -2,7 +2,6 @@
 // We use "http-status-codes" instead of STATUS_CODES in the "http" library
 // because we need to use this file in the browser.
 import getReasonPhrase from "http-status-codes"
-import fetch from "node-fetch"
 import * as cES from "./checkEtherScan.js"
 
 // https://stackoverflow.com/questions/9781218/how-to-change-node-jss-console-font-color

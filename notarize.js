@@ -4,7 +4,6 @@ import * as fs from 'fs'
 import * as ethers from 'ethers'
 import minimist from 'minimist'
 import * as http from 'http'
-import fetch from "node-fetch"
 
 import * as main from './index.js'
 import * as formatter from "./formatter.js"
