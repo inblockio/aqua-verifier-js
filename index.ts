@@ -331,7 +331,7 @@ async function verifyRevision(
     },
     witness_result: {},
     file_hash: "",
-    data: input.offline_data
+    data: input
   }
   const data = result.data
 
@@ -455,8 +455,6 @@ async function* generateVerifyPage(
   verbose: boolean | undefined,
   doVerifyMerkleProof: boolean
 ) {
-  let revisionInput
-
   VERBOSE = verbose
 
   let elapsed
@@ -464,16 +462,9 @@ async function* generateVerifyPage(
   for (const vh of verificationHashes) {
     const elapsedStart = hrtime()
 
-    // For offline verification, we simply pass in the data.
-    if ("offline_data" in input) {
-      revisionInput = {
-        offline_data: input.offline_data.revisions[vh],
-      }
-    }
-
     const [isCorrect, detail] = await verifyRevision(
       vh,
-      revisionInput,
+      input.revisions[vh],
       doVerifyMerkleProof
     )
     elapsed = getElapsedTime(elapsedStart)
@@ -489,12 +480,12 @@ async function* generateVerifyPage(
 
 async function verifyPage(input, verbose, doVerifyMerkleProof) {
   let verificationHashes
-  verificationHashes = Object.keys(input.offline_data.revisions)
+  verificationHashes = Object.keys(input.revisions)
   console.log("Page Verification Hashes: ", verificationHashes)
   let verificationStatus
 
   // Secure feature to detect detached chain, missing genesis revision
-  const firstRevision = input.offline_data.revisions[verificationHashes[verificationHashes.length - 1]]
+  const firstRevision = input.revisions[verificationHashes[verificationHashes.length - 1]]
   if (!firstRevision.metadata.previous_verification_hash === '') {
     verificationStatus = INVALID_VERIFICATION_STATUS
     console.log(`Status: ${verificationStatus}`)
@@ -592,8 +583,7 @@ async function verifyPageFromMwAPI(server, title, verbose, ignoreMerkleProof) {
     // NORECORD
     verifiedContent = { revisions: {} }
   }
-  const input = { offline_data: verifiedContent}
-  return await verifyPage(input, verbose, !ignoreMerkleProof)
+  return await verifyPage(verifiedContent, verbose, !ignoreMerkleProof)
 }
 
 export {

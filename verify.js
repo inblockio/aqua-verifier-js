@@ -3,7 +3,6 @@
 import * as main from "./index.js"
 import minimist from "minimist"
 import * as formatter from "./formatter.js"
-import * as transformer from "./transform.js"
 import * as fs from "fs"
 
 const opts = {
@@ -50,35 +49,24 @@ async function readExportFile(filename) {
      process.exit(1)
    }
   const fileContent = fs.readFileSync(filename)
-  let offlineData
-  if (filename.endsWith(".json")) {
-    const parsed = JSON.parse(fileContent)
-    if (!("pages" in parsed)) {
-      formatter.log_red("The json file doesn't contain 'pages' key.")
-      process.exit(1)
-    }
-    offlineData = parsed.pages
-  } else {
-    if (!filename.endsWith(".xml")) {
-      formatter.log_red("Only JSON or XML files are supported.")
-      process.exit(1)
-    }
-    offlineData = await transformer.parseMWXmlString(fileContent)
+  if (!filename.endsWith(".json")) {
+    formatter.log_red("The file must have a .json extension")
+    process.exit(1)
+  }
+  const offlineData = JSON.parse(fileContent)
+  if (!("revisions" in offlineData)) {
+    formatter.log_red("The json file doesn't contain 'revisions' key.")
+    process.exit(1)
   }
   return offlineData
 }
 
 // The main function
 (async function () {
-  let input
   if (file) {
     const offlineData = await readExportFile(file)
-    for (const offlinePageData of offlineData) {
-      console.log(`Verifying ${offlinePageData.title}`)
-      input = { offline_data: offlinePageData }
-      await main.verifyPage(input, verbose, !ignoreMerkleProof)
-      console.log()
-    }
+    await main.verifyPage(offlineData, verbose, !ignoreMerkleProof)
+    console.log()
   } else {
     console.log(`Verifying ${title}`)
     let APIstatus, versionMatches, serverVersion
