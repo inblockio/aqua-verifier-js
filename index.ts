@@ -134,7 +134,7 @@ async function verifyWitness(
 ) {
   const result = {
     witness_hash: witnessData.witness_hash,
-    tx_hash: witnessData.witness_event_transaction_hash,
+    tx_hash: witnessData.transaction_hash,
     witness_network: witnessData.witness_network,
     etherscan_result: "",
     etherscan_error_message: "",
@@ -150,7 +150,7 @@ async function verifyWitness(
   // Do online lookup of transaction hash
   const etherScanResult = await cES.checkEtherScan(
     witnessData.witness_network,
-    witnessData.witness_event_transaction_hash,
+    witnessData.transaction_hash,
     witnessData.merkle_root,
   )
   result.etherscan_result = etherScanResult
