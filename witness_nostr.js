@@ -53,4 +53,6 @@ const doWitnessNostr = async (witnessEventVerificationHash) => {
   return [npub, nevent]
 }
 
-await doWitnessNostr("anotheraienjoyer")
+export {
+  doWitnessNostr,
+}
