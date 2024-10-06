@@ -46,20 +46,6 @@ function calculateSignatureHash(signature: string, publicKey: string) {
   return getHashSum(signature + publicKey)
 }
 
-function calculateWitnessHash(
-  domain_snapshot_genesis_hash: string,
-  merkle_root: string,
-  witness_network: string,
-  witness_tx_hash: string,
-) {
-  return getHashSum(
-    domain_snapshot_genesis_hash +
-    merkle_root +
-    witness_network +
-    witness_tx_hash
-  )
-}
-
 function calculateVerificationHash(
   contentHash: string,
   metadataHash: string,
@@ -125,8 +111,6 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash: string) {
  * verification log.
  * Steps:
  * - Calls get_witness_data API passing witness event ID.
- * - Calls function getHashSum passing domain_snapshot_genesis_hash and
- *   merkle_root from the get_witness_data API call.
  * - Writes witness event ID and transaction hash to the log.
  * - Calls function checkEtherScan (see the file checkEtherScan.js) passing
  *   witness network, witness event transaction hash and the actual  witness
@@ -148,18 +132,13 @@ async function verifyWitness(
   verification_hash: string,
   doVerifyMerkleProof: boolean,
 ) {
-  const actual_witness_event_verification_hash = getHashSum(
-    witnessData.domain_snapshot_genesis_hash + witnessData.merkle_root
-  )
-
   const result = {
     witness_hash: witnessData.witness_hash,
     tx_hash: witnessData.witness_event_transaction_hash,
     witness_network: witnessData.witness_network,
     etherscan_result: "",
     etherscan_error_message: "",
-    actual_witness_event_verification_hash:
-      actual_witness_event_verification_hash,
+    merkle_root: witnessData.merkle_root,
     witness_event_vh_matches: true,
     // `extra` is populated with useful info when the witness event verification
     // doesn't match.
@@ -172,7 +151,7 @@ async function verifyWitness(
   const etherScanResult = await cES.checkEtherScan(
     witnessData.witness_network,
     witnessData.witness_event_transaction_hash,
-    actual_witness_event_verification_hash
+    witnessData.merkle_root,
   )
   result.etherscan_result = etherScanResult
 
@@ -187,35 +166,18 @@ async function verifyWitness(
     }
     result.etherscan_error_message = errMsg
   }
-  if (
-    actual_witness_event_verification_hash !=
-    witnessData.witness_event_verification_hash
-  ) {
-    result.witness_event_vh_matches = false
-    result.extra = {
-      domain_snapshot_genesis_hash: witnessData.domain_snapshot_genesis_hash,
-      merkle_root: witnessData.merkle_root,
-      witness_event_verification_hash:
-        witnessData.witness_event_verification_hash,
-    }
-    return ["INVALID", result]
-  }
+
   // At this point, we know that the witness matches.
   if (doVerifyMerkleProof) {
     // Only verify the witness merkle proof when verifyWitness is successful,
     // because this step is expensive.
-    if (verification_hash === witnessData.domain_snapshot_genesis_hash) {
-      // Corner case when the page is a Domain Snapshot.
-      result.merkle_proof_status = "DOMAIN_SNAPSHOT"
-    } else {
-      const merkleProofIsOK = verifyMerkleIntegrity(
-        witnessData.structured_merkle_proof,
-        verification_hash
-      )
-      result.merkle_proof_status = merkleProofIsOK ? "VALID" : "INVALID"
-      if (!merkleProofIsOK) {
-        return ["INVALID", result]
-      }
+    const merkleProofIsOK = verifyMerkleIntegrity(
+      witnessData.structured_merkle_proof,
+      verification_hash
+    )
+    result.merkle_proof_status = merkleProofIsOK ? "VALID" : "INVALID"
+    if (!merkleProofIsOK) {
+      return ["INVALID", result]
     }
   }
   if (etherScanResult !== "true") {
