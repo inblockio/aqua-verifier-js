@@ -293,22 +293,7 @@ const prepareWitness = async (verificationHash) => {
 }
 
 const createNewMetaData = () => {
-  return {
-    pages: [{ revisions: {} }],
-    siteInfo: {
-      sitename: "Personal Knowledge Container",
-      dbname: "my_wiki",
-      base: "http://localhost:9352/index.php/Main_Page",
-      generator: "MediaWiki 1.37.1",
-      case: "first-letter",
-      namespaces: {
-        0: {
-          case: true,
-          title: "",
-        },
-      },
-    },
-  }
+  return { revisions: {} }
 }
 
 function formatMwTimestamp(ts) {
@@ -424,12 +409,12 @@ const createNewRevision = async (previousRevision, timestamp, includeSignature) 
   let lastRevision
   if (fs.existsSync(metadataFilename)) {
     metadata = JSON.parse(fs.readFileSync(metadataFilename))
-    revisions = metadata.pages[0].revisions
+    revisions = metadata.revisions
     const verificationHashes = Object.keys(revisions)
     lastRevision = revisions[verificationHashes[verificationHashes.length - 1]]
   } else {
     metadata = createNewMetaData()
-    revisions = metadata.pages[0].revisions
+    revisions = metadata.revisions
     const genesisRevision = await createNewRevision(null, timestamp, false)
     revisions[genesisRevision.metadata.verification_hash] = genesisRevision
     lastRevision = genesisRevision
