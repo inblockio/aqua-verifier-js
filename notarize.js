@@ -358,8 +358,8 @@ const createNewRevision = async (previousRevision, timestamp, includeSignature) 
       )
     } else {
       try {
-      const mnemonic = fs.readFileSync("mnemonic.txt", "utf8")
-      let wallet;[wallet, walletAddress, publicKey] = getWallet(mnemonic)
+      const credentials = JSON.parse(fs.readFileSync("credentials.json", "utf8"))
+      let wallet;[wallet, walletAddress, publicKey] = getWallet(credentials.mnemonic)
       signature = await doSign(wallet, previousVerificationHash)
     } catch (error) {
       console.error("Failed to read mnemonic:", error);
