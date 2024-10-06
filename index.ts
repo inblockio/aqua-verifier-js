@@ -139,10 +139,6 @@ async function verifyWitness(
     etherscan_result: "",
     etherscan_error_message: "",
     merkle_root: witnessData.merkle_root,
-    witness_event_vh_matches: true,
-    // `extra` is populated with useful info when the witness event verification
-    // doesn't match.
-    extra: null,
     doVerifyMerkleProof: doVerifyMerkleProof,
     merkle_proof_status: "",
   }

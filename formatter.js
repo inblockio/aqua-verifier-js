@@ -154,23 +154,7 @@ function printWitnessInfo(detail) {
     )
     witOut += cliRedify(`\n${_space4}Error code: ${wr.etherscan_result}`)
     witOut += cliRedify(
-      `\n${_space4}Verify manually: ${wr.actual_witness_event_verification_hash}`
-    )
-  }
-  if (!wr.witness_event_vh_matches) {
-    witOut += cliRedify(
-      `\n${_space4}${CROSSMARK}` +
-        "Witness event verification hash doesn't match"
-    )
-    witOut += cliRedify(
-      `\n${_space4}Domain Snapshot genesis hash: ${wr.extra.domain_snapshot_genesis_hash}`
-    )
-    witOut += cliRedify(`\n${_space4}Merkle root: ${wr.extra.merkle_root}`)
-    witOut += cliRedify(
-      `\n${_space4}Expected: ${wr.extra.witness_event_verification_hash}`
-    )
-    witOut += cliRedify(
-      `\n${_space4}Actual: ${wr.actual_witness_event_verification_hash}`
+      `\n${_space4}Verify manually: ${wr.merkle_root}`
     )
   }
 
@@ -275,32 +259,10 @@ function formatWitnessInfo2HTML(detail) {
     )
     witOut += htmlRedify(`${_space4}Error code: ${wr.etherscan_result}`)
     // We want the long hash to be shortened in the HTML output.
-    const formattedWEVH = clipboardifyHash(
-      wr.actual_witness_event_verification_hash
+    const formattedMR = clipboardifyHash(
+      wr.merkle_root
     )
-    witOut += htmlRedify(`${_space4}Verify manually: ${formattedWEVH}`)
-  }
-
-  if (!wr.witness_event_vh_matches) {
-    witOut += htmlRedify(
-      `${_space4}${CROSSMARK}` + "Witness event verification hash doesn't match"
-    )
-    witOut += htmlRedify(
-      `${_space4}Domain Snapshot genesis hash: ${wr.extra.domain_snapshot_genesis_hash}`
-    )
-    witOut += htmlRedify(
-      `${_space4}Merkle root: ${clipboardifyHash(wr.extra.merkle_root)}`
-    )
-    witOut += htmlRedify(
-      `${_space4}Expected: ${clipboardifyHash(
-        wr.extra.witness_event_verification_hash
-      )}`
-    )
-    witOut += htmlRedify(
-      `${_space4}Actual: ${clipboardifyHash(
-        wr.actual_witness_event_verification_hash
-      )}`
-    )
+    witOut += htmlRedify(`${_space4}Verify manually: ${formattedMR}`)
   }
 
   if (wr.doVerifyMerkleProof && wr.merkle_proof_status !== "") {
