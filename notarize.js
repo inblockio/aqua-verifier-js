@@ -274,12 +274,13 @@ const prepareWitness = async (verificationHash) => {
     merkle_root,
     // Where is it stored: ChainID for ethereum, btc, nostr
     witness_network,
+    // Required for the the publishing of the hash
     smart_contract_address,
     // Transaction hash to locate the verification hash
-    witness_event_transaction_hash: transactionHash,
-    //Publisher
+    transaction_hash: transactionHash,
+    // Publisher / Identifier for publisher
     sender_account_address: walletAddress,
-    //Optional for aggregated results
+    // Optional for aggregated witness hashes
     structured_merkle_proof: [
       {
         depth: "0",
