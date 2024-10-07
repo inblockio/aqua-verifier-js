@@ -278,7 +278,7 @@ const prepareWitness = async (verificationHash) => {
   } else {
     witness_network = "sepolia"
     smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
-    [transactionHash, publisher] = await doWitnessMetamask(
+    ;[transactionHash, publisher] = await doWitnessMetamask(
       merkle_root,
       witness_network,
       smart_contract_address
