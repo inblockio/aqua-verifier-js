@@ -34,26 +34,18 @@ function getHashSum(content: string) {
   return content === "" ? "" : sha3.sha3_512(content)
 }
 
-function calculateMetadataHash(
-  domainId: string,
-  timestamp: string,
-  previousVerificationHash: string = "",
-  mergeHash: string = ""
-) {
-  return getHashSum(domainId + timestamp + previousVerificationHash + mergeHash)
-}
-
 function calculateSignatureHash(signature: string, publicKey: string) {
   return getHashSum(signature + publicKey)
 }
 
 function calculateVerificationHash(
   contentHash: string,
-  metadataHash: string,
+  timestamp: string,
+  previousVerificationHash: string,
   signature_hash: string,
   witness_hash: string,
 ) {
-  return getHashSum(contentHash + metadataHash + signature_hash + witness_hash)
+  return getHashSum(contentHash + timestamp + previousVerificationHash + signature_hash + witness_hash)
 }
 
 /**
@@ -239,24 +231,13 @@ function verifyContent(data) {
   return [contentHash === data.content.content_hash, contentHash]
 }
 
-function verifyMetadata(data) {
-  const metadataHash = calculateMetadataHash(
-    data.metadata.domain_id,
-    data.metadata.time_stamp,
-    data.metadata.previous_verification_hash ?? "",
-    data.metadata.merge_hash ?? ""
-  )
-  return [metadataHash === data.metadata.metadata_hash, metadataHash]
-}
-
 /**
  * TODO THIS DOCSTRING IS OUTDATED!
  * Verifies a revision from a page.
  * Steps:
  * - Calls verify_page API passing revision id.
- * - Calculates metadata hash using previous verification hash.
  * - Calls function verifyWitness using data from the verify_page API call.
- * - Calculates the verification hash using content hash, metadata hash,
+ * - Calculates the verification hash using content hash,
  *   signature hash and witness hash.
  * - If the calculated verification hash is different from the verification
  *   hash returned from the first verify_page API calls then logs a hash
@@ -286,7 +267,6 @@ async function verifyRevision(
     verification_hash: verificationHash,
     status: {
       content: false,
-      metadata: false,
       signature: "MISSING",
       witness: "MISSING",
       verification: INVALID_VERIFICATION_STATUS,
@@ -319,15 +299,6 @@ async function verifyRevision(
   // To save storage for the cacher, e.g the Chrome extension.
   delete result.data.content.content
   delete result.data.content.file
-
-  // Metadata
-  let metadataHash
-  [ok, metadataHash] = verifyMetadata(data)
-  if (!ok) {
-    return [false, { error_message: "Metadata hash doesn't match" }]
-  }
-  // Mark metadata as correct
-  result.status.metadata = true
 
   // TODO comparison with null is probably not needed. Needs testing.
   const hasSignature = !(
@@ -369,7 +340,8 @@ async function verifyRevision(
 
   const calculatedVerificationHash = calculateVerificationHash(
     contentHash,
-    metadataHash,
+    data.metadata.time_stamp,
+    data.metadata.previous_verification_hash ?? "",
     signatureHash,
     data.witness ? data.witness.witness_hash : ""
   )
@@ -557,7 +529,6 @@ export {
   ERROR_VERIFICATION_STATUS,
   // For notarize.js
   getHashSum,
-  calculateMetadataHash,
   calculateVerificationHash,
   calculateSignatureHash,
   // For the VerifyPage Chrome extension and CLI

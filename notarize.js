@@ -363,12 +363,6 @@ const createNewRevision = async (previousRevision, timestamp, includeSignature) 
 
   const domainId = "5e5a1ec586" // TODO
 
-  const metadataHash = main.calculateMetadataHash(
-    domainId,
-    timestamp,
-    previousVerificationHash
-  )
-
   let signatureHash = ""  // MUST be the default
   let signature, walletAddress, publicKey
   if (includeSignature) {
@@ -397,7 +391,8 @@ const createNewRevision = async (previousRevision, timestamp, includeSignature) 
 
   const verificationHash = main.calculateVerificationHash(
     contentHash,
-    metadataHash,
+    timestamp,
+    previousVerificationHash,
     signatureHash,
     witnessHash,
   )
@@ -405,7 +400,6 @@ const createNewRevision = async (previousRevision, timestamp, includeSignature) 
     domain_id: domainId,
     time_stamp: timestamp,
     previous_verification_hash: previousVerificationHash,
-    metadata_hash: metadataHash,
     verification_hash: verificationHash,
   }
 

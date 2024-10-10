@@ -2,9 +2,14 @@ import * as formatter from "./formatter.js";
 declare const apiVersion = "0.3.0";
 declare const ERROR_VERIFICATION_STATUS = "ERROR";
 declare function getHashSum(content: string): any;
-declare function calculateMetadataHash(domainId: string, timestamp: string, previousVerificationHash?: string, mergeHash?: string): any;
 declare function calculateSignatureHash(signature: string, publicKey: string): any;
-declare function calculateVerificationHash(contentHash: string, metadataHash: string, signature_hash: string, witness_hash: string): any;
+declare function calculateVerificationHash(
+  contentHash: string,
+  timestamp: string,
+  previousVerificationHash: string,
+  signature_hash: string,
+  witness_hash: string,
+): any;
 /**
  * TODO THIS DOCSTRING IS OUTDATED!
  * Verifies all of the verified revisions of a page.
