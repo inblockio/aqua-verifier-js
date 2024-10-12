@@ -45,7 +45,13 @@ function calculateVerificationHash(
   signature_hash: string,
   witness_hash: string,
 ) {
-  return getHashSum(contentHash + timestamp + previousVerificationHash + signature_hash + witness_hash)
+  return getHashSum(
+    contentHash +
+      timestamp +
+      previousVerificationHash +
+      signature_hash +
+      witness_hash,
+  )
 }
 
 /**
@@ -138,7 +144,10 @@ async function verifyWitness(
 
   let isValid: boolean
   if (witnessData.witness_network === "nostr") {
-    isValid = await witnessNostr.verify(witnessData.transaction_hash, witnessData.merkle_root)
+    isValid = await witnessNostr.verify(
+      witnessData.transaction_hash,
+      witnessData.merkle_root,
+    )
   } else {
     // Do online lookup of transaction hash
     const etherScanResult = await cES.checkEtherScan(
@@ -169,7 +178,7 @@ async function verifyWitness(
     // because this step is expensive.
     const merkleProofIsOK = verifyMerkleIntegrity(
       witnessData.structured_merkle_proof,
-      verification_hash
+      verification_hash,
     )
     result.merkle_proof_status = merkleProofIsOK ? "VALID" : "INVALID"
     if (!merkleProofIsOK) {
@@ -207,14 +216,15 @@ function verifySignature(data: object, verificationHash: string) {
   }
   // Signature verification
   // The padded message is required
-  const paddedMessage =
-    `I sign the following page verification_hash: [0x${verificationHash}]`
+  const paddedMessage = `I sign the following page verification_hash: [0x${verificationHash}]`
   try {
     const recoveredAddress = ethers.recoverAddress(
       ethers.hashMessage(paddedMessage),
-      data.signature.signature
+      data.signature.signature,
     )
-    signatureOk = recoveredAddress.toLowerCase() === data.signature.wallet_address.toLowerCase()
+    signatureOk =
+      recoveredAddress.toLowerCase() ===
+      data.signature.wallet_address.toLowerCase()
   } catch (e) {
     // continue regardless of error
   }
@@ -261,7 +271,7 @@ function verifyContent(data) {
 async function verifyRevision(
   verificationHash: string,
   input,
-  doVerifyMerkleProof: boolean
+  doVerifyMerkleProof: boolean,
 ) {
   let result = {
     verification_hash: verificationHash,
@@ -274,7 +284,7 @@ async function verifyRevision(
     },
     witness_result: {},
     file_hash: "",
-    data: input
+    data: input,
   }
   const data = result.data
 
@@ -310,15 +320,18 @@ async function verifyRevision(
   const hasWitness = !(data.witness === null || data.witness === undefined)
 
   if (hasSignature && hasWitness) {
-    return [false, { error_message: "Signature and witness must not both be present"}]
+    return [
+      false,
+      { error_message: "Signature and witness must not both be present" },
+    ]
   }
 
   let signatureHash = ""
   if (hasSignature) {
     let sigStatus
-    [ok, sigStatus] = verifySignature(
+    ;[ok, sigStatus] = verifySignature(
       data,
-      data.metadata.previous_verification_hash
+      data.metadata.previous_verification_hash,
     )
     result.status.signature = sigStatus
     signatureHash = data.signature.signature_hash
@@ -329,7 +342,7 @@ async function verifyRevision(
       //as of version v1.2 Aqua protocol it takes always the previous verification hash
       //as a witness and a signature MUST create a new revision of the Aqua-Chain
       data.metadata.previous_verification_hash,
-      doVerifyMerkleProof
+      doVerifyMerkleProof,
     )
     result.witness_result = witnessResult
     result.status.witness = witnessStatus
@@ -343,7 +356,7 @@ async function verifyRevision(
     data.metadata.time_stamp,
     data.metadata.previous_verification_hash ?? "",
     signatureHash,
-    data.witness ? data.witness.witness_hash : ""
+    data.witness ? data.witness.witness_hash : "",
   )
 
   if (calculatedVerificationHash !== verificationHash) {
@@ -388,7 +401,7 @@ async function* generateVerifyPage(
   verificationHashes,
   input,
   verbose: boolean | undefined,
-  doVerifyMerkleProof: boolean
+  doVerifyMerkleProof: boolean,
 ) {
   VERBOSE = verbose
 
@@ -400,7 +413,7 @@ async function* generateVerifyPage(
     const [isCorrect, detail] = await verifyRevision(
       vh,
       input.revisions[vh],
-      doVerifyMerkleProof
+      doVerifyMerkleProof,
     )
     elapsed = getElapsedTime(elapsedStart)
     detail.elapsed = elapsed
@@ -420,8 +433,9 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   let verificationStatus
 
   // Secure feature to detect detached chain, missing genesis revision
-  const firstRevision = input.revisions[verificationHashes[verificationHashes.length - 1]]
-  if (!firstRevision.metadata.previous_verification_hash === '') {
+  const firstRevision =
+    input.revisions[verificationHashes[verificationHashes.length - 1]]
+  if (!firstRevision.metadata.previous_verification_hash === "") {
     verificationStatus = INVALID_VERIFICATION_STATUS
     console.log(`Status: ${verificationStatus}`)
     return [verificationStatus, null]
@@ -440,7 +454,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
     verificationHashes,
     input,
     verbose,
-    doVerifyMerkleProof
+    doVerifyMerkleProof,
   )) {
     const [isCorrect, detail] = value
     formatter.printRevisionInfo(detail, verbose)
@@ -454,11 +468,11 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
       `  Progress: ${count} / ${verificationHashes.length} (${(
         (100 * count) /
         verificationHashes.length
-      ).toFixed(1)}%)`
+      ).toFixed(1)}%)`,
     )
     if (count < verificationHashes.length) {
       console.log(
-        `${count + 1}. Verification of Revision ${verificationHashes[count]}.`
+        `${count + 1}. Verification of Revision ${verificationHashes[count]}.`,
       )
     }
   }
@@ -478,14 +492,14 @@ async function readFromMediaWikiAPI(server, title) {
   }
   const verificationHash = data.verification_hash
   response = await fetch(
-    `${server}/rest.php/data_accounting/get_branch/${verificationHash}`
+    `${server}/rest.php/data_accounting/get_branch/${verificationHash}`,
   )
   data = await response.json()
   const hashes = data.hashes
   const revisions = {}
   for (const vh of hashes) {
     response = await fetch(
-      `${server}/rest.php/data_accounting/get_revision/${vh}`
+      `${server}/rest.php/data_accounting/get_revision/${vh}`,
     )
     revisions[vh] = await response.json()
   }

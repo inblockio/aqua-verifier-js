@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-import * as fs from 'fs'
-import * as ethers from 'ethers'
-import minimist from 'minimist'
-import * as http from 'http'
+import * as fs from "fs"
+import * as ethers from "ethers"
+import minimist from "minimist"
+import * as http from "http"
 
-import * as main from './index.js'
+import * as main from "./index.js"
 import * as formatter from "./formatter.js"
 
 // Witness support for nostr network
@@ -220,7 +220,7 @@ const doSignMetamask = async (verificationHash) => {
       const walletAddress = content.wallet_address
       const publicKey = ethers.SigningKey.recoverPublicKey(
         ethers.hashMessage(messageToBeSigned),
-        signature
+        signature,
       )
       console.log(`The signature has been retrieved: ${signature}`)
       server.close()
@@ -234,7 +234,7 @@ const doSignMetamask = async (verificationHash) => {
 const doWitnessMetamask = async (
   witnessEventVerificationHash,
   witnessNetwork,
-  smartContractAddress
+  smartContractAddress,
 ) => {
   const html = witnessMetamaskHtml
     .replace("WITNESSNETWORK", witnessNetwork)
@@ -263,16 +263,18 @@ const doWitnessMetamask = async (
 
 const prepareWitness = async (verificationHash) => {
   const merkle_root = verificationHash
-  let witness_hash, witness_network, smart_contract_address, transactionHash, publisher
+  let witness_hash,
+    witness_network,
+    smart_contract_address,
+    transactionHash,
+    publisher
   if (enableWitnessNostr) {
     // publisher is a public key used for nostr
     // transaction hash is an event identifier for nostr
-    [publisher, transactionHash] = await witnessNostr.witness(merkle_root)
+    ;[publisher, transactionHash] = await witnessNostr.witness(merkle_root)
     witness_network = "nostr"
     witness_hash = main.getHashSum(
-        merkle_root +
-        witness_network +
-        transactionHash
+      merkle_root + witness_network + transactionHash,
     )
     smart_contract_address = "N/A"
   } else {
@@ -281,12 +283,10 @@ const prepareWitness = async (verificationHash) => {
     ;[transactionHash, publisher] = await doWitnessMetamask(
       merkle_root,
       witness_network,
-      smart_contract_address
+      smart_contract_address,
     )
     witness_hash = main.getHashSum(
-      merkle_root +
-        witness_network +
-        transactionHash
+      merkle_root + witness_network + transactionHash,
     )
   }
   const witness = {
@@ -342,7 +342,11 @@ const getWallet = (mnemonic) => {
   return [wallet, walletAddress, wallet.publicKey]
 }
 
-const createNewRevision = async (previousRevision, timestamp, includeSignature) => {
+const createNewRevision = async (
+  previousRevision,
+  timestamp,
+  includeSignature,
+) => {
   if (includeSignature && enableWitness) {
     formatter.log_red("ERROR: you cannot sign & witness at the same time")
     process.exit(1)
@@ -352,7 +356,9 @@ const createNewRevision = async (previousRevision, timestamp, includeSignature) 
     content: { rev_id: 0 },
   }
 
-  let previousVerificationHash = previousRevision ? previousRevision.metadata.verification_hash : ""
+  let previousVerificationHash = previousRevision
+    ? previousRevision.metadata.verification_hash
+    : ""
 
   const fileContent = fs.readFileSync(filename, "utf8")
   const contentHash = main.getHashSum(fileContent)
@@ -363,22 +369,25 @@ const createNewRevision = async (previousRevision, timestamp, includeSignature) 
 
   const domainId = "5e5a1ec586" // TODO
 
-  let signatureHash = ""  // MUST be the default
+  let signatureHash = "" // MUST be the default
   let signature, walletAddress, publicKey
   if (includeSignature) {
     if (signMetamask) {
       ;[signature, walletAddress, publicKey] = await doSignMetamask(
-        previousVerificationHash
+        previousVerificationHash,
       )
     } else {
       try {
-      const credentials = JSON.parse(fs.readFileSync("credentials.json", "utf8"))
-      let wallet;[wallet, walletAddress, publicKey] = getWallet(credentials.mnemonic)
-      signature = await doSign(wallet, previousVerificationHash)
-    } catch (error) {
-      console.error("Failed to read mnemonic:", error);
-      process.exit(1);
-    }
+        const credentials = JSON.parse(
+          fs.readFileSync("credentials.json", "utf8"),
+        )
+        let wallet
+        ;[wallet, walletAddress, publicKey] = getWallet(credentials.mnemonic)
+        signature = await doSign(wallet, previousVerificationHash)
+      } catch (error) {
+        console.error("Failed to read mnemonic:", error)
+        process.exit(1)
+      }
     }
     signatureHash = main.calculateSignatureHash(signature, publicKey)
   }
@@ -387,7 +396,9 @@ const createNewRevision = async (previousRevision, timestamp, includeSignature) 
     const witness = await prepareWitness(previousVerificationHash)
     verificationData.witness = witness
   }
-  const witnessHash = verificationData.witness ? verificationData.witness.witness_hash : ""
+  const witnessHash = verificationData.witness
+    ? verificationData.witness.witness_hash
+    : ""
 
   const verificationHash = main.calculateVerificationHash(
     contentHash,
@@ -443,7 +454,11 @@ const createNewRevision = async (previousRevision, timestamp, includeSignature) 
   //  process.exit()
   //}
 
-  const verificationData = await createNewRevision(lastRevision, timestamp, enableSignature)
+  const verificationData = await createNewRevision(
+    lastRevision,
+    timestamp,
+    enableSignature,
+  )
   const verificationHash = verificationData.metadata.verification_hash
   revisions[verificationHash] = verificationData
   console.log(`Writing new revision ${verificationHash}`)
