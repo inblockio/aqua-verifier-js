@@ -138,8 +138,8 @@ function printWitnessInfo(detail) {
   const _space2 = "  "
   const _space4 = _space2 + _space2
   const wr = detail.witness_result
-  const wh = shortenHash(wr.witness_hash)
-  let witOut = `${_space2}Witness event ${wh} detected`
+  const wmr = shortenHash(wr.merkle_root)
+  let witOut = `${_space2}Witness event ${wmr} detected`
   witOut += `\n${_space4}Transaction hash: ${wr.tx_hash}`
   const suffix = ` on ${wr.witness_network}`
   if (wr.isValid) {
@@ -190,9 +190,9 @@ function printRevisionInfo(detail, verbose) {
 
   console.log(`  Elapsed: ${detail.elapsed} s`)
   console.log(
-    `  Timestamp: ${formatDBTimestamp(detail.data.metadata.time_stamp)}`
+    `  Timestamp: ${formatDBTimestamp(detail.data.time_stamp)}`
   )
-  console.log(`  Domain ID: ${detail.data.metadata.domain_id}`)
+  console.log(`  Domain ID: ${detail.data.domain_id}`)
   if (detail.status.verification === INVALID_VERIFICATION_STATUS) {
     log_red(`  ${CROSSMARK}` + " Verification hash doesn't match")
     return
@@ -300,8 +300,8 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   }
 
   let out = `${_space2}Elapsed: ${detail.elapsed} s<br>`
-  out += `${_space2}${formatDBTimestamp(detail.data.metadata.time_stamp)}<br>`
-  out += `${_space2}Domain ID: ${detail.data.metadata.domain_id}<br>`
+  out += `${_space2}${formatDBTimestamp(detail.data.time_stamp)}<br>`
+  out += `${_space2}Domain ID: ${detail.data.domain_id}<br>`
   if (detail.status.verification === INVALID_VERIFICATION_STATUS) {
     out += htmlRedify(
       `${_space2}${CROSSMARK}` + " verification hash doesn't match"

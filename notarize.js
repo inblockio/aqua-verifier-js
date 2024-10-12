@@ -14,7 +14,7 @@ import * as witnessNostr from "./witness_nostr.js"
 
 const opts = {
   // This is required so that -v is position independent.
-  boolean: ["v", "sign-cli", "sign-metamask", "witness-eth"],
+  boolean: ["v", "sign-cli", "sign-metamask", "witness-eth", "witness-nostr"],
 }
 
 const usage = () => {
@@ -49,12 +49,6 @@ const enableWitness = enableWitnessEth || enableWitnessNostr
 const port = 8420
 const host = "localhost"
 const serverUrl = `http://${host}:${port}`
-
-const dict2Array = (obj) => {
-  return Object.keys(obj)
-    .sort()
-    .map((key) => [key, obj[key]])
-}
 
 const doSign = async (wallet, verificationHash) => {
   const message =
@@ -270,8 +264,7 @@ const doWitnessMetamask = async (
 
 const prepareWitness = async (verificationHash) => {
   const merkle_root = verificationHash
-  let witness_hash,
-    witness_network,
+  let witness_network,
     smart_contract_address,
     transactionHash,
     publisher
@@ -280,9 +273,6 @@ const prepareWitness = async (verificationHash) => {
     // transaction hash is an event identifier for nostr
     ;[publisher, transactionHash] = await witnessNostr.witness(merkle_root)
     witness_network = "nostr"
-    witness_hash = main.getHashSum(
-      merkle_root + witness_network + transactionHash,
-    )
     smart_contract_address = "N/A"
   } else {
     witness_network = "sepolia"
@@ -346,6 +336,7 @@ const getWallet = (mnemonic) => {
 }
 
 const prepareSignature = async (previousVerificationHash) => {
+  let signature, walletAddress, publicKey
   if (signMetamask) {
     ;[signature, walletAddress, publicKey] = await doSignMetamask(
       previousVerificationHash,
@@ -388,7 +379,7 @@ const createNewRevision = async (
   }
 
   if (includeSignature) {
-    const sigData = prepareSignature(previousVerificationHash)
+    const sigData = await prepareSignature(previousVerificationHash)
     verificationData = { ...verificationData, ...sigData }
   }
 
@@ -400,8 +391,9 @@ const createNewRevision = async (
     )
   }
 
-  const leaves = dict2Array(verificationData).map(main.getHashSum)
+  const leaves = main.dict2Leaves(verificationData)
   const tree = new MerkleTree(leaves, main.getHashSum)
+  verificationData.leaves = leaves
   return {
     verification_hash: tree.getHexRoot(),
     data: verificationData,
@@ -444,5 +436,5 @@ const createNewRevision = async (
   revisions[verificationHash] = verificationData.data
   console.log(`Writing new revision ${verificationHash}`)
 
-  fs.writeFileSync(metadataFilename, JSON.stringify(metadata), "utf8")
+  fs.writeFileSync(metadataFilename, JSON.stringify(metadata, null, 2), "utf8")
 })()

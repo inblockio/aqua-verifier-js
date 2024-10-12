@@ -4,6 +4,7 @@ import { Buffer } from "buffer"
 
 import sha3 from "js-sha3"
 import hrtime from "browser-process-hrtime"
+import { MerkleTree } from "merkletreejs"
 
 // utilities for verifying signatures
 import * as ethers from "ethers"
@@ -30,28 +31,14 @@ function getElapsedTime(start) {
   return (elapsed[0] + elapsed[1] / 1e9).toFixed(precision)
 }
 
+const dict2Leaves = (obj) => {
+  return Object.keys(obj)
+    .sort()  // MUST be sorted for deterministic Merkle tree
+    .map((key) => getHashSum(`${key}:${obj[key]}`))
+}
+
 function getHashSum(content: string) {
   return content === "" ? "" : sha3.sha3_512(content)
-}
-
-function calculateSignatureHash(signature: string, publicKey: string) {
-  return getHashSum(signature + publicKey)
-}
-
-function calculateVerificationHash(
-  contentHash: string,
-  timestamp: string,
-  previousVerificationHash: string,
-  signature_hash: string,
-  witness_hash: string,
-) {
-  return getHashSum(
-    contentHash +
-      timestamp +
-      previousVerificationHash +
-      signature_hash +
-      witness_hash,
-  )
 }
 
 /**
@@ -132,12 +119,11 @@ async function verifyWitness(
   doVerifyMerkleProof: boolean,
 ) {
   const result = {
-    witness_hash: witnessData.witness_hash,
-    tx_hash: witnessData.transaction_hash,
+    tx_hash: witnessData.witness_transaction_hash,
     witness_network: witnessData.witness_network,
     etherscan_result: "",
     etherscan_error_message: "",
-    merkle_root: witnessData.merkle_root,
+    merkle_root: witnessData.witness_merkle_root,
     doVerifyMerkleProof: doVerifyMerkleProof,
     merkle_proof_status: "",
   }
@@ -145,15 +131,15 @@ async function verifyWitness(
   let isValid: boolean
   if (witnessData.witness_network === "nostr") {
     isValid = await witnessNostr.verify(
-      witnessData.transaction_hash,
-      witnessData.merkle_root,
+      witnessData.witness_transaction_hash,
+      witnessData.witness_merkle_root,
     )
   } else {
     // Do online lookup of transaction hash
     const etherScanResult = await cES.checkEtherScan(
       witnessData.witness_network,
-      witnessData.transaction_hash,
-      witnessData.merkle_root,
+      witnessData.witness_transaction_hash,
+      witnessData.witness_merkle_root,
     )
     result.etherscan_result = etherScanResult
 
@@ -177,7 +163,7 @@ async function verifyWitness(
     // Only verify the witness merkle proof when verifyWitness is successful,
     // because this step is expensive.
     const merkleProofIsOK = verifyMerkleIntegrity(
-      witnessData.structured_merkle_proof,
+      JSON.parse(witnessData.witness_merkle_proof),
       verification_hash,
     )
     result.merkle_proof_status = merkleProofIsOK ? "VALID" : "INVALID"
@@ -220,11 +206,11 @@ function verifySignature(data: object, verificationHash: string) {
   try {
     const recoveredAddress = ethers.recoverAddress(
       ethers.hashMessage(paddedMessage),
-      data.signature.signature,
+      data.signature,
     )
     signatureOk =
       recoveredAddress.toLowerCase() ===
-      data.signature.wallet_address.toLowerCase()
+      data.signature_wallet_address.toLowerCase()
   } catch (e) {
     // continue regardless of error
   }
@@ -273,6 +259,7 @@ async function verifyRevision(
   input,
   doVerifyMerkleProof: boolean,
 ) {
+  let ok: boolean = true
   let result = {
     verification_hash: verificationHash,
     status: {
@@ -280,45 +267,23 @@ async function verifyRevision(
       signature: "MISSING",
       witness: "MISSING",
       verification: INVALID_VERIFICATION_STATUS,
-      file: "MISSING",
     },
     witness_result: {},
     file_hash: "",
     data: input,
   }
-  const data = result.data
 
-  // File
-  if ("file" in data.content) {
-    // This is a file
-    const [fileIsCorrect, fileOut] = verifyFile(data)
-    if (!fileIsCorrect) {
-      return [fileIsCorrect, fileOut]
+  // Ensure mandatory claims are present
+  const mandatoryClaims = ["previous_verification_hash", "content", "domain_id", "time_stamp"]
+  for (const claim of mandatoryClaims) {
+    if (!(claim in input)) {
+      return [false, { error_message: `mandatory field ${claim} is not present`}]
     }
-    result.status.file = "VERIFIED"
-    result.file_hash = fileOut.file_hash
   }
 
-  // Content
-  let [ok, contentHash] = verifyContent(data)
-  if (!ok) {
-    return [false, { error_message: "Content hash doesn't match" }]
-  }
-  // Mark content as correct
-  result.status.content = true
-  // To save storage for the cacher, e.g the Chrome extension.
-  delete result.data.content.content
-  delete result.data.content.file
-
-  // TODO comparison with null is probably not needed. Needs testing.
-  const hasSignature = !(
-    !("signature" in data) ||
-    data.signature === null ||
-    data.signature.signature === "" ||
-    data.signature.signature === null
-  )
-  const hasWitness = !(data.witness === null || data.witness === undefined)
-
+  // Ensure only either signature or witness is in the revision
+  const hasSignature = "signature" in input
+  const hasWitness = "witness_merkle_root" in input
   if (hasSignature && hasWitness) {
     return [
       false,
@@ -326,47 +291,67 @@ async function verifyRevision(
     ]
   }
 
-  let signatureHash = ""
+  const leaves = input.leaves
+  delete input.leaves
+  const actualLeaves = []
+
+  // Verify leaves
+  for (const [i, claim] of Object.keys(input).sort().entries()) {
+    const actual = getHashSum(`${claim}:${input[claim]}`)
+    const claimOk = leaves[i] === actual
+    result.status[claim] = claimOk
+    ok = ok && claimOk
+    if (claim === "content" && !claimOk) {
+      const error_message = `Error: Claim ${claim} hash doesn't match`
+      return [false, { error_message }]
+    }
+    actualLeaves.push(actual)
+  }
+
+  // Verify signature
   if (hasSignature) {
-    let sigStatus
-    ;[ok, sigStatus] = verifySignature(
-      data,
-      data.metadata.previous_verification_hash,
+    const [sigOk, sigStatus] = verifySignature(
+      input,
+      input.previous_verification_hash,
     )
     result.status.signature = sigStatus
-    signatureHash = data.signature.signature_hash
-  } else if (hasWitness) {
+    ok = ok && sigOk
+  }
+
+  // Verify witness
+  if (hasWitness) {
     // Witness
     const [witnessStatus, witnessResult] = await verifyWitness(
-      data.witness,
+      input,
       //as of version v1.2 Aqua protocol it takes always the previous verification hash
       //as a witness and a signature MUST create a new revision of the Aqua-Chain
-      data.metadata.previous_verification_hash,
+      input.previous_verification_hash,
       doVerifyMerkleProof,
     )
     result.witness_result = witnessResult
     result.status.witness = witnessStatus
 
     // Specify witness correctness
-    ok = result.status.witness !== "INVALID"
+    ok = ok && (witnessStatus === "VALID")
   }
 
-  const calculatedVerificationHash = calculateVerificationHash(
-    contentHash,
-    data.metadata.time_stamp,
-    data.metadata.previous_verification_hash ?? "",
-    signatureHash,
-    data.witness ? data.witness.witness_hash : "",
-  )
-
-  if (calculatedVerificationHash !== verificationHash) {
-    result.status.verification = INVALID_VERIFICATION_STATUS
-    return [false, result]
-  } else {
-    result.status.verification = VERIFIED_VERIFICATION_STATUS
-  }
-
+  // Verify verification hash
+  const tree = new MerkleTree(leaves, getHashSum)
+  const vhOk = tree.getHexRoot() === verificationHash
+  ok = ok && vhOk
+  result.status.verification = vhOk ? VERIFIED_VERIFICATION_STATUS : INVALID_VERIFICATION_STATUS
   return [ok, result]
+
+  // File
+  // if ("file" in data.content) {
+  //   // This is a file
+  //   const [fileIsCorrect, fileOut] = verifyFile(data)
+  //   if (!fileIsCorrect) {
+  //     return [fileIsCorrect, fileOut]
+  //   }
+  //   result.status.file = "VERIFIED"
+  //   result.file_hash = fileOut.file_hash
+  // }
 }
 
 function calculateStatus(count: number, totalLength: number) {
@@ -435,7 +420,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   // Secure feature to detect detached chain, missing genesis revision
   const firstRevision =
     input.revisions[verificationHashes[verificationHashes.length - 1]]
-  if (!firstRevision.metadata.previous_verification_hash === "") {
+  if (!firstRevision.previous_verification_hash === "") {
     verificationStatus = INVALID_VERIFICATION_STATUS
     console.log(`Status: ${verificationStatus}`)
     return [verificationStatus, null]
@@ -542,9 +527,8 @@ export {
   // For verified_import.js
   ERROR_VERIFICATION_STATUS,
   // For notarize.js
+  dict2Leaves,
   getHashSum,
-  calculateVerificationHash,
-  calculateSignatureHash,
   // For the VerifyPage Chrome extension and CLI
   verifyPageFromMwAPI,
   formatter,
