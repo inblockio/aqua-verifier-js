@@ -4,6 +4,7 @@ import * as fs from "fs"
 import * as ethers from "ethers"
 import minimist from "minimist"
 import * as http from "http"
+import { MerkleTree } from "merkletreejs"
 
 import * as main from "./index.js"
 import * as formatter from "./formatter.js"
@@ -48,6 +49,12 @@ const enableWitness = enableWitnessEth || enableWitnessNostr
 const port = 8420
 const host = "localhost"
 const serverUrl = `http://${host}:${port}`
+
+const dict2Array = (obj) => {
+  return Object.keys(obj)
+    .sort()
+    .map((key) => [key, obj[key]])
+}
 
 const doSign = async (wallet, verificationHash) => {
   const message =
@@ -285,23 +292,19 @@ const prepareWitness = async (verificationHash) => {
       witness_network,
       smart_contract_address,
     )
-    witness_hash = main.getHashSum(
-      merkle_root + witness_network + transactionHash,
-    )
   }
   const witness = {
-    witness_hash,
-    merkle_root,
+    witness_merkle_root: merkle_root,
     // Where is it stored: ChainID for ethereum, btc, nostr
     witness_network,
     // Required for the the publishing of the hash
-    smart_contract_address,
+    witness_smart_contract_address: smart_contract_address,
     // Transaction hash to locate the verification hash
-    transaction_hash: transactionHash,
+    witness_transaction_hash: transactionHash,
     // Publisher / Identifier for publisher
-    sender_account_address: publisher,
+    witness_sender_account_address: publisher,
     // Optional for aggregated witness hashes
-    structured_merkle_proof: [
+    witness_merkle_proof: [
       {
         depth: "0",
         left_leaf: verificationHash,
@@ -342,8 +345,33 @@ const getWallet = (mnemonic) => {
   return [wallet, walletAddress, wallet.publicKey]
 }
 
+const prepareSignature = async (previousVerificationHash) => {
+  if (signMetamask) {
+    ;[signature, walletAddress, publicKey] = await doSignMetamask(
+      previousVerificationHash,
+    )
+  } else {
+    try {
+      const credentials = JSON.parse(
+        fs.readFileSync("credentials.json", "utf8"),
+      )
+      let wallet
+      ;[wallet, walletAddress, publicKey] = getWallet(credentials.mnemonic)
+      signature = await doSign(wallet, previousVerificationHash)
+    } catch (error) {
+      console.error("Failed to read mnemonic:", error)
+      process.exit(1)
+    }
+  }
+  return {
+    signature,
+    signature_public_key: publicKey,
+    signature_wallet_address: walletAddress,
+  }
+}
+
 const createNewRevision = async (
-  previousRevision,
+  previousVerificationHash,
   timestamp,
   includeSignature,
 ) => {
@@ -351,79 +379,33 @@ const createNewRevision = async (
     formatter.log_red("ERROR: you cannot sign & witness at the same time")
     process.exit(1)
   }
-
-  let verificationData = {
-    content: { rev_id: 0 },
-  }
-
-  let previousVerificationHash = previousRevision
-    ? previousRevision.metadata.verification_hash
-    : ""
-
   const fileContent = fs.readFileSync(filename, "utf8")
-  const contentHash = main.getHashSum(fileContent)
-  verificationData.content.content = {
-    main: fileContent,
+  let verificationData = {
+    previous_verification_hash: previousVerificationHash,
+    content: fileContent,
+    domain_id: "5e5a1ec586", // TODO
+    time_stamp: timestamp,
   }
-  verificationData.content.content_hash = contentHash
 
-  const domainId = "5e5a1ec586" // TODO
-
-  let signatureHash = "" // MUST be the default
-  let signature, walletAddress, publicKey
   if (includeSignature) {
-    if (signMetamask) {
-      ;[signature, walletAddress, publicKey] = await doSignMetamask(
-        previousVerificationHash,
-      )
-    } else {
-      try {
-        const credentials = JSON.parse(
-          fs.readFileSync("credentials.json", "utf8"),
-        )
-        let wallet
-        ;[wallet, walletAddress, publicKey] = getWallet(credentials.mnemonic)
-        signature = await doSign(wallet, previousVerificationHash)
-      } catch (error) {
-        console.error("Failed to read mnemonic:", error)
-        process.exit(1)
-      }
-    }
-    signatureHash = main.calculateSignatureHash(signature, publicKey)
+    const sigData = prepareSignature(previousVerificationHash)
+    verificationData = { ...verificationData, ...sigData }
   }
 
   if (enableWitness) {
     const witness = await prepareWitness(previousVerificationHash)
-    verificationData.witness = witness
-  }
-  const witnessHash = verificationData.witness
-    ? verificationData.witness.witness_hash
-    : ""
-
-  const verificationHash = main.calculateVerificationHash(
-    contentHash,
-    timestamp,
-    previousVerificationHash,
-    signatureHash,
-    witnessHash,
-  )
-  verificationData.metadata = {
-    domain_id: domainId,
-    time_stamp: timestamp,
-    previous_verification_hash: previousVerificationHash,
-    verification_hash: verificationHash,
+    verificationData = { ...verificationData, ...witness }
+    verificationData.witness_merkle_proof = JSON.stringify(
+      verificationData.witness_merkle_proof,
+    )
   }
 
-  verificationData.signature = null
-  if (includeSignature) {
-    verificationData.signature = {
-      signature,
-      public_key: publicKey,
-      wallet_address: walletAddress,
-      signature_hash: signatureHash,
-    }
+  const leaves = dict2Array(verificationData).map(main.getHashSum)
+  const tree = new MerkleTree(leaves, main.getHashSum)
+  return {
+    verification_hash: tree.getHexRoot(),
+    data: verificationData,
   }
-  return verificationData
 }
 
 // The main function
@@ -431,19 +413,18 @@ const createNewRevision = async (
   const metadataFilename = filename + ".aqua.json"
   const timestamp = getFileTimestamp(filename)
   let metadata
-  let revisions
-  let lastRevision
+  let revisions, lastRevisionHash
   if (fs.existsSync(metadataFilename)) {
     metadata = JSON.parse(fs.readFileSync(metadataFilename))
     revisions = metadata.revisions
     const verificationHashes = Object.keys(revisions)
-    lastRevision = revisions[verificationHashes[verificationHashes.length - 1]]
+    lastRevisionHash = verificationHashes[verificationHashes.length - 1]
   } else {
     metadata = createNewMetaData()
     revisions = metadata.revisions
-    const genesisRevision = await createNewRevision(null, timestamp, false)
-    revisions[genesisRevision.metadata.verification_hash] = genesisRevision
-    lastRevision = genesisRevision
+    const genesis = await createNewRevision("", timestamp, false)
+    revisions[genesis.verification_hash] = genesis.data
+    lastRevisionHash = genesis.verification_hash
   }
 
   // TODO: replace this with checking if the signature already exists in the last revision
@@ -455,12 +436,12 @@ const createNewRevision = async (
   //}
 
   const verificationData = await createNewRevision(
-    lastRevision,
+    lastRevisionHash,
     timestamp,
     enableSignature,
   )
-  const verificationHash = verificationData.metadata.verification_hash
-  revisions[verificationHash] = verificationData
+  const verificationHash = verificationData.verification_hash
+  revisions[verificationHash] = verificationData.data
   console.log(`Writing new revision ${verificationHash}`)
 
   fs.writeFileSync(metadataFilename, JSON.stringify(metadata), "utf8")
