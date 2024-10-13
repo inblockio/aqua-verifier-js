@@ -276,7 +276,7 @@ async function verifyRevision(
   }
 
   // Ensure mandatory claims are present
-  const mandatoryClaims = ["previous_verification_hash", "content", "domain_id", "time_stamp"]
+  const mandatoryClaims = ["previous_verification_hash", "content", "domain_id", "local_timestamp"]
   for (const claim of mandatoryClaims) {
     if (!(claim in input)) {
       return [false, { error_message: `mandatory field ${claim} is not present`}]

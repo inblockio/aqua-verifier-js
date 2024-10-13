@@ -377,7 +377,7 @@ const createNewRevision = async (
     previous_verification_hash: previousVerificationHash,
     content: fileContent,
     domain_id: "5e5a1ec586", // TODO
-    time_stamp: timestamp,
+    local_timestamp: timestamp,
   }
 
   if (includeSignature) {
@@ -422,7 +422,7 @@ const createNewRevision = async (
   }
 
   // TODO: replace this with checking if the signature already exists in the last revision
-  //if (lastRevision && timestamp == lastRevision.metadata.time_stamp) {
+  //if (lastRevision && timestamp == lastRevision.metadata.local_timestamp) {
   //  console.log(
   //    `The file ${filename} hasn't been modified since it was last notarized`
   //  )
