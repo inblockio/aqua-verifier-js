@@ -11,6 +11,7 @@ import * as formatter from "./formatter.js"
 
 // Witness support for nostr network
 import * as witnessNostr from "./witness_nostr.js"
+import * as witnessEth from "./witness_eth.js"
 
 const opts = {
   // This is required so that -v is position independent.
@@ -98,79 +99,6 @@ if (window.ethereum && window.ethereum.isMetaMask) {
 </html>
 `
 
-const witnessMetamaskHtml = `
-<html>
-  <script>
-const witnessNetwork = "WITNESSNETWORK"
-const smart_contract_address = "SMARTCONTRACTADDRESS"
-const witness_event_verification_hash = "WITNESSEVENTVERIFICATIONHASH"
-const localServerUrl= window.location.href;
-const ethChainIdMap = {
-  'mainnet': '0x1',
-  'sepolia': '0xaa36a7',
-  'holesky': '0x4268',
-}
-const doWitness = async () => {
-  const chainId = await window.ethereum.request({ method: 'eth_chainId' })
-  const requestedChainId = ethChainIdMap[witnessNetwork]
-  if (requestedChainId !== chainId) {
-    console.log(requestedChainId, chainId)
-    // Switch network if the Wallet network does not match DA
-    // requested network.
-    await window.ethereum.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{
-        chainId: requestedChainId,
-      }],
-    })
-  }
-  // Now we do the actual witness process
-  const wallet_address = window.ethereum.selectedAddress
-  const params = [
-    {
-      from: wallet_address,
-      to: smart_contract_address,
-      // gas and gasPrice are optional values which are
-      // automatically set by MetaMask.
-      // gas: '0x7cc0', // 30400
-      // gasPrice: '0x328400000',
-      data: '0x9cef4ea1' + witness_event_verification_hash,
-    },
-  ]
-  const transaction_hash = await window.ethereum.request({
-    method: 'eth_sendTransaction',
-    params: params,
-  })
-  document.getElementById("transaction_hash").innerHTML = \`Transaction hash of the witness network: \${transaction_hash} (you may close this tab)\`
-  await fetch(localServerUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({transaction_hash, wallet_address})
-  })
-}
-if (window.ethereum && window.ethereum.isMetaMask) {
-  if (window.ethereum.isConnected() && window.ethereum.selectedAddress) {
-    doWitness()
-  } else {
-    window.ethereum.request({ method: 'eth_requestAccounts' })
-      .then(doWitness)
-      .catch((error) => {
-        console.error(error);
-        alert(error.message);
-      })
-  }
-} else {
-  alert("Metamask not detected")
-}
-  </script>
-<body>
-  <div id="transaction_hash"></div>
-</body>
-</html>
-`
-
 const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -232,36 +160,6 @@ const doSignMetamask = async (verificationHash) => {
   }
 }
 
-const doWitnessMetamask = async (
-  witnessEventVerificationHash,
-  witnessNetwork,
-  smartContractAddress,
-) => {
-  const html = witnessMetamaskHtml
-    .replace("WITNESSNETWORK", witnessNetwork)
-    .replace("SMARTCONTRACTADDRESS", smartContractAddress)
-    .replace("WITNESSEVENTVERIFICATIONHASH", witnessEventVerificationHash)
-  const requestListener = commonPrepareListener(html)
-  const server = http.createServer(requestListener)
-  server.listen(port, host, () => {
-    console.log(`Server is running on ${serverUrl}`)
-  })
-  let response, content
-  while (true) {
-    response = await fetch(serverUrl + "/result")
-    content = await response.json()
-    if (content.transaction_hash) {
-      const transactionHash = content.transaction_hash
-      const walletAddress = content.wallet_address
-      console.log(`The witness tx hash has been retrieved: ${transactionHash}`)
-      server.close()
-      return [transactionHash, walletAddress]
-    }
-    console.log("Waiting for the witness...")
-    await sleep(10000)
-  }
-}
-
 const prepareWitness = async (verificationHash) => {
   const merkle_root = verificationHash
   let witness_network,
@@ -278,7 +176,7 @@ const prepareWitness = async (verificationHash) => {
   } else {
     witness_network = "sepolia"
     smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
-    ;[transactionHash, publisher] = await doWitnessMetamask(
+    ;[transactionHash, publisher] = await witnessEth.witnessMetamask(
       merkle_root,
       witness_network,
       smart_contract_address,

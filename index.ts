@@ -9,9 +9,9 @@ import { MerkleTree } from "merkletreejs"
 // utilities for verifying signatures
 import * as ethers from "ethers"
 
-import * as cES from "./checkEtherScan.js"
 import * as formatter from "./formatter.js"
 import * as witnessNostr from "./witness_nostr.js"
+import * as witnessEth from "./witness_eth.js"
 
 // Currently supported API version.
 const apiVersion = "0.3.0"
@@ -121,8 +121,8 @@ async function verifyWitness(
   const result = {
     tx_hash: witnessData.witness_transaction_hash,
     witness_network: witnessData.witness_network,
-    etherscan_result: "",
-    etherscan_error_message: "",
+    result: "",
+    error_message: "",
     merkle_root: witnessData.witness_merkle_root,
     witness_timestamp: witnessData.witness_timestamp,
     doVerifyMerkleProof: doVerifyMerkleProof,
@@ -137,26 +137,19 @@ async function verifyWitness(
       witnessData.witness_timestamp,
     )
   } else {
-    // Do online lookup of transaction hash
-    const etherScanResult = await cES.checkEtherScan(
+    // Verify the transaction hash via the Ethereum blockchain
+    const _result = await witnessEth.verify(
       witnessData.witness_network,
       witnessData.witness_transaction_hash,
       witnessData.witness_merkle_root,
+      witnessData.witness_timestamp,
     )
-    result.etherscan_result = etherScanResult
+    result.result = _result
 
-    if (etherScanResult !== "true" && etherScanResult !== "false") {
-      let errMsg
-      if (etherScanResult === "Transaction hash not found") {
-        errMsg = "Transaction hash not found"
-      } else if (etherScanResult.includes("ENETUNREACH")) {
-        errMsg = "Server is unreachable"
-      } else {
-        errMsg = "Online lookup failed"
-      }
-      result.etherscan_error_message = errMsg
+    if (_result !== "true" && _result !== "false") {
+      result.error_message = _result
     }
-    isValid = etherScanResult === "true"
+    isValid = _result === "true"
   }
   result.isValid = isValid
 

@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import * as fs from 'fs'
 
 import { generateSecretKey, getPublicKey } from 'nostr-tools/pure'
