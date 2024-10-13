@@ -141,6 +141,7 @@ function printWitnessInfo(detail) {
   const wmr = shortenHash(wr.merkle_root)
   let witOut = `${_space2}Witness event ${wmr} detected`
   witOut += `\n${_space4}Transaction hash: ${wr.tx_hash}`
+  witOut += `\n${_space4}Timestamp: ${wr.witness_timestamp}`
   const suffix = ` on ${wr.witness_network}`
   if (wr.isValid) {
     witOut += `\n${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified${suffix}`

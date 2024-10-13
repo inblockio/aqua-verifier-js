@@ -64,11 +64,12 @@ const witness = async (witnessEventVerificationHash) => {
   const publishEvent = await waitForEventAuthor(relay, pk);
   relay.close()
   const nevent = nip19.neventEncode(publishEvent)
+  const witnessTimestamp = publishEvent.created_at
   console.log(`got event https://snort.social/${nevent}`)
-  return [npub, nevent]
+  return [nevent, npub, witnessTimestamp]
 }
 
-const verify = async (transactionHash, expectedMR) => {
+const verify = async (transactionHash, expectedMR, expectedTimestamp) => {
   const { type, data } = nip19.decode(transactionHash)
   if (type !== "nevent") {
     return false
@@ -76,6 +77,9 @@ const verify = async (transactionHash, expectedMR) => {
   const relay = await Relay.connect(relayUrl)
   const publishEvent = await waitForEventId(relay, data.id)
   relay.close()
+  if (expectedTimestamp !== publishEvent.created_at) {
+    return false
+  }
   const merkleRoot = publishEvent.content
   return merkleRoot === expectedMR
 }

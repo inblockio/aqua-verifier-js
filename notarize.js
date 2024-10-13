@@ -267,11 +267,12 @@ const prepareWitness = async (verificationHash) => {
   let witness_network,
     smart_contract_address,
     transactionHash,
-    publisher
+    publisher,
+    witnessTimestamp
   if (enableWitnessNostr) {
     // publisher is a public key used for nostr
     // transaction hash is an event identifier for nostr
-    ;[publisher, transactionHash] = await witnessNostr.witness(merkle_root)
+    ;[transactionHash, publisher, witnessTimestamp] = await witnessNostr.witness(merkle_root)
     witness_network = "nostr"
     smart_contract_address = "N/A"
   } else {
@@ -285,6 +286,7 @@ const prepareWitness = async (verificationHash) => {
   }
   const witness = {
     witness_merkle_root: merkle_root,
+    witness_timestamp: witnessTimestamp,
     // Where is it stored: ChainID for ethereum, btc, nostr
     witness_network,
     // Required for the the publishing of the hash

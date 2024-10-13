@@ -124,6 +124,7 @@ async function verifyWitness(
     etherscan_result: "",
     etherscan_error_message: "",
     merkle_root: witnessData.witness_merkle_root,
+    witness_timestamp: witnessData.witness_timestamp,
     doVerifyMerkleProof: doVerifyMerkleProof,
     merkle_proof_status: "",
   }
@@ -133,6 +134,7 @@ async function verifyWitness(
     isValid = await witnessNostr.verify(
       witnessData.witness_transaction_hash,
       witnessData.witness_merkle_root,
+      witnessData.witness_timestamp,
     )
   } else {
     // Do online lookup of transaction hash
