@@ -143,7 +143,8 @@ function printWitnessInfo(detail) {
     // Show it to user
     witOut += `\n${_space4}Transaction hash: ${wr.tx_hash}`
   }
-  witOut += `\n${_space4}Timestamp: ${wr.witness_timestamp}`
+  const isoTimestamp = (new Date(wr.witness_timestamp * 1000)).toISOString();
+  witOut += `\n${_space4}Timestamp: ${isoTimestamp}`
   const suffix = ` on ${wr.witness_network}`
   if (wr.isValid) {
     witOut += `\n${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified${suffix}`
