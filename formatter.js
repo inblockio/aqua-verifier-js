@@ -226,7 +226,7 @@ function printRevisionInfo(detail, verbose) {
       break
     case "VALID":
       console.log(
-        `    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.data.signature.wallet_address}`
+        `    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.data.signature_wallet_address}`
       )
       break
     default:
