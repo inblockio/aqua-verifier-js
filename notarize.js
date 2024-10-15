@@ -273,6 +273,7 @@ const createNewRevision = async (
   previousVerificationHash,
   timestamp,
   includeSignature,
+  includeWitness,
 ) => {
   if (includeSignature && enableWitness) {
     formatter.log_red("ERROR: you cannot sign & witness at the same time")
@@ -291,7 +292,7 @@ const createNewRevision = async (
     verificationData = { ...verificationData, ...sigData }
   }
 
-  if (enableWitness) {
+  if (includeWitness) {
     const witness = await prepareWitness(previousVerificationHash)
     verificationData = { ...verificationData, ...witness }
     verificationData.witness_merkle_proof = JSON.stringify(
@@ -322,7 +323,7 @@ const createNewRevision = async (
   } else {
     metadata = createNewMetaData()
     revisions = metadata.revisions
-    const genesis = await createNewRevision("", timestamp, false)
+    const genesis = await createNewRevision("", timestamp, false, false)
     revisions[genesis.verification_hash] = genesis.data
     lastRevisionHash = genesis.verification_hash
   }
@@ -339,6 +340,7 @@ const createNewRevision = async (
     lastRevisionHash,
     timestamp,
     enableSignature,
+    enableWitness,
   )
   const verificationHash = verificationData.verification_hash
   revisions[verificationHash] = verificationData.data
