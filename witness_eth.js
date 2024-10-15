@@ -81,6 +81,34 @@ const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+const commonPrepareListener = (htmlContent) => {
+  let output = "{}"
+  const requestListener = async (req, res) => {
+    if (req.method == "POST") {
+      let data = ""
+      req.on("data", (chunk) => {
+        data += chunk
+      })
+      await new Promise((resolve) => {
+        req.on("end", resolve)
+      })
+      output = data
+      res.writeHead(200)
+      res.end()
+    } else {
+      if (req.url === "/result") {
+        res.writeHead(200)
+        res.end(output)
+        return
+      }
+      res.setHeader("Content-Type", "text/html")
+      res.writeHead(200)
+      res.end(htmlContent)
+    }
+  }
+  return requestListener
+}
+
 const witnessMetamask = async (
   witnessEventVerificationHash,
   witnessNetwork,

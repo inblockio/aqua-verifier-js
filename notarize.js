@@ -106,39 +106,11 @@ const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-const commonPrepareListener = (htmlContent) => {
-  let output = "{}"
-  const requestListener = async (req, res) => {
-    if (req.method == "POST") {
-      let data = ""
-      req.on("data", (chunk) => {
-        data += chunk
-      })
-      await new Promise((resolve) => {
-        req.on("end", resolve)
-      })
-      output = data
-      res.writeHead(200)
-      res.end()
-    } else {
-      if (req.url === "/result") {
-        res.writeHead(200)
-        res.end(output)
-        return
-      }
-      res.setHeader("Content-Type", "text/html")
-      res.writeHead(200)
-      res.end(htmlContent)
-    }
-  }
-  return requestListener
-}
-
 const doSignMetamask = async (verificationHash) => {
   const messageToBeSigned =
     "I sign the following page verification_hash: [0x" + verificationHash + "]"
   const html = signMetamaskHtml.replace("MESSAGETOBESIGNED", messageToBeSigned)
-  const requestListener = commonPrepareListener(html)
+  const requestListener = witnessEth.commonPrepareListener(html)
   const server = http.createServer(requestListener)
   server.listen(port, host, () => {
     console.log(`Server is running on ${serverUrl}`)
