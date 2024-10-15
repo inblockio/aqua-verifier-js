@@ -12,6 +12,7 @@ import * as ethers from "ethers"
 import * as formatter from "./formatter.js"
 import * as witnessNostr from "./witness_nostr.js"
 import * as witnessEth from "./witness_eth.js"
+import * as witnessTsa from "./witness_tsa.js"
 
 // Currently supported API version.
 const apiVersion = "0.3.0"
@@ -132,6 +133,12 @@ async function verifyWitness(
   let isValid: boolean
   if (witnessData.witness_network === "nostr") {
     isValid = await witnessNostr.verify(
+      witnessData.witness_transaction_hash,
+      witnessData.witness_merkle_root,
+      witnessData.witness_timestamp,
+    )
+  } else if (witnessData.witness_network === "TSA_RFC3161") {
+    isValid = await witnessTsa.verify(
       witnessData.witness_transaction_hash,
       witnessData.witness_merkle_root,
       witnessData.witness_timestamp,

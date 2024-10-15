@@ -12,10 +12,11 @@ import * as formatter from "./formatter.js"
 // Witness support for nostr network
 import * as witnessNostr from "./witness_nostr.js"
 import * as witnessEth from "./witness_eth.js"
+import * as witnessTsa from "./witness_tsa.js"
 
 const opts = {
   // This is required so that -v is position independent.
-  boolean: ["v", "sign-cli", "sign-metamask", "witness-eth", "witness-nostr"],
+  boolean: ["v", "sign-cli", "sign-metamask", "witness-eth", "witness-nostr", "witness-tsa"],
 }
 
 const usage = () => {
@@ -28,6 +29,7 @@ Options:
   --sign-metamask    Sign with MetaMask instead of local Ethereum wallet
   --witness-eth      Witness to Ethereum on-chain with MetaMask
   --witness-nostr    Witness to Nostr network
+  --witness-tsa      Witness to TSA DigiCert
 `)
 }
 
@@ -45,7 +47,8 @@ const signCli = argv["sign-cli"]
 const enableSignature = signMetamask || signCli
 const enableWitnessEth = argv["witness-eth"]
 const enableWitnessNostr = argv["witness-nostr"]
-const enableWitness = enableWitnessEth || enableWitnessNostr
+const enableWitnessTsa = argv["witness-tsa"]
+const enableWitness = enableWitnessEth || enableWitnessNostr || enableWitnessTsa
 
 const port = 8420
 const host = "localhost"
@@ -173,6 +176,11 @@ const prepareWitness = async (verificationHash) => {
     ;[transactionHash, publisher, witnessTimestamp] = await witnessNostr.witness(merkle_root)
     witness_network = "nostr"
     smart_contract_address = "N/A"
+  } else if (enableWitnessTsa) {
+    const tsaUrl = "http://timestamp.digicert.com" // DigiCert's TSA URL
+    ;[transactionHash, publisher, witnessTimestamp] = await witnessTsa.witness(merkle_root, tsaUrl)
+    witness_network = "TSA_RFC3161"
+    smart_contract_address = tsaUrl
   } else {
     witness_network = "sepolia"
     smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"

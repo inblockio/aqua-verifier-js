@@ -34,7 +34,9 @@
     "typescript": "5.1.6"
   },
   "optionalDependencies": {
-    "nostr-tools": "^2.7.2"
+    "asn1js": "^3.0.5",
+    "nostr-tools": "^2.7.2",
+    "pkijs": "^3.2.4"
   },
   "files": [
     "checkEtherScan.js",

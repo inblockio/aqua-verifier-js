@@ -2,7 +2,6 @@
 // We use "http-status-codes" instead of STATUS_CODES in the "http" library
 // because we need to use this file in the browser.
 import getReasonPhrase from "http-status-codes"
-import * as cES from "./checkEtherScan.js"
 
 // https://stackoverflow.com/questions/9781218/how-to-change-node-jss-console-font-color
 const Reset = "\x1b[0m"
@@ -140,7 +139,10 @@ function printWitnessInfo(detail) {
   const wr = detail.witness_result
   const wmr = shortenHash(wr.merkle_root)
   let witOut = `${_space2}Witness event ${wmr} detected`
-  witOut += `\n${_space4}Transaction hash: ${wr.tx_hash}`
+  if (wr.witness_network !== "TSA_RFC3161") {
+    // Show it to user
+    witOut += `\n${_space4}Transaction hash: ${wr.tx_hash}`
+  }
   witOut += `\n${_space4}Timestamp: ${wr.witness_timestamp}`
   const suffix = ` on ${wr.witness_network}`
   if (wr.isValid) {
@@ -191,7 +193,7 @@ function printRevisionInfo(detail, verbose) {
 
   console.log(`  Elapsed: ${detail.elapsed} s`)
   console.log(
-    `  Timestamp: ${formatDBTimestamp(detail.data.time_stamp)}`
+    `  Timestamp: ${formatDBTimestamp(detail.data.local_timestamp)}`
   )
   console.log(`  Domain ID: ${detail.data.domain_id}`)
   if (detail.status.verification === INVALID_VERIFICATION_STATUS) {
@@ -243,8 +245,7 @@ function formatWitnessInfo2HTML(detail) {
   let witOut = `${_space2}Witness event detected`
 
   const wr = detail.witness_result
-  const witnessTxUrl =
-    cES.witnessNetworkMap[wr.witness_network] + "/" + wr.tx_hash
+  const witnessTxUrl = `${wr.witness_network}/${wr.tx_hash}`
 
   const txHash = makeHref(shortenHash(wr.tx_hash), witnessTxUrl)
   witOut += `<br>${_space4}Transaction hash: ${txHash}`
