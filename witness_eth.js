@@ -192,4 +192,4 @@ async function testVerify() {
 
 // testVerify()
 
-export { witnessMetamask, verify }
+export { commonPrepareListener, witnessMetamask, verify }
