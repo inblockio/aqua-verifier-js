@@ -4,13 +4,15 @@ import { Buffer } from "buffer"
 
 import sha3 from "js-sha3"
 import hrtime from "browser-process-hrtime"
+import { MerkleTree } from "merkletreejs"
 
 // utilities for verifying signatures
 import * as ethers from "ethers"
 
-import * as cES from "./checkEtherScan.js"
 import * as formatter from "./formatter.js"
 import * as witnessNostr from "./witness_nostr.js"
+import * as witnessEth from "./witness_eth.js"
+import * as witnessTsa from "./witness_tsa.js"
 
 // Currently supported API version.
 const apiVersion = "0.3.0"
@@ -30,30 +32,14 @@ function getElapsedTime(start) {
   return (elapsed[0] + elapsed[1] / 1e9).toFixed(precision)
 }
 
+const dict2Leaves = (obj) => {
+  return Object.keys(obj)
+    .sort()  // MUST be sorted for deterministic Merkle tree
+    .map((key) => getHashSum(`${key}:${obj[key]}`))
+}
+
 function getHashSum(content: string) {
   return content === "" ? "" : sha3.sha3_512(content)
-}
-
-function calculateMetadataHash(
-  domainId: string,
-  timestamp: string,
-  previousVerificationHash: string = "",
-  mergeHash: string = ""
-) {
-  return getHashSum(domainId + timestamp + previousVerificationHash + mergeHash)
-}
-
-function calculateSignatureHash(signature: string, publicKey: string) {
-  return getHashSum(signature + publicKey)
-}
-
-function calculateVerificationHash(
-  contentHash: string,
-  metadataHash: string,
-  signature_hash: string,
-  witness_hash: string,
-) {
-  return getHashSum(contentHash + metadataHash + signature_hash + witness_hash)
 }
 
 /**
@@ -134,40 +120,43 @@ async function verifyWitness(
   doVerifyMerkleProof: boolean,
 ) {
   const result = {
-    witness_hash: witnessData.witness_hash,
-    tx_hash: witnessData.transaction_hash,
+    tx_hash: witnessData.witness_transaction_hash,
     witness_network: witnessData.witness_network,
-    etherscan_result: "",
-    etherscan_error_message: "",
-    merkle_root: witnessData.merkle_root,
+    result: "",
+    error_message: "",
+    merkle_root: witnessData.witness_merkle_root,
+    witness_timestamp: witnessData.witness_timestamp,
     doVerifyMerkleProof: doVerifyMerkleProof,
     merkle_proof_status: "",
   }
 
   let isValid: boolean
   if (witnessData.witness_network === "nostr") {
-    isValid = await witnessNostr.verify(witnessData.transaction_hash, witnessData.merkle_root)
-  } else {
-    // Do online lookup of transaction hash
-    const etherScanResult = await cES.checkEtherScan(
-      witnessData.witness_network,
-      witnessData.transaction_hash,
-      witnessData.merkle_root,
+    isValid = await witnessNostr.verify(
+      witnessData.witness_transaction_hash,
+      witnessData.witness_merkle_root,
+      witnessData.witness_timestamp,
     )
-    result.etherscan_result = etherScanResult
+  } else if (witnessData.witness_network === "TSA_RFC3161") {
+    isValid = await witnessTsa.verify(
+      witnessData.witness_transaction_hash,
+      witnessData.witness_merkle_root,
+      witnessData.witness_timestamp,
+    )
+  } else {
+    // Verify the transaction hash via the Ethereum blockchain
+    const _result = await witnessEth.verify(
+      witnessData.witness_network,
+      witnessData.witness_transaction_hash,
+      witnessData.witness_merkle_root,
+      witnessData.witness_timestamp,
+    )
+    result.result = _result
 
-    if (etherScanResult !== "true" && etherScanResult !== "false") {
-      let errMsg
-      if (etherScanResult === "Transaction hash not found") {
-        errMsg = "Transaction hash not found"
-      } else if (etherScanResult.includes("ENETUNREACH")) {
-        errMsg = "Server is unreachable"
-      } else {
-        errMsg = "Online lookup failed"
-      }
-      result.etherscan_error_message = errMsg
+    if (_result !== "true" && _result !== "false") {
+      result.error_message = _result
     }
-    isValid = etherScanResult === "true"
+    isValid = _result === "true"
   }
   result.isValid = isValid
 
@@ -176,8 +165,8 @@ async function verifyWitness(
     // Only verify the witness merkle proof when verifyWitness is successful,
     // because this step is expensive.
     const merkleProofIsOK = verifyMerkleIntegrity(
-      witnessData.structured_merkle_proof,
-      verification_hash
+      JSON.parse(witnessData.witness_merkle_proof),
+      verification_hash,
     )
     result.merkle_proof_status = merkleProofIsOK ? "VALID" : "INVALID"
     if (!merkleProofIsOK) {
@@ -215,14 +204,15 @@ function verifySignature(data: object, verificationHash: string) {
   }
   // Signature verification
   // The padded message is required
-  const paddedMessage =
-    `I sign the following page verification_hash: [0x${verificationHash}]`
+  const paddedMessage = `I sign the following page verification_hash: [0x${verificationHash}]`
   try {
     const recoveredAddress = ethers.recoverAddress(
       ethers.hashMessage(paddedMessage),
-      data.signature.signature
+      data.signature,
     )
-    signatureOk = recoveredAddress.toLowerCase() === data.signature.wallet_address.toLowerCase()
+    signatureOk =
+      recoveredAddress.toLowerCase() ===
+      data.signature_wallet_address.toLowerCase()
   } catch (e) {
     // continue regardless of error
   }
@@ -239,24 +229,13 @@ function verifyContent(data) {
   return [contentHash === data.content.content_hash, contentHash]
 }
 
-function verifyMetadata(data) {
-  const metadataHash = calculateMetadataHash(
-    data.metadata.domain_id,
-    data.metadata.time_stamp,
-    data.metadata.previous_verification_hash ?? "",
-    data.metadata.merge_hash ?? ""
-  )
-  return [metadataHash === data.metadata.metadata_hash, metadataHash]
-}
-
 /**
  * TODO THIS DOCSTRING IS OUTDATED!
  * Verifies a revision from a page.
  * Steps:
  * - Calls verify_page API passing revision id.
- * - Calculates metadata hash using previous verification hash.
  * - Calls function verifyWitness using data from the verify_page API call.
- * - Calculates the verification hash using content hash, metadata hash,
+ * - Calculates the verification hash using content hash,
  *   signature hash and witness hash.
  * - If the calculated verification hash is different from the verification
  *   hash returned from the first verify_page API calls then logs a hash
@@ -280,108 +259,101 @@ function verifyMetadata(data) {
 async function verifyRevision(
   verificationHash: string,
   input,
-  doVerifyMerkleProof: boolean
+  doVerifyMerkleProof: boolean,
 ) {
+  let ok: boolean = true
   let result = {
     verification_hash: verificationHash,
     status: {
       content: false,
-      metadata: false,
       signature: "MISSING",
       witness: "MISSING",
       verification: INVALID_VERIFICATION_STATUS,
-      file: "MISSING",
     },
     witness_result: {},
     file_hash: "",
-    data: input
+    data: input,
   }
-  const data = result.data
 
-  // File
-  if ("file" in data.content) {
-    // This is a file
-    const [fileIsCorrect, fileOut] = verifyFile(data)
-    if (!fileIsCorrect) {
-      return [fileIsCorrect, fileOut]
+  // Ensure mandatory claims are present
+  const mandatoryClaims = ["previous_verification_hash", "content", "domain_id", "local_timestamp"]
+  for (const claim of mandatoryClaims) {
+    if (!(claim in input)) {
+      return [false, { error_message: `mandatory field ${claim} is not present`}]
     }
-    result.status.file = "VERIFIED"
-    result.file_hash = fileOut.file_hash
   }
 
-  // Content
-  let [ok, contentHash] = verifyContent(data)
-  if (!ok) {
-    return [false, { error_message: "Content hash doesn't match" }]
-  }
-  // Mark content as correct
-  result.status.content = true
-  // To save storage for the cacher, e.g the Chrome extension.
-  delete result.data.content.content
-  delete result.data.content.file
-
-  // Metadata
-  let metadataHash
-  [ok, metadataHash] = verifyMetadata(data)
-  if (!ok) {
-    return [false, { error_message: "Metadata hash doesn't match" }]
-  }
-  // Mark metadata as correct
-  result.status.metadata = true
-
-  // TODO comparison with null is probably not needed. Needs testing.
-  const hasSignature = !(
-    !("signature" in data) ||
-    data.signature === null ||
-    data.signature.signature === "" ||
-    data.signature.signature === null
-  )
-  const hasWitness = !(data.witness === null || data.witness === undefined)
-
+  // Ensure only either signature or witness is in the revision
+  const hasSignature = "signature" in input
+  const hasWitness = "witness_merkle_root" in input
   if (hasSignature && hasWitness) {
-    return [false, { error_message: "Signature and witness must not both be present"}]
+    return [
+      false,
+      { error_message: "Signature and witness must not both be present" },
+    ]
   }
 
-  let signatureHash = ""
+  const leaves = input.leaves
+  delete input.leaves
+  const actualLeaves = []
+
+  // Verify leaves
+  for (const [i, claim] of Object.keys(input).sort().entries()) {
+    const actual = getHashSum(`${claim}:${input[claim]}`)
+    const claimOk = leaves[i] === actual
+    result.status[claim] = claimOk
+    ok = ok && claimOk
+    if (claim === "content" && !claimOk) {
+      const error_message = `Error: Claim ${claim} hash doesn't match`
+      return [false, { error_message }]
+    }
+    actualLeaves.push(actual)
+  }
+
+  // Verify signature
   if (hasSignature) {
-    let sigStatus
-    [ok, sigStatus] = verifySignature(
-      data,
-      data.metadata.previous_verification_hash
+    const [sigOk, sigStatus] = verifySignature(
+      input,
+      input.previous_verification_hash,
     )
     result.status.signature = sigStatus
-    signatureHash = data.signature.signature_hash
-  } else if (hasWitness) {
+    ok = ok && sigOk
+  }
+
+  // Verify witness
+  if (hasWitness) {
     // Witness
     const [witnessStatus, witnessResult] = await verifyWitness(
-      data.witness,
+      input,
       //as of version v1.2 Aqua protocol it takes always the previous verification hash
       //as a witness and a signature MUST create a new revision of the Aqua-Chain
-      data.metadata.previous_verification_hash,
-      doVerifyMerkleProof
+      input.previous_verification_hash,
+      doVerifyMerkleProof,
     )
     result.witness_result = witnessResult
     result.status.witness = witnessStatus
 
     // Specify witness correctness
-    ok = result.status.witness !== "INVALID"
+    ok = ok && (witnessStatus === "VALID")
   }
 
-  const calculatedVerificationHash = calculateVerificationHash(
-    contentHash,
-    metadataHash,
-    signatureHash,
-    data.witness ? data.witness.witness_hash : ""
-  )
-
-  if (calculatedVerificationHash !== verificationHash) {
-    result.status.verification = INVALID_VERIFICATION_STATUS
-    return [false, result]
-  } else {
-    result.status.verification = VERIFIED_VERIFICATION_STATUS
-  }
-
+  // Verify verification hash
+  const tree = new MerkleTree(leaves, getHashSum)
+  const vhOk = tree.getHexRoot() === verificationHash
+  ok = ok && vhOk
+  result.status.verification = vhOk ? VERIFIED_VERIFICATION_STATUS : INVALID_VERIFICATION_STATUS
   return [ok, result]
+
+  // File
+  // if ("file" in data.content) {
+  //   // This is a file
+  //   const [fileIsCorrect, fileOut] = verifyFile(data)
+  //   if (!fileIsCorrect) {
+  //     return [fileIsCorrect, fileOut]
+  //   }
+  //   result.status.file = "VERIFIED"
+  //   result.file_hash = fileOut.file_hash
+  // }
 }
 
 function calculateStatus(count: number, totalLength: number) {
@@ -416,7 +388,7 @@ async function* generateVerifyPage(
   verificationHashes,
   input,
   verbose: boolean | undefined,
-  doVerifyMerkleProof: boolean
+  doVerifyMerkleProof: boolean,
 ) {
   VERBOSE = verbose
 
@@ -428,7 +400,7 @@ async function* generateVerifyPage(
     const [isCorrect, detail] = await verifyRevision(
       vh,
       input.revisions[vh],
-      doVerifyMerkleProof
+      doVerifyMerkleProof,
     )
     elapsed = getElapsedTime(elapsedStart)
     detail.elapsed = elapsed
@@ -448,8 +420,9 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   let verificationStatus
 
   // Secure feature to detect detached chain, missing genesis revision
-  const firstRevision = input.revisions[verificationHashes[verificationHashes.length - 1]]
-  if (!firstRevision.metadata.previous_verification_hash === '') {
+  const firstRevision =
+    input.revisions[verificationHashes[verificationHashes.length - 1]]
+  if (!firstRevision.previous_verification_hash === "") {
     verificationStatus = INVALID_VERIFICATION_STATUS
     console.log(`Status: ${verificationStatus}`)
     return [verificationStatus, null]
@@ -468,7 +441,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
     verificationHashes,
     input,
     verbose,
-    doVerifyMerkleProof
+    doVerifyMerkleProof,
   )) {
     const [isCorrect, detail] = value
     formatter.printRevisionInfo(detail, verbose)
@@ -482,11 +455,11 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
       `  Progress: ${count} / ${verificationHashes.length} (${(
         (100 * count) /
         verificationHashes.length
-      ).toFixed(1)}%)`
+      ).toFixed(1)}%)`,
     )
     if (count < verificationHashes.length) {
       console.log(
-        `${count + 1}. Verification of Revision ${verificationHashes[count]}.`
+        `${count + 1}. Verification of Revision ${verificationHashes[count]}.`,
       )
     }
   }
@@ -506,14 +479,14 @@ async function readFromMediaWikiAPI(server, title) {
   }
   const verificationHash = data.verification_hash
   response = await fetch(
-    `${server}/rest.php/data_accounting/get_branch/${verificationHash}`
+    `${server}/rest.php/data_accounting/get_branch/${verificationHash}`,
   )
   data = await response.json()
   const hashes = data.hashes
   const revisions = {}
   for (const vh of hashes) {
     response = await fetch(
-      `${server}/rest.php/data_accounting/get_revision/${vh}`
+      `${server}/rest.php/data_accounting/get_revision/${vh}`,
     )
     revisions[vh] = await response.json()
   }
@@ -556,10 +529,8 @@ export {
   // For verified_import.js
   ERROR_VERIFICATION_STATUS,
   // For notarize.js
+  dict2Leaves,
   getHashSum,
-  calculateMetadataHash,
-  calculateVerificationHash,
-  calculateSignatureHash,
   // For the VerifyPage Chrome extension and CLI
   verifyPageFromMwAPI,
   formatter,

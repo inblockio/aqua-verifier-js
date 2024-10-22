@@ -2,7 +2,6 @@
 // We use "http-status-codes" instead of STATUS_CODES in the "http" library
 // because we need to use this file in the browser.
 import getReasonPhrase from "http-status-codes"
-import * as cES from "./checkEtherScan.js"
 
 // https://stackoverflow.com/questions/9781218/how-to-change-node-jss-console-font-color
 const Reset = "\x1b[0m"
@@ -138,9 +137,14 @@ function printWitnessInfo(detail) {
   const _space2 = "  "
   const _space4 = _space2 + _space2
   const wr = detail.witness_result
-  const wh = shortenHash(wr.witness_hash)
-  let witOut = `${_space2}Witness event ${wh} detected`
-  witOut += `\n${_space4}Transaction hash: ${wr.tx_hash}`
+  const wmr = shortenHash(wr.merkle_root)
+  let witOut = `${_space2}Witness event ${wmr} detected`
+  if (wr.witness_network !== "TSA_RFC3161") {
+    // Show it to user
+    witOut += `\n${_space4}Transaction hash: ${wr.tx_hash}`
+  }
+  const isoTimestamp = (new Date(wr.witness_timestamp * 1000)).toISOString();
+  witOut += `\n${_space4}Timestamp: ${isoTimestamp}`
   const suffix = ` on ${wr.witness_network}`
   if (wr.isValid) {
     witOut += `\n${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified${suffix}`
@@ -190,9 +194,9 @@ function printRevisionInfo(detail, verbose) {
 
   console.log(`  Elapsed: ${detail.elapsed} s`)
   console.log(
-    `  Timestamp: ${formatDBTimestamp(detail.data.metadata.time_stamp)}`
+    `  Timestamp: ${formatDBTimestamp(detail.data.local_timestamp)}`
   )
-  console.log(`  Domain ID: ${detail.data.metadata.domain_id}`)
+  console.log(`  Domain ID: ${detail.data.domain_id}`)
   if (detail.status.verification === INVALID_VERIFICATION_STATUS) {
     log_red(`  ${CROSSMARK}` + " Verification hash doesn't match")
     return
@@ -223,7 +227,7 @@ function printRevisionInfo(detail, verbose) {
       break
     case "VALID":
       console.log(
-        `    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.data.signature.wallet_address}`
+        `    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.data.signature_wallet_address}`
       )
       break
     default:
@@ -242,8 +246,7 @@ function formatWitnessInfo2HTML(detail) {
   let witOut = `${_space2}Witness event detected`
 
   const wr = detail.witness_result
-  const witnessTxUrl =
-    cES.witnessNetworkMap[wr.witness_network] + "/" + wr.tx_hash
+  const witnessTxUrl = `${wr.witness_network}/${wr.tx_hash}`
 
   const txHash = makeHref(shortenHash(wr.tx_hash), witnessTxUrl)
   witOut += `<br>${_space4}Transaction hash: ${txHash}`
@@ -300,8 +303,8 @@ function formatRevisionInfo2HTML(server, detail, verbose = false) {
   }
 
   let out = `${_space2}Elapsed: ${detail.elapsed} s<br>`
-  out += `${_space2}${formatDBTimestamp(detail.data.metadata.time_stamp)}<br>`
-  out += `${_space2}Domain ID: ${detail.data.metadata.domain_id}<br>`
+  out += `${_space2}${formatDBTimestamp(detail.data.time_stamp)}<br>`
+  out += `${_space2}Domain ID: ${detail.data.domain_id}<br>`
   if (detail.status.verification === INVALID_VERIFICATION_STATUS) {
     out += htmlRedify(
       `${_space2}${CROSSMARK}` + " verification hash doesn't match"
