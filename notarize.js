@@ -9,6 +9,7 @@ import { MerkleTree } from "merkletreejs"
 import * as main from "./index.js"
 import * as formatter from "./formatter.js"
 
+import * as did from "./did.js"
 // Witness support for nostr network
 import * as witnessNostr from "./witness_nostr.js"
 import * as witnessEth from "./witness_eth.js"
@@ -16,7 +17,8 @@ import * as witnessTsa from "./witness_tsa.js"
 
 const opts = {
   // This is required so that -v is position independent.
-  boolean: ["v", "sign-cli", "sign-metamask", "witness-eth", "witness-nostr", "witness-tsa"],
+  boolean: ["v", "witness-eth", "witness-nostr", "witness-tsa"],
+  string: ["sign"]
 }
 
 const usage = () => {
@@ -25,8 +27,10 @@ notarize.js [OPTIONS] <filename>
 which generates filename.aqua.json
 
 Options:
-  --sign-cli         Sign with the seed phrase provided in mnemonic.txt
-  --sign-metamask    Sign with MetaMask instead of local Ethereum wallet
+  --sign [cli|metamask|did] Sign with either of:
+    1. the Ethereum seed phrase provided in mnemonic.txt
+    2. MetaMask
+    3. DID key
   --witness-eth      Witness to Ethereum on-chain with MetaMask
   --witness-nostr    Witness to Nostr network
   --witness-tsa      Witness to TSA DigiCert
@@ -42,9 +46,8 @@ if (!filename) {
   process.exit(1)
 }
 
-const signMetamask = argv["sign-metamask"]
-const signCli = argv["sign-cli"]
-const enableSignature = signMetamask || signCli
+const signMethod = argv["sign"]
+const enableSignature = !!signMethod
 const enableWitnessEth = argv["witness-eth"]
 const enableWitnessNostr = argv["witness-nostr"]
 const enableWitnessTsa = argv["witness-tsa"]
@@ -215,24 +218,39 @@ const getWallet = (mnemonic) => {
   return [wallet, walletAddress, wallet.publicKey]
 }
 
+const readCredentials = () => {
+  return JSON.parse(
+    fs.readFileSync("credentials.json", "utf8"),
+  )
+}
+
 const prepareSignature = async (previousVerificationHash) => {
   let signature, walletAddress, publicKey
-  if (signMetamask) {
-    ;[signature, walletAddress, publicKey] = await doSignMetamask(
-      previousVerificationHash,
-    )
-  } else {
-    try {
-      const credentials = JSON.parse(
-        fs.readFileSync("credentials.json", "utf8"),
+  switch (signMethod) {
+    case "metamask":
+      ;[signature, walletAddress, publicKey] = await doSignMetamask(
+        previousVerificationHash,
       )
-      let wallet
-      ;[wallet, walletAddress, publicKey] = getWallet(credentials.mnemonic)
-      signature = await doSign(wallet, previousVerificationHash)
-    } catch (error) {
-      console.error("Failed to read mnemonic:", error)
-      process.exit(1)
-    }
+      break
+    case "cli":
+      try {
+        const credentials = readCredentials()
+        let wallet
+        ;[wallet, walletAddress, publicKey] = getWallet(credentials.mnemonic)
+        signature = await doSign(wallet, previousVerificationHash)
+      } catch (error) {
+        console.error("Failed to read mnemonic:", error)
+        process.exit(1)
+      }
+      break
+    case "did":
+      const credentials = readCredentials()
+      console.log(btoa(credentials.did))
+      const { jws, key } = await did.signature.sign(previousVerificationHash, Buffer.from(credentials.did, "hex"))
+      signature = jws
+      walletAddress = key
+      publicKey = key
+      break
   }
   return {
     signature,

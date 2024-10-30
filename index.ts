@@ -13,6 +13,7 @@ import * as formatter from "./formatter.js"
 import * as witnessNostr from "./witness_nostr.js"
 import * as witnessEth from "./witness_eth.js"
 import * as witnessTsa from "./witness_tsa.js"
+import * as did from "./did.js"
 
 // Currently supported API version.
 const apiVersion = "0.3.0"
@@ -176,24 +177,7 @@ async function verifyWitness(
   return [isValid ? "VALID" : "INVALID", result]
 }
 
-function verifyFile(data) {
-  const fileContentHash = data.content.content.file_hash || null
-  if (fileContentHash === null) {
-    return [
-      false,
-      { error_message: "Revision contains a file, but no file content hash" },
-    ]
-  }
-
-  const rawFileContent = Buffer.from(data.content.file.data || "", "base64")
-  if (fileContentHash !== getHashSum(rawFileContent)) {
-    return [false, { error_message: "File content hash does not match" }]
-  }
-
-  return [true, { file_hash: fileContentHash }]
-}
-
-function verifySignature(data: object, verificationHash: string) {
+const verifySignature = async (data: object, verificationHash: string) => {
   // TODO enforce that the verificationHash is a correct SHA3 sum string
   // Specify signature correctness
   let signatureOk = false
@@ -202,20 +186,26 @@ function verifySignature(data: object, verificationHash: string) {
     // contain a signature.
     return [signatureOk, "INVALID"]
   }
+
   // Signature verification
-  // The padded message is required
-  const paddedMessage = `I sign the following page verification_hash: [0x${verificationHash}]`
-  try {
-    const recoveredAddress = ethers.recoverAddress(
-      ethers.hashMessage(paddedMessage),
-      data.signature,
-    )
-    signatureOk =
-      recoveredAddress.toLowerCase() ===
-      data.signature_wallet_address.toLowerCase()
-  } catch (e) {
-    // continue regardless of error
+  if (data.signature_public_key.startsWith("did:")) {
+    signatureOk = await did.signature.verify(data.signature, data.signature_public_key, verificationHash)
+  } else {
+    // The padded message is required
+    const paddedMessage = `I sign the following page verification_hash: [0x${verificationHash}]`
+    try {
+      const recoveredAddress = ethers.recoverAddress(
+        ethers.hashMessage(paddedMessage),
+        data.signature,
+      )
+      signatureOk =
+        recoveredAddress.toLowerCase() ===
+        data.signature_wallet_address.toLowerCase()
+    } catch (e) {
+      // continue regardless of error
+    }
   }
+
   const status = signatureOk ? "VALID" : "INVALID"
   return [signatureOk, status]
 }
@@ -312,7 +302,7 @@ async function verifyRevision(
 
   // Verify signature
   if (hasSignature) {
-    const [sigOk, sigStatus] = verifySignature(
+    const [sigOk, sigStatus] = await verifySignature(
       input,
       input.previous_verification_hash,
     )
@@ -343,17 +333,6 @@ async function verifyRevision(
   ok = ok && vhOk
   result.status.verification = vhOk ? VERIFIED_VERIFICATION_STATUS : INVALID_VERIFICATION_STATUS
   return [ok, result]
-
-  // File
-  // if ("file" in data.content) {
-  //   // This is a file
-  //   const [fileIsCorrect, fileOut] = verifyFile(data)
-  //   if (!fileIsCorrect) {
-  //     return [fileIsCorrect, fileOut]
-  //   }
-  //   result.status.file = "VERIFIED"
-  //   result.file_hash = fileOut.file_hash
-  // }
 }
 
 function calculateStatus(count: number, totalLength: number) {
