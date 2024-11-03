@@ -247,8 +247,7 @@ const prepareSignature = async (previousVerificationHash) => {
       break
     case "did":
       const credentials = readCredentials()
-      console.log(btoa(credentials.did))
-      const { jws, key } = await did.signature.sign(previousVerificationHash, Buffer.from(credentials.did, "hex"))
+      const { jws, key } = await did.signature.sign(previousVerificationHash, Buffer.from(credentials["did:key"], "hex"))
       signature = jws
       walletAddress = key
       publicKey = key
