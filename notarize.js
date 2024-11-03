@@ -225,12 +225,13 @@ const readCredentials = () => {
 }
 
 const prepareSignature = async (previousVerificationHash) => {
-  let signature, walletAddress, publicKey
+  let signature, walletAddress, publicKey, signature_type
   switch (signMethod) {
     case "metamask":
       ;[signature, walletAddress, publicKey] = await doSignMetamask(
         previousVerificationHash,
       )
+      signature_type = "Ethereum"
       break
     case "cli":
       try {
@@ -242,6 +243,7 @@ const prepareSignature = async (previousVerificationHash) => {
         console.error("Failed to read mnemonic:", error)
         process.exit(1)
       }
+      signature_type = "Ethereum"
       break
     case "did":
       const credentials = readCredentials()
@@ -250,12 +252,14 @@ const prepareSignature = async (previousVerificationHash) => {
       signature = jws
       walletAddress = key
       publicKey = key
+      signature_type = "did:key"
       break
   }
   return {
     signature,
     signature_public_key: publicKey,
     signature_wallet_address: walletAddress,
+    signature_type,
   }
 }
 

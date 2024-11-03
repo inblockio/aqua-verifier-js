@@ -188,35 +188,29 @@ const verifySignature = async (data: object, verificationHash: string) => {
   }
 
   // Signature verification
-  if (data.signature_public_key.startsWith("did:")) {
-    signatureOk = await did.signature.verify(data.signature, data.signature_public_key, verificationHash)
-  } else {
-    // The padded message is required
-    const paddedMessage = `I sign the following page verification_hash: [0x${verificationHash}]`
-    try {
-      const recoveredAddress = ethers.recoverAddress(
-        ethers.hashMessage(paddedMessage),
-        data.signature,
-      )
-      signatureOk =
-        recoveredAddress.toLowerCase() ===
-        data.signature_wallet_address.toLowerCase()
-    } catch (e) {
-      // continue regardless of error
-    }
+  switch (data.signature_type) {
+    case "did:key":
+      signatureOk = await did.signature.verify(data.signature, data.signature_public_key, verificationHash)
+      break
+    case "Ethereum":
+      // The padded message is required
+      const paddedMessage = `I sign the following page verification_hash: [0x${verificationHash}]`
+      try {
+        const recoveredAddress = ethers.recoverAddress(
+          ethers.hashMessage(paddedMessage),
+          data.signature,
+        )
+        signatureOk =
+          recoveredAddress.toLowerCase() ===
+          data.signature_wallet_address.toLowerCase()
+      } catch (e) {
+        // continue regardless of error
+      }
+      break
   }
 
   const status = signatureOk ? "VALID" : "INVALID"
   return [signatureOk, status]
-}
-
-function verifyContent(data) {
-  let content = ""
-  for (const slotContent of Object.values(data.content.content)) {
-    content += slotContent
-  }
-  const contentHash = getHashSum(content)
-  return [contentHash === data.content.content_hash, contentHash]
 }
 
 /**
