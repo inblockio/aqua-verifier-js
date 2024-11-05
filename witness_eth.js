@@ -32,10 +32,10 @@ const doWitness = async () => {
     })
   }
   // Now we do the actual witness process
-  const wallet_address = window.ethereum.selectedAddress
+  const addresses = await window.ethereum.request({method: 'eth_accounts'})
   const params = [
     {
-      from: wallet_address,
+      from: addresses[0],
       to: smart_contract_address,
       // gas and gasPrice are optional values which are
       // automatically set by MetaMask.
