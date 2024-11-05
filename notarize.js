@@ -305,19 +305,14 @@ const createNewRevision = async (
 ;(async function () {
   const metadataFilename = filename + ".aqua.json"
   const timestamp = getFileTimestamp(filename)
-  let metadata
-  let revisions, lastRevisionHash
-  if (fs.existsSync(metadataFilename)) {
-    metadata = JSON.parse(fs.readFileSync(metadataFilename))
-    revisions = metadata.revisions
-    const verificationHashes = Object.keys(revisions)
-    lastRevisionHash = verificationHashes[verificationHashes.length - 1]
-  } else {
+  let metadata, revisions
+  if (!fs.existsSync(metadataFilename)) {
     metadata = createNewMetaData()
     revisions = metadata.revisions
     const genesis = await createNewRevision("", timestamp, "content")
     revisions[genesis.verification_hash] = genesis.data
-    lastRevisionHash = genesis.verification_hash
+    fs.writeFileSync(metadataFilename, JSON.stringify(metadata, null, 2), "utf8")
+    return
   }
 
   // TODO: replace this with checking if the signature already exists in the last revision
@@ -327,6 +322,11 @@ const createNewRevision = async (
   //  )
   //  process.exit()
   //}
+
+  metadata = JSON.parse(fs.readFileSync(metadataFilename))
+  revisions = metadata.revisions
+  const verificationHashes = Object.keys(revisions)
+  const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
   if (enableSignature && enableWitness) {
     formatter.log_red("ERROR: you cannot sign & witness at the same time")
