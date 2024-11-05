@@ -260,7 +260,13 @@ async function verifyRevision(
   }
 
   // Ensure mandatory claims are present
-  const mandatoryClaims = ["previous_verification_hash", "content", "domain_id", "local_timestamp"]
+  const mandatory = {
+    content: "content",
+    signature: "signature",
+    witness: "witness_merkle_root",
+  }[input.revision_type]
+  const mandatoryClaims = ["previous_verification_hash", "domain_id", "local_timestamp", mandatory]
+
   for (const claim of mandatoryClaims) {
     if (!(claim in input)) {
       return [false, { error_message: `mandatory field ${claim} is not present`}]
@@ -287,10 +293,6 @@ async function verifyRevision(
     const claimOk = leaves[i] === actual
     result.status[claim] = claimOk
     ok = ok && claimOk
-    if (claim === "content" && !claimOk) {
-      const error_message = `Error: Claim ${claim} hash doesn't match`
-      return [false, { error_message }]
-    }
     actualLeaves.push(actual)
   }
 

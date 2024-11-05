@@ -265,32 +265,31 @@ const prepareSignature = async (previousVerificationHash) => {
 const createNewRevision = async (
   previousVerificationHash,
   timestamp,
-  includeSignature,
-  includeWitness,
+  revision_type,
 ) => {
-  if (includeSignature && enableWitness) {
-    formatter.log_red("ERROR: you cannot sign & witness at the same time")
-    process.exit(1)
-  }
-  const fileContent = fs.readFileSync(filename, "utf8")
   let verificationData = {
     previous_verification_hash: previousVerificationHash,
-    content: fileContent,
     domain_id: "5e5a1ec586", // TODO
     local_timestamp: timestamp,
+    revision_type,
   }
 
-  if (includeSignature) {
-    const sigData = await prepareSignature(previousVerificationHash)
-    verificationData = { ...verificationData, ...sigData }
-  }
-
-  if (includeWitness) {
-    const witness = await prepareWitness(previousVerificationHash)
-    verificationData = { ...verificationData, ...witness }
-    verificationData.witness_merkle_proof = JSON.stringify(
-      verificationData.witness_merkle_proof,
-    )
+  switch (revision_type) {
+    case "content":
+      const fileContent = fs.readFileSync(filename, "utf8")
+      verificationData["content"] = fileContent
+      break
+    case "signature":
+      const sigData = await prepareSignature(previousVerificationHash)
+      verificationData = { ...verificationData, ...sigData }
+      break
+    case "witness":
+      const witness = await prepareWitness(previousVerificationHash)
+      verificationData = { ...verificationData, ...witness }
+      verificationData.witness_merkle_proof = JSON.stringify(
+        verificationData.witness_merkle_proof,
+      )
+      break
   }
 
   const leaves = main.dict2Leaves(verificationData)
@@ -316,7 +315,7 @@ const createNewRevision = async (
   } else {
     metadata = createNewMetaData()
     revisions = metadata.revisions
-    const genesis = await createNewRevision("", timestamp, false, false)
+    const genesis = await createNewRevision("", timestamp, "content")
     revisions[genesis.verification_hash] = genesis.data
     lastRevisionHash = genesis.verification_hash
   }
@@ -329,11 +328,22 @@ const createNewRevision = async (
   //  process.exit()
   //}
 
+  if (enableSignature && enableWitness) {
+    formatter.log_red("ERROR: you cannot sign & witness at the same time")
+    process.exit(1)
+  }
+
+  let revisionType = "content"
+  if (enableSignature) {
+    revisionType = "signature"
+  } else if (enableWitness) {
+    revisionType = "witness"
+  }
+
   const verificationData = await createNewRevision(
     lastRevisionHash,
     timestamp,
-    enableSignature,
-    enableWitness,
+    revisionType,
   )
   const verificationHash = verificationData.verification_hash
   revisions[verificationHash] = verificationData.data
