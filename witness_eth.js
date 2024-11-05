@@ -7,7 +7,7 @@ const serverUrl = `http://${host}:${port}`
 
 const witnessMetamaskHtml = `
 <html>
-  <script>
+  <script type="module">
 const witnessNetwork = "WITNESSNETWORK"
 const smart_contract_address = "SMARTCONTRACTADDRESS"
 const witness_event_verification_hash = "WITNESSEVENTVERIFICATIONHASH"
@@ -17,7 +17,7 @@ const ethChainIdMap = {
   'sepolia': '0xaa36a7',
   'holesky': '0x4268',
 }
-const doWitness = async () => {
+const doWitness = async (wallet_address) => {
   const chainId = await window.ethereum.request({ method: 'eth_chainId' })
   const requestedChainId = ethChainIdMap[witnessNetwork]
   if (requestedChainId !== chainId) {
@@ -32,10 +32,9 @@ const doWitness = async () => {
     })
   }
   // Now we do the actual witness process
-  const addresses = await window.ethereum.request({method: 'eth_accounts'})
   const params = [
     {
-      from: addresses[0],
+      from: wallet_address,
       to: smart_contract_address,
       // gas and gasPrice are optional values which are
       // automatically set by MetaMask.
@@ -58,16 +57,10 @@ const doWitness = async () => {
   })
 }
 if (window.ethereum && window.ethereum.isMetaMask) {
-  if (window.ethereum.isConnected() && window.ethereum.selectedAddress) {
-    doWitness()
-  } else {
-    window.ethereum.request({ method: 'eth_requestAccounts' })
-      .then(doWitness)
-      .catch((error) => {
-        console.error(error);
-        alert(error.message);
-      })
-  }
+  await window.ethereum.enable()
+  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+  console.log(accounts)
+  await doWitness(accounts[0])
 } else {
   alert("Metamask not detected")
 }
