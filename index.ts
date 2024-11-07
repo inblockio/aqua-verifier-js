@@ -265,7 +265,7 @@ async function verifyRevision(
     signature: "signature",
     witness: "witness_merkle_root",
   }[input.revision_type]
-  const mandatoryClaims = ["previous_verification_hash", "domain_id", "local_timestamp", mandatory]
+  const mandatoryClaims = ["previous_verification_hash", "domain_id", "local_timestamp", "nonce", mandatory]
 
   for (const claim of mandatoryClaims) {
     if (!(claim in input)) {

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import * as fs from "fs"
+import { randomBytes } from 'crypto'
+
 import * as ethers from "ethers"
 import minimist from "minimist"
 import * as http from "http"
@@ -138,6 +140,11 @@ const doSignMetamask = async (verificationHash) => {
   }
 }
 
+const prepareNonce = () => {
+  const seed = randomBytes(32)
+  return new Buffer.from(seed).toString("base64url")
+}
+
 const prepareWitness = async (verificationHash) => {
   const merkle_root = verificationHash
   let witness_network,
@@ -269,6 +276,7 @@ const createNewRevision = async (
 ) => {
   let verificationData = {
     previous_verification_hash: previousVerificationHash,
+    nonce: prepareNonce(),
     domain_id: "5e5a1ec586", // TODO
     local_timestamp: timestamp,
     revision_type,
