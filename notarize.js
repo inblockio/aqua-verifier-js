@@ -320,6 +320,7 @@ const createNewRevision = async (
     revisions = metadata.revisions
     const genesis = await createNewRevision("", timestamp, "content")
     revisions[genesis.verification_hash] = genesis.data
+    console.log(`Writing new revision ${genesis.verification_hash}`)
     fs.writeFileSync(metadataFilename, JSON.stringify(metadata, null, 2), "utf8")
     return
   }
