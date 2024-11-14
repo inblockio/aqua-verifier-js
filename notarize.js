@@ -171,6 +171,7 @@ const prepareWitness = async (verificationHash) => {
       witness_network,
       smart_contract_address,
     )
+    witnessTimestamp = Date.now() / 1000
   }
   const witness = {
     witness_merkle_root: merkle_root,
