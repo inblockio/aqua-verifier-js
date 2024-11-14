@@ -111,7 +111,7 @@ const witnessMetamask = async (
   const html = witnessMetamaskHtml
     .replace("WITNESSNETWORK", witnessNetwork)
     .replace("SMARTCONTRACTADDRESS", smartContractAddress)
-    .replace("WITNESSEVENTVERIFICATIONHASH", witnessEventVerificationHash)
+    .replace("WITNESSEVENTVERIFICATIONHASH", witnessEventVerificationHash.replace(/^0x/, ""))
   const requestListener = commonPrepareListener(html)
   const server = http.createServer(requestListener)
   server.listen(port, host, () => {
