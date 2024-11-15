@@ -154,7 +154,8 @@ const verify = async (
   let actual = tx.data.split("0x9cef4ea1")[1]
   actual = actual.slice(0, 128)
   sleep(200)  // just in case so as not to overload the free endpoint
-  return `${actual === expectedMR}`
+  const mrSans0x = expectedMR.slice(0, 2) === "0x" ? expectedMR.slice(2) : expectedMR
+  return `${actual === mrSans0x}`
 }
 
 async function testVerify() {
