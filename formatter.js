@@ -147,10 +147,10 @@ function printWitnessInfo(detail) {
   witOut += `\n${_space4}Timestamp: ${isoTimestamp}`
   const suffix = ` on ${wr.witness_network}`
   if (wr.isValid) {
-    witOut += `\n${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified${suffix}`
+    witOut += `\n${_space4}${CHECKMARK}${WATCH}Merkle root has been verified${suffix}`
   } else {
     witOut += cliRedify(
-      `\n${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match${suffix}`
+      `\n${_space4}${CROSSMARK}${WATCH}Merkle root does not match${suffix}`
     )
   }
   // TODO
@@ -252,11 +252,11 @@ function formatWitnessInfo2HTML(detail) {
   witOut += `<br>${_space4}Transaction hash: ${txHash}`
   const suffix = ` on ${wr.witness_network} via etherscan.io`
   if (wr.etherscan_result === "true") {
-    witOut += `<br>${_space4}${CHECKMARK}${WATCH}Witness event verification hash has been verified${suffix}`
+    witOut += `<br>${_space4}${CHECKMARK}${WATCH}Merkle root has been verified${suffix}`
   } else if (wr.etherscan_result === "false") {
     // We don't need <br> because redify already wraps the text inside a div.
     witOut += htmlRedify(
-      `${_space4}${CROSSMARK}${WATCH}Witness event verification hash does not match${suffix}`
+      `${_space4}${CROSSMARK}${WATCH}Merkle root does not match${suffix}`
     )
   } else {
     witOut += htmlRedify(
