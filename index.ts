@@ -273,16 +273,6 @@ async function verifyRevision(
     }
   }
 
-  // Ensure only either signature or witness is in the revision
-  const hasSignature = "signature" in input
-  const hasWitness = "witness_merkle_root" in input
-  if (hasSignature && hasWitness) {
-    return [
-      false,
-      { error_message: "Signature and witness must not both be present" },
-    ]
-  }
-
   const leaves = input.leaves
   delete input.leaves
   const actualLeaves = []
@@ -296,31 +286,29 @@ async function verifyRevision(
     actualLeaves.push(actual)
   }
 
-  // Verify signature
-  if (hasSignature) {
-    const [sigOk, sigStatus] = await verifySignature(
-      input,
-      input.previous_verification_hash,
-    )
-    result.status.signature = sigStatus
-    ok = ok && sigOk
-  }
+  switch (input.revision_type) {
+    case "signature":
+      // Verify signature
+      const [sigOk, sigStatus] = await verifySignature(
+        input,
+        input.previous_verification_hash,
+      )
+      result.status.signature = sigStatus
+      ok = ok && sigOk
+      break
+    case "witness":
+      // Verify witness
+      const [witnessStatus, witnessResult] = await verifyWitness(
+        input,
+        input.previous_verification_hash,
+        doVerifyMerkleProof,
+      )
+      result.witness_result = witnessResult
+      result.status.witness = witnessStatus
 
-  // Verify witness
-  if (hasWitness) {
-    // Witness
-    const [witnessStatus, witnessResult] = await verifyWitness(
-      input,
-      //as of version v1.2 Aqua protocol it takes always the previous verification hash
-      //as a witness and a signature MUST create a new revision of the Aqua-Chain
-      input.previous_verification_hash,
-      doVerifyMerkleProof,
-    )
-    result.witness_result = witnessResult
-    result.status.witness = witnessStatus
-
-    // Specify witness correctness
-    ok = ok && (witnessStatus === "VALID")
+      // Specify witness correctness
+      ok = ok && (witnessStatus === "VALID")
+      break
   }
 
   // Verify verification hash
