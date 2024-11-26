@@ -20,7 +20,7 @@ import * as witnessTsa from "./witness_tsa.js"
 const opts = {
   // This is required so that -v is position independent.
   boolean: ["v", "witness-eth", "witness-nostr", "witness-tsa"],
-  string: ["sign"]
+  string: ["sign", "link"]
 }
 
 const usage = () => {
@@ -29,13 +29,16 @@ notarize.js [OPTIONS] <filename>
 which generates filename.aqua.json
 
 Options:
-  --sign [cli|metamask|did] Sign with either of:
+  --sign [cli|metamask|did]
+    Sign with either of:
     1. the Ethereum seed phrase provided in mnemonic.txt
     2. MetaMask
     3. DID key
   --witness-eth      Witness to Ethereum on-chain with MetaMask
   --witness-nostr    Witness to Nostr network
   --witness-tsa      Witness to TSA DigiCert
+  --link <filename.aqua.json>
+    Add a link to an AQUA chain as a dependency
 `)
 }
 
@@ -54,6 +57,8 @@ const enableWitnessEth = argv["witness-eth"]
 const enableWitnessNostr = argv["witness-nostr"]
 const enableWitnessTsa = argv["witness-tsa"]
 const enableWitness = enableWitnessEth || enableWitnessNostr || enableWitnessTsa
+const linkURI = argv["link"]
+const enableLink = !!linkURI
 
 const port = 8420
 const host = "localhost"
@@ -270,6 +275,12 @@ const prepareSignature = async (previousVerificationHash) => {
   }
 }
 
+const getLatestVH = (uri) => {
+  const metadata = JSON.parse(fs.readFileSync(uri))
+  const verificationHashes = Object.keys(metadata.revisions)
+  return verificationHashes[verificationHashes.length - 1]
+}
+
 const createNewRevision = async (
   previousVerificationHash,
   timestamp,
@@ -299,6 +310,15 @@ const createNewRevision = async (
         verificationData.witness_merkle_proof,
       )
       break
+    case "link":
+      const linkVH = getLatestVH(linkURI)
+      const linkData = {
+        "link_type": "aqua",
+        "link_require_indepth_verification": true,
+        "link_verification_hash": linkVH,
+        "link_uri": linkURI,
+      }
+      verificationData = { ...verificationData, ...linkData }
   }
 
   const leaves = main.dict2Leaves(verificationData)
@@ -320,7 +340,7 @@ const createNewRevision = async (
     revisions = metadata.revisions
     const genesis = await createNewRevision("", timestamp, "content")
     revisions[genesis.verification_hash] = genesis.data
-    console.log(`Writing new revision ${genesis.verification_hash}`)
+    console.log(`Writing new revision ${genesis.verification_hash} to ${filename}.aqua.json`)
     fs.writeFileSync(metadataFilename, JSON.stringify(metadata, null, 2), "utf8")
     return
   }
@@ -348,6 +368,8 @@ const createNewRevision = async (
     revisionType = "signature"
   } else if (enableWitness) {
     revisionType = "witness"
+  } else if (enableLink) {
+    revisionType = "link"
   }
 
   const verificationData = await createNewRevision(
@@ -357,7 +379,7 @@ const createNewRevision = async (
   )
   const verificationHash = verificationData.verification_hash
   revisions[verificationHash] = verificationData.data
-  console.log(`Writing new revision ${verificationHash}`)
+  console.log(`Writing new revision ${verificationHash} to ${filename}.aqua.json`)
 
   fs.writeFileSync(metadataFilename, JSON.stringify(metadata, null, 2), "utf8")
 })()
