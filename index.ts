@@ -2,6 +2,7 @@
 import { Buffer } from "buffer"
 // End of compatibility with browsers.
 
+import * as fs from "fs"
 import sha3 from "js-sha3"
 import hrtime from "browser-process-hrtime"
 import { MerkleTree } from "merkletreejs"
@@ -41,6 +42,24 @@ const dict2Leaves = (obj) => {
 
 function getHashSum(content: string) {
   return content === "" ? "" : sha3.sha3_512(content)
+}
+
+async function readExportFile(filename) {
+   if (!fs.existsSync(filename)) {
+     formatter.log_red(`ERROR: The file ${filename} does not exist.`)
+     process.exit(1)
+   }
+  const fileContent = fs.readFileSync(filename)
+  if (!filename.endsWith(".json")) {
+    formatter.log_red("The file must have a .json extension")
+    process.exit(1)
+  }
+  const offlineData = JSON.parse(fileContent)
+  if (!("revisions" in offlineData)) {
+    formatter.log_red("The json file doesn't contain 'revisions' key.")
+    process.exit(1)
+  }
+  return offlineData
 }
 
 /**
@@ -264,6 +283,7 @@ async function verifyRevision(
     content: "content",
     signature: "signature",
     witness: "witness_merkle_root",
+    link: "link_verification_hash",
   }[input.revision_type]
   const mandatoryClaims = ["previous_verification_hash", "domain_id", "local_timestamp", "nonce", mandatory]
 
@@ -308,6 +328,11 @@ async function verifyRevision(
 
       // Specify witness correctness
       ok = ok && (witnessStatus === "VALID")
+      break
+    case "link":
+      const offlineData = await readExportFile(input.link_uri)
+      const [linkStatus, _] = await verifyPage(offlineData, false, doVerifyMerkleProof)
+      ok = ok && (linkStatus === VERIFIED_VERIFICATION_STATUS)
       break
   }
 
@@ -498,4 +523,5 @@ export {
   verifyPageFromMwAPI,
   formatter,
   checkAPIVersionCompatibility,
+  readExportFile,
 }

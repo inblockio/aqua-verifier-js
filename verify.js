@@ -3,7 +3,6 @@
 import * as main from "./index.js"
 import minimist from "minimist"
 import * as formatter from "./formatter.js"
-import * as fs from "fs"
 
 const opts = {
   // This is required so that -v and -m are position independent.
@@ -43,28 +42,10 @@ const server = argv.server ?? "http://localhost:9352"
 // For offline JSON file verification
 const file = argv.file
 
-async function readExportFile(filename) {
-   if (!fs.existsSync(filename)) {
-     formatter.log_red(`ERROR: The file ${filename} does not exist.`)
-     process.exit(1)
-   }
-  const fileContent = fs.readFileSync(filename)
-  if (!filename.endsWith(".json")) {
-    formatter.log_red("The file must have a .json extension")
-    process.exit(1)
-  }
-  const offlineData = JSON.parse(fileContent)
-  if (!("revisions" in offlineData)) {
-    formatter.log_red("The json file doesn't contain 'revisions' key.")
-    process.exit(1)
-  }
-  return offlineData
-}
-
 // The main function
-(async function () {
+;(async function () {
   if (file) {
-    const offlineData = await readExportFile(file)
+    const offlineData = await main.readExportFile(file)
     await main.verifyPage(offlineData, verbose, !ignoreMerkleProof)
     console.log()
   } else {
