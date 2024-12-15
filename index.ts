@@ -3,9 +3,10 @@ import { Buffer } from "buffer"
 // End of compatibility with browsers.
 
 import * as fs from "fs"
-import sha3 from "js-sha3"
 import hrtime from "browser-process-hrtime"
 import { MerkleTree } from "merkletreejs"
+import { sha256 } from "multihashes-sync/sha2"
+import { bytes } from 'multiformats'
 
 // utilities for verifying signatures
 import * as ethers from "ethers"
@@ -40,8 +41,11 @@ const dict2Leaves = (obj) => {
     .map((key) => getHashSum(`${key}:${obj[key]}`))
 }
 
+// TODO in the Rust version, you should infer what the hashing algorithm
+// and the digest size are from the multihash itself. Instead of assuming that
+// it is SHA2-256
 function getHashSum(content: string) {
-  return content === "" ? "" : sha3.sha3_512(content)
+  return content === "" ? "" : bytes.toHex(sha256.digest(content).bytes)
 }
 
 async function readExportFile(filename) {
