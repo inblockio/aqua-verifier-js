@@ -19,7 +19,7 @@ import * as witnessTsa from "./witness_tsa.js"
 
 const opts = {
   // This is required so that -v is position independent.
-  boolean: ["v", "witness-eth", "witness-nostr", "witness-tsa"],
+  boolean: ["v", "witness-eth", "witness-nostr", "witness-tsa", "scalar"],
   string: ["sign", "link"]
 }
 
@@ -39,6 +39,8 @@ Options:
   --witness-tsa      Witness to TSA DigiCert
   --link <filename.aqua.json>
     Add a link to an AQUA chain as a dependency
+  --scalar
+    Use this flag to use a more lightweight, "scalar" aquafication
 `)
 }
 
@@ -56,6 +58,7 @@ const enableSignature = !!signMethod
 const enableWitnessEth = argv["witness-eth"]
 const enableWitnessNostr = argv["witness-nostr"]
 const enableWitnessTsa = argv["witness-tsa"]
+const enableScalar = argv["scalar"]
 const enableWitness = enableWitnessEth || enableWitnessNostr || enableWitnessTsa
 const linkURI = argv["link"]
 const enableLink = !!linkURI
@@ -165,17 +168,17 @@ const prepareWitness = async (verificationHash) => {
     smart_contract_address = "N/A"
   } else if (enableWitnessTsa) {
     const tsaUrl = "http://timestamp.digicert.com" // DigiCert's TSA URL
-    ;[transactionHash, publisher, witnessTimestamp] = await witnessTsa.witness(merkle_root, tsaUrl)
+      ;[transactionHash, publisher, witnessTimestamp] = await witnessTsa.witness(merkle_root, tsaUrl)
     witness_network = "TSA_RFC3161"
     smart_contract_address = tsaUrl
   } else {
     witness_network = "sepolia"
     smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
-    ;[transactionHash, publisher] = await witnessEth.witnessMetamask(
-      merkle_root,
-      witness_network,
-      smart_contract_address,
-    )
+      ;[transactionHash, publisher] = await witnessEth.witnessMetamask(
+        merkle_root,
+        witness_network,
+        smart_contract_address,
+      )
     witnessTimestamp = Date.now() / 1000
   }
   const witness = {
@@ -250,7 +253,7 @@ const prepareSignature = async (previousVerificationHash) => {
       try {
         const credentials = readCredentials()
         let wallet
-        ;[wallet, walletAddress, publicKey] = getWallet(credentials.mnemonic)
+          ;[wallet, walletAddress, publicKey] = getWallet(credentials.mnemonic)
         signature = await doSign(wallet, previousVerificationHash)
       } catch (error) {
         console.error("Failed to read mnemonic:", error)
@@ -285,6 +288,7 @@ const createNewRevision = async (
   previousVerificationHash,
   timestamp,
   revision_type,
+  enableScalar,
 ) => {
   let verificationData = {
     previous_verification_hash: previousVerificationHash,
@@ -321,6 +325,15 @@ const createNewRevision = async (
       verificationData = { ...verificationData, ...linkData }
   }
 
+  if (enableScalar) {
+    const scalarData = JSON.stringify(verificationData)
+    return {
+      verification_hash: main.getHashSum(scalarData),
+      data: scalarData,
+    }
+  }
+
+  // Merklelize the dictionary
   const leaves = main.dict2Leaves(verificationData)
   const tree = new MerkleTree(leaves, main.getHashSum)
   verificationData.leaves = leaves
@@ -330,56 +343,57 @@ const createNewRevision = async (
   }
 }
 
-// The main function
-;(async function () {
-  const metadataFilename = filename + ".aqua.json"
-  const timestamp = getFileTimestamp(filename)
-  let metadata, revisions
-  if (!fs.existsSync(metadataFilename)) {
-    metadata = createNewMetaData()
+  // The main function
+  ; (async function() {
+    const metadataFilename = filename + ".aqua.json"
+    const timestamp = getFileTimestamp(filename)
+    let metadata, revisions
+    if (!fs.existsSync(metadataFilename)) {
+      metadata = createNewMetaData()
+      revisions = metadata.revisions
+      const genesis = await createNewRevision("", timestamp, "content", false)
+      revisions[genesis.verification_hash] = genesis.data
+      console.log(`Writing new revision ${genesis.verification_hash} to ${filename}.aqua.json`)
+      fs.writeFileSync(metadataFilename, JSON.stringify(metadata, null, 2), "utf8")
+      return
+    }
+
+    // TODO: replace this with checking if the signature already exists in the last revision
+    //if (lastRevision && timestamp == lastRevision.metadata.local_timestamp) {
+    //  console.log(
+    //    `The file ${filename} hasn't been modified since it was last notarized`
+    //  )
+    //  process.exit()
+    //}
+
+    metadata = JSON.parse(fs.readFileSync(metadataFilename))
     revisions = metadata.revisions
-    const genesis = await createNewRevision("", timestamp, "content")
-    revisions[genesis.verification_hash] = genesis.data
-    console.log(`Writing new revision ${genesis.verification_hash} to ${filename}.aqua.json`)
+    const verificationHashes = Object.keys(revisions)
+    const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
+
+    if (enableSignature && enableWitness) {
+      formatter.log_red("ERROR: you cannot sign & witness at the same time")
+      process.exit(1)
+    }
+
+    let revisionType = "content"
+    if (enableSignature) {
+      revisionType = "signature"
+    } else if (enableWitness) {
+      revisionType = "witness"
+    } else if (enableLink) {
+      revisionType = "link"
+    }
+
+    const verificationData = await createNewRevision(
+      lastRevisionHash,
+      timestamp,
+      revisionType,
+      enableScalar,
+    )
+    const verificationHash = verificationData.verification_hash
+    revisions[verificationHash] = verificationData.data
+    console.log(`Writing new revision ${verificationHash} to ${filename}.aqua.json`)
+
     fs.writeFileSync(metadataFilename, JSON.stringify(metadata, null, 2), "utf8")
-    return
-  }
-
-  // TODO: replace this with checking if the signature already exists in the last revision
-  //if (lastRevision && timestamp == lastRevision.metadata.local_timestamp) {
-  //  console.log(
-  //    `The file ${filename} hasn't been modified since it was last notarized`
-  //  )
-  //  process.exit()
-  //}
-
-  metadata = JSON.parse(fs.readFileSync(metadataFilename))
-  revisions = metadata.revisions
-  const verificationHashes = Object.keys(revisions)
-  const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
-
-  if (enableSignature && enableWitness) {
-    formatter.log_red("ERROR: you cannot sign & witness at the same time")
-    process.exit(1)
-  }
-
-  let revisionType = "content"
-  if (enableSignature) {
-    revisionType = "signature"
-  } else if (enableWitness) {
-    revisionType = "witness"
-  } else if (enableLink) {
-    revisionType = "link"
-  }
-
-  const verificationData = await createNewRevision(
-    lastRevisionHash,
-    timestamp,
-    revisionType,
-  )
-  const verificationHash = verificationData.verification_hash
-  revisions[verificationHash] = verificationData.data
-  console.log(`Writing new revision ${verificationHash} to ${filename}.aqua.json`)
-
-  fs.writeFileSync(metadataFilename, JSON.stringify(metadata, null, 2), "utf8")
-})()
+  })()
