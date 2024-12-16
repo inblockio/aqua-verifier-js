@@ -236,6 +236,43 @@ const verifySignature = async (data: object, verificationHash: string) => {
   return [signatureOk, status]
 }
 
+function verifyRevisionMerkleTreeStructure(input, result, verificationHash: string) {
+  let ok: boolean = true
+  // Ensure mandatory claims are present
+  const mandatory = {
+    content: "content",
+    signature: "signature",
+    witness: "witness_merkle_root",
+    link: "link_verification_hash",
+  }[input.revision_type]
+  const mandatoryClaims = ["previous_verification_hash", "domain_id", "local_timestamp", "nonce", mandatory]
+
+  for (const claim of mandatoryClaims) {
+    if (!(claim in input)) {
+      return [false, { error_message: `mandatory field ${claim} is not present` }]
+    }
+  }
+
+  const leaves = input.leaves
+  delete input.leaves
+  const actualLeaves = []
+
+  // Verify leaves
+  for (const [i, claim] of Object.keys(input).sort().entries()) {
+    const actual = getHashSum(`${claim}:${input[claim]}`)
+    const claimOk = leaves[i] === actual
+    result.status[claim] = claimOk
+    ok = ok && claimOk
+    actualLeaves.push(actual)
+  }
+
+  // Verify verification hash
+  const tree = new MerkleTree(leaves, getHashSum)
+  const vhOk = tree.getHexRoot() === verificationHash
+  ok = ok && vhOk
+  return [ok, result]
+}
+
 /**
  * TODO THIS DOCSTRING IS OUTDATED!
  * Verifies a revision from a page.
@@ -270,18 +307,8 @@ async function verifyRevision(
 ) {
   let ok: boolean = true
 
-  // Fast scalar verification if input is a string
-  if (typeof input === "string" || input instanceof String) {
-    const actualVH = "0x" + getHashSum(input)
-    ok = actualVH === verificationHash
-    return [ok, {
-      scalar: true,
-      verification_hash: verificationHash,
-      status: {
-        verification: ok ? VERIFIED_VERIFICATION_STATUS : INVALID_VERIFICATION_STATUS
-      }
-    }]
-  }
+  // We use fast scalar verification if input is a string
+  const isScalar = typeof input === "string" || input instanceof String
 
   let result = {
     scalar: false,
@@ -297,32 +324,15 @@ async function verifyRevision(
     data: input,
   }
 
-  // Ensure mandatory claims are present
-  const mandatory = {
-    content: "content",
-    signature: "signature",
-    witness: "witness_merkle_root",
-    link: "link_verification_hash",
-  }[input.revision_type]
-  const mandatoryClaims = ["previous_verification_hash", "domain_id", "local_timestamp", "nonce", mandatory]
-
-  for (const claim of mandatoryClaims) {
-    if (!(claim in input)) {
-      return [false, { error_message: `mandatory field ${claim} is not present` }]
+  if (isScalar) {
+    result.scalar = true
+    const actualVH = "0x" + getHashSum(input)
+    ok = actualVH === verificationHash
+  } else {
+    [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)
+    if (!ok) {
+      return [ok, result]
     }
-  }
-
-  const leaves = input.leaves
-  delete input.leaves
-  const actualLeaves = []
-
-  // Verify leaves
-  for (const [i, claim] of Object.keys(input).sort().entries()) {
-    const actual = getHashSum(`${claim}:${input[claim]}`)
-    const claimOk = leaves[i] === actual
-    result.status[claim] = claimOk
-    ok = ok && claimOk
-    actualLeaves.push(actual)
   }
 
   switch (input.revision_type) {
@@ -354,12 +364,8 @@ async function verifyRevision(
       ok = ok && (linkStatus === VERIFIED_VERIFICATION_STATUS)
       break
   }
+  result.status.verification = ok ? VERIFIED_VERIFICATION_STATUS : INVALID_VERIFICATION_STATUS
 
-  // Verify verification hash
-  const tree = new MerkleTree(leaves, getHashSum)
-  const vhOk = tree.getHexRoot() === verificationHash
-  ok = ok && vhOk
-  result.status.verification = vhOk ? VERIFIED_VERIFICATION_STATUS : INVALID_VERIFICATION_STATUS
   return [ok, result]
 }
 
