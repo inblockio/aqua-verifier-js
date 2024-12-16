@@ -326,9 +326,10 @@ const createNewRevision = async (
   }
 
   if (enableScalar) {
+    // A simpler version of revision -- scalar
     const scalarData = JSON.stringify(verificationData)
     return {
-      verification_hash: main.getHashSum(scalarData),
+      verification_hash: "0x" + main.getHashSum(scalarData),
       data: scalarData,
     }
   }

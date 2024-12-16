@@ -180,6 +180,14 @@ function printWitnessInfo(detail) {
   console.log(witOut)
 }
 
+function displayVHStatus(status) {
+  if (status === INVALID_VERIFICATION_STATUS) {
+    log_red(`  ${CROSSMARK}` + " Verification hash doesn't match")
+  } else {
+    console.log(`  ${CHECKMARK} Verification hash matches`)
+  }
+}
+
 function printRevisionInfo(detail, verbose) {
   // IMPORTANT! If you update this function, make sure to update
   // formatRevisionInfo2HTML as well.
@@ -192,16 +200,21 @@ function printRevisionInfo(detail, verbose) {
     return
   }
 
+  if (detail.scalar) {
+    console.log("  Scalar revision detected")
+    displayVHStatus(detail.status.verification)
+    return
+  }
+
   console.log(`  Elapsed: ${detail.elapsed} s`)
   console.log(
     `  Timestamp: ${formatDBTimestamp(detail.data.local_timestamp)}`
   )
   console.log(`  Domain ID: ${detail.data.domain_id}`)
+  displayVHStatus(detail.status.verification)
   if (detail.status.verification === INVALID_VERIFICATION_STATUS) {
-    log_red(`  ${CROSSMARK}` + " Verification hash doesn't match")
     return
   }
-  console.log(`  ${CHECKMARK} Verification hash matches`)
 
   if (detail.status.file === "VERIFIED") {
     // The alternative value of detail.status.file is "MISSING", where we don't

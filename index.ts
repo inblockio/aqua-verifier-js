@@ -49,10 +49,10 @@ function getHashSum(content: string) {
 }
 
 async function readExportFile(filename) {
-   if (!fs.existsSync(filename)) {
-     formatter.log_red(`ERROR: The file ${filename} does not exist.`)
-     process.exit(1)
-   }
+  if (!fs.existsSync(filename)) {
+    formatter.log_red(`ERROR: The file ${filename} does not exist.`)
+    process.exit(1)
+  }
   const fileContent = fs.readFileSync(filename)
   if (!filename.endsWith(".json")) {
     formatter.log_red("The file must have a .json extension")
@@ -269,7 +269,22 @@ async function verifyRevision(
   doVerifyMerkleProof: boolean,
 ) {
   let ok: boolean = true
+
+  // Fast scalar verification if input is a string
+  if (typeof input === "string" || input instanceof String) {
+    const actualVH = "0x" + getHashSum(input)
+    ok = actualVH === verificationHash
+    return [ok, {
+      scalar: true,
+      verification_hash: verificationHash,
+      status: {
+        verification: ok ? VERIFIED_VERIFICATION_STATUS : INVALID_VERIFICATION_STATUS
+      }
+    }]
+  }
+
   let result = {
+    scalar: false,
     verification_hash: verificationHash,
     status: {
       content: false,
@@ -293,7 +308,7 @@ async function verifyRevision(
 
   for (const claim of mandatoryClaims) {
     if (!(claim in input)) {
-      return [false, { error_message: `mandatory field ${claim} is not present`}]
+      return [false, { error_message: `mandatory field ${claim} is not present` }]
     }
   }
 
