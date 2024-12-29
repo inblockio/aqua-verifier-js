@@ -493,31 +493,6 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   return [verificationStatus, details]
 }
 
-async function readFromMediaWikiAPI(server, title) {
-  let response, data
-  response = await fetch(
-    `${server}/rest.php/data_accounting/get_page_last_rev?page_title=${title}`,
-  )
-  data = await response.json()
-  if (!response.ok) {
-    formatter.log_red(`Error: get_page_last_rev: ${data.message}`)
-  }
-  const verificationHash = data.verification_hash
-  response = await fetch(
-    `${server}/rest.php/data_accounting/get_branch/${verificationHash}`,
-  )
-  data = await response.json()
-  const hashes = data.hashes
-  const revisions = {}
-  for (const vh of hashes) {
-    response = await fetch(
-      `${server}/rest.php/data_accounting/get_revision/${vh}`,
-    )
-    revisions[vh] = await response.json()
-  }
-  return { revisions }
-}
-
 async function getServerInfo(server) {
   const url = `${server}/rest.php/data_accounting/get_server_info`
   return fetch(url)
@@ -535,18 +510,6 @@ async function checkAPIVersionCompatibility(server) {
   return ["API endpoint found, but API version can't be retrieved", false, ""]
 }
 
-async function verifyPageFromMwAPI(server, title, verbose, ignoreMerkleProof) {
-  let verifiedContent
-  try {
-    verifiedContent = await readFromMediaWikiAPI(server, title)
-  } catch (e) {
-    // TODO: be more specific than just returning empty revisions
-    // NORECORD
-    verifiedContent = { revisions: {} }
-  }
-  return await verifyPage(verifiedContent, verbose, !ignoreMerkleProof)
-}
-
 export {
   generateVerifyPage,
   verifyPage,
@@ -558,7 +521,6 @@ export {
   getHashSum,
   getFileHashSum,
   // For the VerifyPage Chrome extension and CLI
-  verifyPageFromMwAPI,
   formatter,
   checkAPIVersionCompatibility,
   readExportFile,
