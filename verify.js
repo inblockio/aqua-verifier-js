@@ -14,7 +14,7 @@ function usage() {
   console.log(`Usage:
 verify.js [OPTIONS] <file name>
 or
-verify.js --api [OPTIONS] <page title>
+verify.js [OPTIONS] --api <page title>
 
 Options:
   -v                     Verbose
