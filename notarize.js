@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import * as fs from "fs"
-import { randomBytes, createHash } from 'crypto'
+import { randomBytes } from 'crypto'
 
 import * as ethers from "ethers"
 import minimist from "minimist"

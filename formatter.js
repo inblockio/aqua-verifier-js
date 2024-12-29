@@ -205,7 +205,7 @@ function printRevisionInfo(detail, verbose) {
     "witness": "⌚",
   }[detail.revision_type]
 
-  if (detail.status.type_ok === "Revision condition met") {
+  if (detail.status.type_ok === "valid") {
     console.log(`    ${CHECKMARK}${emoji}${detail.status.type_ok}: ${detail.revision_type}`)
   } else {
     log_red(`    ${CROSSMARK}${emoji}${detail.status.type_ok}: ${detail.revision_type}`)

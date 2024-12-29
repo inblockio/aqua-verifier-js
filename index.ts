@@ -375,7 +375,7 @@ async function verifyRevision(
       typeOk = (linkStatus === VERIFIED_VERIFICATION_STATUS)
       break
   }
-  result.status.type_ok = typeOk ? "Revision condition met" : "Revision condition failed"
+  result.status.type_ok = typeOk ? "valid" : "invalid"
   result.status.verification = ok ? VERIFIED_VERIFICATION_STATUS : INVALID_VERIFICATION_STATUS
 
   return [ok, result]
