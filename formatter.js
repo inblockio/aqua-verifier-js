@@ -207,7 +207,7 @@ function printRevisionInfo(detail, verbose) {
 
   let additionalInfo = ""
   if (detail.revision_type === "signature") {
-    additionalInfo = ` by ${detail.data.signature_wallet_address}`
+    additionalInfo = `, ${detail.data.signature_type}, address ${detail.data.signature_wallet_address}`
   }
   if (detail.status.type_ok === "valid") {
     console.log(`    ${CHECKMARK}${emoji}${detail.status.type_ok}: ${detail.revision_type}${additionalInfo}`)
