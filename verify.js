@@ -42,7 +42,10 @@ const server = argv.server ?? "http://localhost:9352"
 // The main function
 ;(async function () {
   if (!argv.api) {
-    const filename = argv._[0]
+    let filename = argv._[0]
+    // If the file is an AQUA file, we read it directly, otherwise, we read the AQUA
+    // file corresponding with the file
+    filename = filename.endsWith(".aqua.json") ? filename : filename + ".aqua.json"
     const offlineData = await main.readExportFile(filename)
     await main.verifyPage(offlineData, verbose, !ignoreMerkleProof)
     console.log()
