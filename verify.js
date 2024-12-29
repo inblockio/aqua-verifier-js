@@ -14,7 +14,7 @@ function usage() {
   console.log(`Usage:
 verify.js [OPTIONS] <page title>
 or
-verify.js [OPTIONS] --file <offline file.json or file.xml>
+verify.js [OPTIONS] <filename>
 
 Options:
   -v                     Verbose
@@ -26,8 +26,8 @@ If the --server is not specified, it defaults to http://localhost:9352`)
 
 // This should be a commandline argument for specifying the title of the page
 // which should be verified.
-if (argv.api && argv._.length < 1) {
-  formatter.log_red("ERROR: You must specify the page title")
+if (argv._.length < 1) {
+  formatter.log_red("ERROR: You must specify the file name or page title (if --api)")
   usage()
   process.exit(1)
 }
