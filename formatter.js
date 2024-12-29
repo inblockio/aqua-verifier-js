@@ -13,7 +13,6 @@ const BgGreen = "\x1b[42m"
 const WARN = "⚠️"
 const CROSSMARK = "❌"
 const CHECKMARK = "✅"
-const LOCKED_WITH_PEN = "🔏"
 const WATCH = "⌚"
 const BRANCH = "🌿"
 const FILE_GLYPH = "📄"
@@ -31,14 +30,6 @@ function cliYellowfy(content) {
   return FgYellow + content + Reset
 }
 
-function htmlRedify(content) {
-  return '<div style="color:Crimson;">' + content + "</div>"
-}
-
-function htmlDimify(content) {
-  return '<div style="color:Gray;">' + content + "</div>"
-}
-
 function log_red(content) {
   console.log(cliRedify(content))
 }
@@ -53,18 +44,6 @@ function log_dim(content) {
 
 function shortenHash(hash) {
   return hash.slice(0, 6) + "..." + hash.slice(-6)
-}
-
-function clipboardifyHash(hash) {
-  // We use clipboard.js in the frontend side so that when clicked, the hash is
-  // copied to clipboard.
-  const shortened = shortenHash(hash)
-  return `<button class="clipboard-button" data-clipboard-text="${hash}">${shortened}</button>`
-}
-
-function makeHref(content, url) {
-  const newTabString = ' target="_blank"'
-  return `<a href="${url}"${newTabString}>${content}</a>`
 }
 
 function fetchWithToken(url, token) {
@@ -130,8 +109,7 @@ function formatHTTPError(response, message = "") {
 }
 
 function printWitnessInfo(detail) {
-  if (detail.status.witness === "MISSING") {
-    log_dim(`    ${WARN} Not witnessed`)
+  if (detail.revision_type !== "witness") {
     return
   }
   const _space2 = "  "
@@ -189,8 +167,6 @@ function displayVHStatus(status) {
 }
 
 function printRevisionInfo(detail, verbose) {
-  // IMPORTANT! If you update this function, make sure to update
-  // formatRevisionInfo2HTML as well.
   if ("error_message" in detail) {
     log_red(detail.error_message)
     return
@@ -216,227 +192,30 @@ function printRevisionInfo(detail, verbose) {
     return
   }
 
-  if (detail.status.file === "VERIFIED") {
-    // The alternative value of detail.status.file is "MISSING", where we don't
-    // log anything extra in that situation.
-    console.log(
-      `    ${CHECKMARK}${FILE_GLYPH} File content hash matches (${detail.file_hash})`
-    )
-  } else if (detail.status.file === "INVALID") {
-    console.log(`    ${CROSSMARK}${FILE_GLYPH} Invalid file content hash`)
-  }
-
-  printWitnessInfo(detail)
-
   if (verbose) {
     delete detail.data.witness
     console.log("  VERBOSE backend", detail)
   }
 
-  // Signature
-  switch (detail.status.signature) {
-    case "MISSING":
-      log_dim(`    ${WARN} Not signed`)
-      break
-    case "VALID":
-      console.log(
-        `    ${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${detail.data.signature_wallet_address}`
-      )
-      break
-    default:
-      log_red(`    ${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`)
+  const emoji = {
+    "file_hash": "📄",
+    "content": "📄",
+    "link": "🔗",
+    "signature": "🔏",
+    "witness": "⌚",
+  }[detail.revision_type]
+
+  if (detail.status.type_ok === "Revision condition met") {
+    console.log(`    ${CHECKMARK}${emoji}${detail.status.type_ok}: ${detail.revision_type}`)
+  } else {
+    log_red(`    ${CROSSMARK}${emoji}${detail.status.type_ok}: ${detail.revision_type}`)
   }
+
+  printWitnessInfo(detail)
 }
 
 function checkmarkCrossmark(isCorrect) {
   return isCorrect ? CHECKMARK : CROSSMARK
-}
-
-function formatWitnessInfo2HTML(detail) {
-  const _space2 = "&nbsp&nbsp"
-  const _space4 = _space2 + _space2
-
-  let witOut = `${_space2}Witness event detected`
-
-  const wr = detail.witness_result
-  const witnessTxUrl = `${wr.witness_network}/${wr.tx_hash}`
-
-  const txHash = makeHref(shortenHash(wr.tx_hash), witnessTxUrl)
-  witOut += `<br>${_space4}Transaction hash: ${txHash}`
-  const suffix = ` on ${wr.witness_network} via etherscan.io`
-  if (wr.etherscan_result === "true") {
-    witOut += `<br>${_space4}${CHECKMARK}${WATCH}Merkle root has been verified${suffix}`
-  } else if (wr.etherscan_result === "false") {
-    // We don't need <br> because redify already wraps the text inside a div.
-    witOut += htmlRedify(
-      `${_space4}${CROSSMARK}${WATCH}Merkle root does not match${suffix}`
-    )
-  } else {
-    witOut += htmlRedify(
-      `${_space4}${CROSSMARK}${WATCH}${wr.etherscan_error_message}${suffix}`
-    )
-    witOut += htmlRedify(`${_space4}Error code: ${wr.etherscan_result}`)
-    // We want the long hash to be shortened in the HTML output.
-    const formattedMR = clipboardifyHash(
-      wr.merkle_root
-    )
-    witOut += htmlRedify(`${_space4}Verify manually: ${formattedMR}`)
-  }
-
-  if (wr.doVerifyMerkleProof && wr.merkle_proof_status !== "") {
-    switch (wr.merkle_proof_status) {
-      case "DOMAIN_SNAPSHOT":
-        witOut += `<br>${_space4}${CHECKMARK}Is a Domain Snapshot, hence not part of Merkle Proof`
-        break
-      case "VALID":
-        witOut += `<br>${_space4}${CHECKMARK}${BRANCH}Witness Merkle Proof is OK`
-        break
-      default:
-        witOut += `<br>${_space4}${CROSSMARK}${BRANCH}Witness Merkle Proof is corrupted`
-    }
-  }
-  return witOut
-}
-
-function formatRevisionInfo2HTML(server, detail, verbose = false) {
-  // Format the info into HTML nicely. Used in VerifyPage Chrome extension, but
-  // could be used elsewhere too.
-  const _space = "&nbsp"
-  const _space2 = _space + _space
-  const _space4 = _space2 + _space2
-  if ("error_message" in detail) {
-    return _space2 + detail.error_message
-  }
-  if (!("verification_hash" in detail)) {
-    return `${_space2}no verification hash`
-  }
-
-  function makeDetail(detail) {
-    return `<details>${detail}</details>`
-  }
-
-  let out = `${_space2}Elapsed: ${detail.elapsed} s<br>`
-  out += `${_space2}${formatDBTimestamp(detail.data.time_stamp)}<br>`
-  out += `${_space2}Domain ID: ${detail.data.domain_id}<br>`
-  if (detail.status.verification === INVALID_VERIFICATION_STATUS) {
-    out += htmlRedify(
-      `${_space2}${CROSSMARK}` + " verification hash doesn't match"
-    )
-    return [CROSSMARK, makeDetail(out)]
-  }
-  out += `${_space2}${CHECKMARK} Verification hash matches<br>`
-  let isCorrect = true
-
-  let fileSummary = ""
-  if (detail.status.file === "VERIFIED") {
-    // The alternative value of detail.status.file is "MISSING", where we don't
-    // log anything extra in that situation.
-    out += `${_space4}${CHECKMARK}${FILE_GLYPH} File content hash matches (${clipboardifyHash(
-      detail.file_hash
-    )})<br>`
-    fileSummary = FILE_GLYPH
-  } else if (detail.status.file === "INVALID") {
-    out += `${_space4}${CROSSMARK}${FILE_GLYPH} Invalid file content hash<br>`
-    fileSummary = FILE_GLYPH
-    isCorrect = false
-  }
-
-  let witnessSummary = ""
-  if (detail.status.witness !== "MISSING") {
-    const witOut = formatWitnessInfo2HTML(detail)
-    out += witOut + "<br>"
-    witnessSummary = WATCH
-    if (detail.status.witness === "INVALID") {
-      isCorrect = false
-    }
-  } else {
-    out += htmlDimify(`${_space4}${WARN} Not witnessed<br>`)
-  }
-  if (verbose) {
-    delete detail.witness_result
-    out += `${_space2}VERBOSE backend ` + JSON.stringify(detail) + "<br>"
-  }
-
-  if (detail.status.signature === "MISSING") {
-    out += htmlDimify(`${_space4}${WARN} Not signed<br>`)
-    return [
-      checkmarkCrossmark(isCorrect) + fileSummary + witnessSummary,
-      makeDetail(out),
-    ]
-  }
-  if (detail.status.signature === "VALID") {
-    const walletURL = `${server}/index.php/User:${detail.data.signature.wallet_address}`
-    const walletA = `<a href="${walletURL}" target="_blank">${detail.data.signature.wallet_address}</a>`
-    out += `${_space4}${CHECKMARK}${LOCKED_WITH_PEN} Valid signature from wallet: ${walletA}<br>`
-  } else {
-    out += htmlRedify(
-      `${_space4}${CROSSMARK}${LOCKED_WITH_PEN} Invalid signature`
-    )
-    isCorrect = false
-  }
-  return [
-    checkmarkCrossmark(isCorrect) +
-      fileSummary +
-      witnessSummary +
-      LOCKED_WITH_PEN,
-    makeDetail(out),
-  ]
-}
-
-function formatPageInfo2HTML(serverUrl, title, status, details, verbose) {
-  if (status === "NORECORD") {
-    return "No revision record"
-  } else if (status === "N/A" || !details) {
-    return ""
-  } else if (status === ERROR_VERIFICATION_STATUS) {
-    if (details && "error" in details) {
-      return "ERROR: " + details.error
-    }
-    return "ERROR: Unknown cause"
-  }
-  const _space2 = "&nbsp&nbsp"
-  const numRevisions = details.verification_hashes.length
-  let finalOutput = `Number of Verified Page Revisions: ${numRevisions}<br>`
-  let out = ""
-  for (let i = 0; i < details.revision_details.length; i++) {
-    let revisionOut = ""
-    if (i % 2 == 0) {
-      revisionOut += '<div style="background: LightCyan;">'
-    } else {
-      revisionOut += "<div>"
-    }
-
-    if ("error_message" in details.revision_details[i]) {
-      revisionOut += htmlRedify(
-        "ERROR: " + details.revision_details[i].error_message
-      )
-      revisionOut += "</div>"
-      out = revisionOut + out
-      break
-    }
-
-    const revid = details.revision_details[i].data.content.rev_id
-    const revidURL = `${serverUrl}/index.php?title=${title}&oldid=${revid}`
-    const [summary, formattedRevInfo] = formatRevisionInfo2HTML(
-      serverUrl,
-      details.revision_details[i],
-      verbose
-    )
-    revisionOut += `${
-      i + 1
-    }. Verification of <a href='${revidURL}' target="_blank">Revision ID ${revid}<a>.${summary}<br>`
-    revisionOut += formattedRevInfo
-    const count = i + 1
-    revisionOut += `${_space2}Progress: ${count} / ${numRevisions} (${(
-      (100 * count) /
-      numRevisions
-    ).toFixed(1)}%)<br>`
-    revisionOut += "</div>"
-    // We order the output by the most recent revision shown first.
-    out = revisionOut + out
-  }
-  finalOutput += out
-  return finalOutput
 }
 
 async function doPreliminaryAPICall(endpointName, url, token) {
@@ -558,8 +337,6 @@ async function verifyPage(input, verbose, doVerifyMerkleProof, token) {
 }
 export {
   log_red,
-  formatRevisionInfo2HTML,
-  formatPageInfo2HTML,
   getApiURL,
   getRevisionHashes,
   fetchWithToken,

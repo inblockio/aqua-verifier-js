@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import * as fs from "fs"
-import { randomBytes } from 'crypto'
+import { randomBytes, createHash } from 'crypto'
 
 import * as ethers from "ethers"
 import minimist from "minimist"
@@ -19,7 +19,7 @@ import * as witnessTsa from "./witness_tsa.js"
 
 const opts = {
   // This is required so that -v is position independent.
-  boolean: ["v", "witness-eth", "witness-nostr", "witness-tsa", "scalar"],
+  boolean: ["v", "witness-eth", "witness-nostr", "witness-tsa", "scalar", "content"],
   string: ["sign", "link"]
 }
 
@@ -41,6 +41,8 @@ Options:
     Add a link to an AQUA chain as a dependency
   --scalar
     Use this flag to use a more lightweight, "scalar" aquafication
+  --content
+    Use this flag to include the content file instead of just its hash and name
 `)
 }
 
@@ -60,6 +62,7 @@ const enableWitnessNostr = argv["witness-nostr"]
 const enableWitnessTsa = argv["witness-tsa"]
 const enableScalar = argv["scalar"]
 const enableWitness = enableWitnessEth || enableWitnessNostr || enableWitnessTsa
+const enableContent = argv["content"]
 const linkURI = argv["link"]
 const enableLink = !!linkURI
 
@@ -303,6 +306,11 @@ const createNewRevision = async (
       const fileContent = fs.readFileSync(filename, "utf8")
       verificationData["content"] = fileContent
       break
+    case "file_hash":
+      const fileHash = main.getFileHashSum(filename)
+      verificationData["file_hash"] = fileHash
+      verificationData["file_name"] = filename
+      break
     case "signature":
       const sigData = await prepareSignature(previousVerificationHash)
       verificationData = { ...verificationData, ...sigData }
@@ -352,7 +360,8 @@ const createNewRevision = async (
     if (!fs.existsSync(metadataFilename)) {
       metadata = createNewMetaData()
       revisions = metadata.revisions
-      const genesis = await createNewRevision("", timestamp, "content", false)
+      const revisionType = enableContent ? "content" : "file_hash"
+      const genesis = await createNewRevision("", timestamp, revisionType, false)
       revisions[genesis.verification_hash] = genesis.data
       console.log(`Writing new revision ${genesis.verification_hash} to ${filename}.aqua.json`)
       fs.writeFileSync(metadataFilename, JSON.stringify(metadata, null, 2), "utf8")
@@ -377,13 +386,15 @@ const createNewRevision = async (
       process.exit(1)
     }
 
-    let revisionType = "content"
+    let revisionType = "file_hash"
     if (enableSignature) {
       revisionType = "signature"
     } else if (enableWitness) {
       revisionType = "witness"
     } else if (enableLink) {
       revisionType = "link"
+    } else if (enableContent) {
+      revisionType = "content"
     }
 
     const verificationData = await createNewRevision(

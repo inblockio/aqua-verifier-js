@@ -48,6 +48,11 @@ function getHashSum(content: string) {
   return content === "" ? "" : bytes.toHex(sha256.digest(content).bytes)
 }
 
+const getFileHashSum = (filename) => {
+  const content = fs.readFileSync(filename)
+  return getHashSum(content)
+}
+
 async function readExportFile(filename) {
   if (!fs.existsSync(filename)) {
     formatter.log_red(`ERROR: The file ${filename} does not exist.`)
@@ -240,12 +245,13 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
   let ok: boolean = true
   // Ensure mandatory claims are present
   const mandatory = {
-    content: "content",
-    signature: "signature",
-    witness: "witness_merkle_root",
-    link: "link_verification_hash",
+    content: ["content"],
+    file_hash: ["file_hash", "file_name"],
+    link: ["link_verification_hash"],
+    signature: ["signature"],
+    witness: ["witness_merkle_root"],
   }[input.revision_type]
-  const mandatoryClaims = ["previous_verification_hash", "domain_id", "local_timestamp", "nonce", mandatory]
+  const mandatoryClaims = ["previous_verification_hash", "domain_id", "local_timestamp", "nonce", ...mandatory]
 
   for (const claim of mandatoryClaims) {
     if (!(claim in input)) {
@@ -314,14 +320,13 @@ async function verifyRevision(
     scalar: false,
     verification_hash: verificationHash,
     status: {
-      content: false,
-      signature: "MISSING",
-      witness: "MISSING",
       verification: INVALID_VERIFICATION_STATUS,
+      type_ok: false,
     },
     witness_result: {},
     file_hash: "",
     data: input,
+    revision_type: input.revision_type,
   }
 
   if (isScalar) {
@@ -335,15 +340,21 @@ async function verifyRevision(
     }
   }
 
+  let typeOk: boolean, _
   switch (input.revision_type) {
+    case "content":
+      typeOk = true
+      break
+    case "file_hash":
+      const fileHash = getFileHashSum(input.file_name)
+      typeOk = fileHash === input.file_hash
+      break
     case "signature":
       // Verify signature
-      const [sigOk, sigStatus] = await verifySignature(
+      [typeOk, _] = await verifySignature(
         input,
         input.previous_verification_hash,
       )
-      result.status.signature = sigStatus
-      ok = ok && sigOk
       break
     case "witness":
       // Verify witness
@@ -353,17 +364,18 @@ async function verifyRevision(
         doVerifyMerkleProof,
       )
       result.witness_result = witnessResult
-      result.status.witness = witnessStatus
 
       // Specify witness correctness
-      ok = ok && (witnessStatus === "VALID")
+      typeOk = (witnessStatus === "VALID")
       break
     case "link":
       const offlineData = await readExportFile(input.link_uri)
-      const [linkStatus, _] = await verifyPage(offlineData, false, doVerifyMerkleProof)
-      ok = ok && (linkStatus === VERIFIED_VERIFICATION_STATUS)
+      let linkStatus: string
+      [linkStatus, _] = await verifyPage(offlineData, false, doVerifyMerkleProof)
+      typeOk = (linkStatus === VERIFIED_VERIFICATION_STATUS)
       break
   }
+  result.status.type_ok = typeOk ? "Revision condition met" : "Revision condition failed"
   result.status.verification = ok ? VERIFIED_VERIFICATION_STATUS : INVALID_VERIFICATION_STATUS
 
   return [ok, result]
@@ -544,6 +556,7 @@ export {
   // For notarize.js
   dict2Leaves,
   getHashSum,
+  getFileHashSum,
   // For the VerifyPage Chrome extension and CLI
   verifyPageFromMwAPI,
   formatter,
