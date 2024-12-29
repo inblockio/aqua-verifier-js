@@ -220,7 +220,7 @@ const verifySignature = async (data: object, verificationHash: string) => {
     case "did:key":
       signatureOk = await did.signature.verify(data.signature, data.signature_public_key, verificationHash)
       break
-    case "signature:ethereum:eip-191":
+    case "ethereum:eip-191":
       // The padded message is required
       const paddedMessage = `I sign the following page verification_hash: [0x${verificationHash}]`
       try {
