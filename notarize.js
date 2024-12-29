@@ -357,7 +357,8 @@ const createNewRevision = async (
     const metadataFilename = filename + ".aqua.json"
     // const timestamp = getFileTimestamp(filename)
     // We use "now" instead of the modified time of the file
-    const timestamp = new Date().toISOString()
+    const now = new Date().toISOString()
+    const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
     let metadata, revisions
     if (!fs.existsSync(metadataFilename)) {
       metadata = createNewMetaData()
