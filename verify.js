@@ -12,9 +12,9 @@ const argv = minimist(process.argv.slice(2), opts)
 
 function usage() {
   console.log(`Usage:
-verify.js [OPTIONS] <page title>
+verify.js [OPTIONS] <file name>
 or
-verify.js [OPTIONS] <filename>
+verify.js --api [OPTIONS] <page title>
 
 Options:
   -v                     Verbose
