@@ -456,7 +456,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   let count = 0
   if (verificationHashes.length > 0) {
     // Print out the verification hash of the first one.
-    console.log(`${count + 1}. Verification of ${verificationHashes[0]}.`)
+    console.log(`${count + 1}. Verification of Revision ${verificationHashes[0]}`)
   }
   const details = {
     verification_hashes: verificationHashes,
@@ -484,7 +484,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
     )
     if (count < verificationHashes.length) {
       console.log(
-        `${count + 1}. Verification of Revision ${verificationHashes[count]}.`,
+        `${count + 1}. Verification of Revision ${verificationHashes[count]}`,
       )
     }
   }
