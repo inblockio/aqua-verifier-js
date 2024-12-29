@@ -205,14 +205,14 @@ function printRevisionInfo(detail, verbose) {
     "witness": "⌚",
   }[detail.revision_type]
 
-  let additional_info
+  let additionalInfo = ""
   if (detail.revision_type === "signature") {
-    additional_info = ` by ${detail.data.signature_wallet_address}`
+    additionalInfo = ` by ${detail.data.signature_wallet_address}`
   }
   if (detail.status.type_ok === "valid") {
-    console.log(`    ${CHECKMARK}${emoji}${detail.status.type_ok}: ${detail.revision_type}${additional_info}`)
+    console.log(`    ${CHECKMARK}${emoji}${detail.status.type_ok}: ${detail.revision_type}${additionalInfo}`)
   } else {
-    log_red(`    ${CROSSMARK}${emoji}${detail.status.type_ok}: ${detail.revision_type}${additional_info}`)
+    log_red(`    ${CROSSMARK}${emoji}${detail.status.type_ok}: ${detail.revision_type}${additionalInfo}`)
   }
 
   printWitnessInfo(detail)
