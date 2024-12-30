@@ -208,8 +208,8 @@ const prepareWitness = async (verificationHash) => {
   return witness
 }
 
-const createNewMetaData = () => {
-  return { revisions: {} }
+const createNewAquaObject = () => {
+  return { revisions: {}, file_index: {} }
 }
 
 function formatMwTimestamp(ts) {
@@ -282,8 +282,8 @@ const prepareSignature = async (previousVerificationHash) => {
 }
 
 const getLatestVH = (uri) => {
-  const metadata = JSON.parse(fs.readFileSync(uri))
-  const verificationHashes = Object.keys(metadata.revisions)
+  const aquaObject = JSON.parse(fs.readFileSync(uri))
+  const verificationHashes = Object.keys(aquaObject.revisions)
   return verificationHashes[verificationHashes.length - 1]
 }
 
@@ -292,6 +292,7 @@ const createNewRevision = async (
   timestamp,
   revision_type,
   enableScalar,
+  aquaObject,
 ) => {
   let verificationData = {
     previous_verification_hash: previousVerificationHash,
@@ -309,7 +310,7 @@ const createNewRevision = async (
     case "file_hash":
       const fileHash = main.getFileHashSum(filename)
       verificationData["file_hash"] = fileHash
-      verificationData["file_name"] = filename
+      aquaObject.file_index[fileHash] = filename
       break
     case "signature":
       const sigData = await prepareSignature(previousVerificationHash)
@@ -359,28 +360,20 @@ const createNewRevision = async (
     // We use "now" instead of the modified time of the file
     const now = new Date().toISOString()
     const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
-    let metadata, revisions
+    let aquaObject, revisions
     if (!fs.existsSync(metadataFilename)) {
-      metadata = createNewMetaData()
-      revisions = metadata.revisions
+      aquaObject = createNewAquaObject()
+      revisions = aquaObject.revisions
       const revisionType = enableContent ? "content" : "file_hash"
-      const genesis = await createNewRevision("", timestamp, revisionType, false)
+      const genesis = await createNewRevision("", timestamp, revisionType, false, aquaObject)
       revisions[genesis.verification_hash] = genesis.data
       console.log(`Writing new revision ${genesis.verification_hash} to ${filename}.aqua.json`)
-      fs.writeFileSync(metadataFilename, JSON.stringify(metadata, null, 2), "utf8")
+      fs.writeFileSync(metadataFilename, JSON.stringify(aquaObject, null, 2), "utf8")
       return
     }
 
-    // TODO: replace this with checking if the signature already exists in the last revision
-    //if (lastRevision && timestamp == lastRevision.metadata.local_timestamp) {
-    //  console.log(
-    //    `The file ${filename} hasn't been modified since it was last notarized`
-    //  )
-    //  process.exit()
-    //}
-
-    metadata = JSON.parse(fs.readFileSync(metadataFilename))
-    revisions = metadata.revisions
+    aquaObject = JSON.parse(fs.readFileSync(metadataFilename))
+    revisions = aquaObject.revisions
     const verificationHashes = Object.keys(revisions)
     const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
@@ -405,10 +398,11 @@ const createNewRevision = async (
       timestamp,
       revisionType,
       enableScalar,
+      aquaObject,
     )
     const verificationHash = verificationData.verification_hash
     revisions[verificationHash] = verificationData.data
     console.log(`Writing new revision ${verificationHash} to ${filename}.aqua.json`)
 
-    fs.writeFileSync(metadataFilename, JSON.stringify(metadata, null, 2), "utf8")
+    fs.writeFileSync(metadataFilename, JSON.stringify(aquaObject, null, 2), "utf8")
   })()

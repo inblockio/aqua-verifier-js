@@ -246,7 +246,7 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
   // Ensure mandatory claims are present
   const mandatory = {
     content: ["content"],
-    file_hash: ["file_hash", "file_name"],
+    file_hash: ["file_hash"],
     link: ["link_verification_hash"],
     signature: ["signature"],
     witness: ["witness_merkle_root"],
@@ -310,6 +310,7 @@ async function verifyRevision(
   verificationHash: string,
   input,
   doVerifyMerkleProof: boolean,
+  aquaObject,
 ) {
   let ok: boolean = true
 
@@ -346,7 +347,7 @@ async function verifyRevision(
       typeOk = true
       break
     case "file_hash":
-      const fileHash = getFileHashSum(input.file_name)
+      const fileHash = getFileHashSum(aquaObject.file_index[input.file_hash])
       typeOk = fileHash === input.file_hash
       break
     case "signature":
@@ -411,7 +412,7 @@ function calculateStatus(count: number, totalLength: number) {
  */
 async function* generateVerifyPage(
   verificationHashes,
-  input,
+  aquaObject,
   verbose: boolean | undefined,
   doVerifyMerkleProof: boolean,
 ) {
@@ -424,8 +425,9 @@ async function* generateVerifyPage(
 
     const [isCorrect, detail] = await verifyRevision(
       vh,
-      input.revisions[vh],
+      aquaObject.revisions[vh],
       doVerifyMerkleProof,
+      aquaObject,
     )
     elapsed = getElapsedTime(elapsedStart)
     detail.elapsed = elapsed
