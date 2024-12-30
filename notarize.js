@@ -19,7 +19,7 @@ import * as witnessTsa from "./witness_tsa.js"
 
 const opts = {
   // This is required so that -v is position independent.
-  boolean: ["v", "witness-eth", "witness-nostr", "witness-tsa", "scalar", "content"],
+  boolean: ["v", "witness-eth", "witness-nostr", "witness-tsa", "scalar", "content", "remove"],
   string: ["sign", "link"]
 }
 
@@ -43,6 +43,8 @@ Options:
     Use this flag to use a more lightweight, "scalar" aquafication
   --content
     Use this flag to include the content file instead of just its hash and name
+  --remove
+    Remove the most recent revision of the AQUA file
 `)
 }
 
@@ -63,6 +65,7 @@ const enableWitnessTsa = argv["witness-tsa"]
 const enableScalar = argv["scalar"]
 const enableWitness = enableWitnessEth || enableWitnessNostr || enableWitnessTsa
 const enableContent = argv["content"]
+const enableRemoveRevision = argv["remove"]
 const linkURI = argv["link"]
 const enableLink = !!linkURI
 
@@ -376,6 +379,13 @@ const createNewRevision = async (
     revisions = aquaObject.revisions
     const verificationHashes = Object.keys(revisions)
     const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
+
+    if (enableRemoveRevision) {
+      delete aquaObject.revisions[lastRevisionHash]
+      fs.writeFileSync(metadataFilename, JSON.stringify(aquaObject, null, 2), "utf8")
+      console.log(`Most recent revision ${lastRevisionHash} has been removed`)
+      return
+    }
 
     if (enableSignature && enableWitness) {
       formatter.log_red("ERROR: you cannot sign & witness at the same time")
