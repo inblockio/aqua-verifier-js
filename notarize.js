@@ -290,6 +290,10 @@ const getLatestVH = (uri) => {
   return verificationHashes[verificationHashes.length - 1]
 }
 
+const serializeAquaObject = (metadataFilename, aquaObject) => {
+  fs.writeFileSync(metadataFilename, JSON.stringify(aquaObject, null, 2), "utf8")
+}
+
 const createNewRevision = async (
   previousVerificationHash,
   timestamp,
@@ -371,7 +375,7 @@ const createNewRevision = async (
       const genesis = await createNewRevision("", timestamp, revisionType, false, aquaObject)
       revisions[genesis.verification_hash] = genesis.data
       console.log(`Writing new revision ${genesis.verification_hash} to ${filename}.aqua.json`)
-      fs.writeFileSync(metadataFilename, JSON.stringify(aquaObject, null, 2), "utf8")
+      serializeAquaObject(metadataFilename, aquaObject)
       return
     }
 
@@ -382,7 +386,7 @@ const createNewRevision = async (
 
     if (enableRemoveRevision) {
       delete aquaObject.revisions[lastRevisionHash]
-      fs.writeFileSync(metadataFilename, JSON.stringify(aquaObject, null, 2), "utf8")
+      serializeAquaObject(metadataFilename, aquaObject)
       console.log(`Most recent revision ${lastRevisionHash} has been removed`)
       return
     }
@@ -414,5 +418,5 @@ const createNewRevision = async (
     revisions[verificationHash] = verificationData.data
     console.log(`Writing new revision ${verificationHash} to ${filename}.aqua.json`)
 
-    fs.writeFileSync(metadataFilename, JSON.stringify(aquaObject, null, 2), "utf8")
+    serializeAquaObject(metadataFilename, aquaObject)
   })()
