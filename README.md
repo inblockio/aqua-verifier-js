@@ -137,6 +137,4 @@ ie
 This will link `README.md.aqua.json` to `LICENSE` file and it will be written into `LICENSE.aqua.json` file
 
 
-### 5. 
-
 

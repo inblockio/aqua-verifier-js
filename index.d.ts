@@ -1,15 +1,10 @@
 import * as formatter from "./formatter.js";
 declare const apiVersion = "0.3.0";
 declare const ERROR_VERIFICATION_STATUS = "ERROR";
+declare const dict2Leaves: (obj: any) => any[];
 declare function getHashSum(content: string): any;
-declare function calculateSignatureHash(signature: string, publicKey: string): any;
-declare function calculateVerificationHash(
-  contentHash: string,
-  timestamp: string,
-  previousVerificationHash: string,
-  signature_hash: string,
-  witness_hash: string,
-): any;
+declare const getFileHashSum: (filename: any) => any;
+declare function readExportFile(filename: any): Promise<any>;
 /**
  * TODO THIS DOCSTRING IS OUTDATED!
  * Verifies all of the verified revisions of a page.
@@ -26,7 +21,18 @@ declare function calculateVerificationHash(
  * @returns {Generator} Generator for isCorrect boolean and detail object of
  *                      each revisions.
  */
-declare function generateVerifyPage(verificationHashes: any, input: any, verbose: boolean | undefined, doVerifyMerkleProof: boolean): AsyncGenerator<any[], void, unknown>;
-declare function verifyPage(input: any, verbose: any, doVerifyMerkleProof: any): Promise<void>;
-declare function verifyPageFromMwAPI(server: any, title: any, verbose: any, ignoreMerkleProof: any): Promise<void>;
-export { generateVerifyPage, verifyPage, apiVersion, ERROR_VERIFICATION_STATUS, getHashSum, calculateMetadataHash, calculateVerificationHash, calculateSignatureHash, verifyPageFromMwAPI, formatter, };
+declare function generateVerifyPage(verificationHashes: any, aquaObject: any, verbose: boolean | undefined, doVerifyMerkleProof: boolean): AsyncGenerator<(boolean | {
+    scalar: boolean;
+    verification_hash: string;
+    status: {
+        verification: string;
+        type_ok: boolean;
+    };
+    witness_result: {};
+    file_hash: string;
+    data: any;
+    revision_type: any;
+})[], void, unknown>;
+declare function verifyPage(input: any, verbose: any, doVerifyMerkleProof: any): Promise<any[]>;
+declare function checkAPIVersionCompatibility(server: any): Promise<any[]>;
+export { generateVerifyPage, verifyPage, apiVersion, ERROR_VERIFICATION_STATUS, dict2Leaves, getHashSum, getFileHashSum, formatter, checkAPIVersionCompatibility, readExportFile, };
