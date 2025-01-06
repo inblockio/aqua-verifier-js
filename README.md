@@ -1,6 +1,5 @@
 # data-accounting-external-verifier
-JS Client for external verifier.
-Goal: A shared library supports a commandline execution and a chrome-extension which is implementation independent. So the verify.js will support not only the mediawiki integration but potentially other third party integrations of the verification procedure.
+JS Client,  scripts for signing , witnessiing and verifying revisiion <br/>
 
 ## Functional description
 * configure remote domain (by default use localhost as domoain) to query REST API to verify page
