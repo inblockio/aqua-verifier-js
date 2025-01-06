@@ -57,22 +57,6 @@ ie
 ./notarize.js --witness-eth ./LICENSE
 ```
 
-### 1.1. Notarizing / Signing / Witnessing Options
-
-There are some options to facilitate the above actions ie lightweight aquafication ie using `--scalar` flag, and `--content` to include file content when doing aquafication
-
-ie
-
-```bash
-./notarize.js --scalar ./LICENSE
-```
-
-ie
-
-```bash
-./notarize.js --content ./LICENSE
-```
-
 ### 2. Aqua chain verification
 
 To verify an aqua chain use the following command
@@ -137,4 +121,20 @@ ie
 This will link `README.md.aqua.json` to `LICENSE` file and it will be written into `LICENSE.aqua.json` file
 
 
+### 5. Generating a content revision
+
+To generate a `content` revision you run the following command
+
+```bash
+./notarize.js --content ./LICENSE
+```
+
+### 6. Generating a Scalar revision
+
+To generate a `content` revision you run the following command
+
+
+```bash
+./notarize.js --scalar ./LICENSE
+```
 
