@@ -1,0 +1,23 @@
+{
+  "revisions": {
+    "0x12203e88f95c4c41150b1ce0b58c2070c444fb78c56de9aa67b7ea637fd551006e05": {
+      "previous_verification_hash": "",
+      "nonce": "qlKTrKbHFsQPRPuT1oohaO_LVRGiB4vN9vZHHK31EXQ",
+      "domain_id": "5e5a1ec586",
+      "local_timestamp": "20250106122735",
+      "revision_type": "file_hash",
+      "file_hash": "12203972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "leaves": [
+        "12207afb5b5ffe18091a7682dbc03611827f066836399a010826c8ce0ccbfde0014b",
+        "122043b3049c2e05471e192cabf588e654c1292e6e33b8c830b54d0ba8f2eb984a26",
+        "1220caf1750781731018cd3bc2f045e30b3340e2dbe3f7511d8d6adb4eade7f2137c",
+        "12201064be3648e9deeff4d1ecf2aacf5706cccd820e42c8f7585f9f87bc32015d3b",
+        "1220d781acf7ba880ecae581ffd8debcb4f5cb430bc2f237e27a6098471a9f7ffa60",
+        "12207eea9613c6543d280b92a70e7b03451901dbf8ed6993eb2488210961277e0775"
+      ]
+    }
+  },
+  "file_index": {
+    "12203972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986": "LICENSE"
+  }
+}

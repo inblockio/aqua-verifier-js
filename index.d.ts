@@ -1,9 +1,9 @@
 import * as formatter from "./formatter.js";
 declare const apiVersion = "0.3.0";
 declare const ERROR_VERIFICATION_STATUS = "ERROR";
-declare const dict2Leaves: (obj: any) => string[];
-declare function getHashSum(content: string): string;
-declare const getFileHashSum: (filename: any) => string;
+declare const dict2Leaves: (obj: any) => any[];
+declare function getHashSum(content: string): any;
+declare const getFileHashSum: (filename: any) => any;
 declare function readExportFile(filename: any): Promise<any>;
 /**
  * TODO THIS DOCSTRING IS OUTDATED!
