@@ -1,0 +1,23 @@
+{
+  "revisions": {
+    "0x12203b33fb10427d71c7b40fa992e163d42556c3bb3b2cbdf026f251ed2a9c1df274": {
+      "previous_verification_hash": "",
+      "nonce": "jovLZGIZyElLMEsxVTfUbMtcbIpFT_2850AWwNQelpI",
+      "domain_id": "5e5a1ec586",
+      "local_timestamp": "20250109064508",
+      "revision_type": "file_hash",
+      "file_hash": "1220902594fb1c28f02f8aec83ea2aec068d24aa104d12712c9c190f888bd21e8ca1",
+      "leaves": [
+        "12207afb5b5ffe18091a7682dbc03611827f066836399a010826c8ce0ccbfde0014b",
+        "12202c5376b11aac1b4eec4576c0549a676d7789a75b6544e0ae6edd9ea6550b6392",
+        "1220bc600e625aed9706206fb905ee6a15e27e047dee7926e07c1a93a10b74d56d42",
+        "12205a8c4e578ae102d85dfe9861dfd43f14cc08ed027d9657e820297ca5120598b1",
+        "1220d781acf7ba880ecae581ffd8debcb4f5cb430bc2f237e27a6098471a9f7ffa60",
+        "12207eea9613c6543d280b92a70e7b03451901dbf8ed6993eb2488210961277e0775"
+      ]
+    }
+  },
+  "file_index": {
+    "1220902594fb1c28f02f8aec83ea2aec068d24aa104d12712c9c190f888bd21e8ca1": "README.md"
+  }
+}
