@@ -294,6 +294,20 @@ const serializeAquaObject = (metadataFilename, aquaObject) => {
   fs.writeFileSync(metadataFilename, JSON.stringify(aquaObject, null, 2), "utf8")
 }
 
+const getDomainName = () => {
+  let domain = "aqua"
+
+  try {
+    const credentials = readCredentials()
+    let [wallet, walletAddress, publicKey] = getWallet(credentials.mnemonic)
+    domain = publicKey
+  } catch (error) {
+    console.error("Failed to read mnemonic:", error)
+    process.exit(1)
+  }
+  return domain;
+}
+
 const createNewRevision = async (
   previousVerificationHash,
   timestamp,
@@ -304,7 +318,7 @@ const createNewRevision = async (
   let verificationData = {
     previous_verification_hash: previousVerificationHash,
     nonce: prepareNonce(),
-    domain_id: "5e5a1ec586", // TODO
+    domain_id: getDomainName(), // TODO
     local_timestamp: timestamp,
     revision_type,
   }
