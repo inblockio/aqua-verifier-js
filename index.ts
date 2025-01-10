@@ -271,7 +271,14 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
 
   // Verify leaves
   for (const [i, claim] of Object.keys(input).sort().entries()) {
-    const actual = getHashSum(`${claim}:${input[claim]}`)
+    // const actual = getHashSum(`${claim}:${input[claim]}`)
+
+    console.log(` ========== ${claim}:${input[claim]} =======`)
+    const actual = getHashSum(`${claim}:${input[claim]}`);
+    console.log("Actual ==> " + actual);
+    console.log("in chain ==> " + leaves[i]);
+    console.log("\n\n");
+
     const claimOk = leaves[i] === actual
     result.status[claim] = claimOk
     ok = ok && claimOk
@@ -293,6 +300,10 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
   });
 
   const vhOk = tree.getHexRoot() === verificationHash
+
+  console.log("one ... hex root ", tree.getHexRoot());
+  console.log("two ... verificationHash ", verificationHash);
+
   ok = ok && vhOk
   return [ok, result]
 }
