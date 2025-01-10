@@ -16,6 +16,7 @@ import * as witnessNostr from "./witness_nostr.js"
 import * as witnessEth from "./witness_eth.js"
 import * as witnessTsa from "./witness_tsa.js"
 import * as did from "./did.js"
+import crypto from "crypto"
 
 // Currently supported API version.
 const apiVersion = "0.3.0"
@@ -47,6 +48,11 @@ const dict2Leaves = (obj) => {
 function getHashSum(content: string) {
   return content === "" ? "" : bytes.toHex(sha256.digest(content).bytes)
 }
+
+function sha256Hasher(data: string) {
+  return crypto.createHash('sha256').update(data).digest('hex');
+}
+
 
 const getFileHashSum = (filename) => {
   const content = fs.readFileSync(filename)
@@ -275,14 +281,17 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
   // Verify verification hash
   // const tree = new MerkleTree(leaves, getHashSum)
   // Clean up leaves by removing "1220" prefix if present
-  const cleanedLeaves = leaves.map(leaf => 
-    typeof leaf === 'string' && leaf.startsWith('1220') 
+  const cleanedLeaves = leaves.map(leaf =>
+    typeof leaf === 'string' && leaf.startsWith('1220')
       ? leaf.slice(4)  // Remove first 4 characters ("1220")
       : leaf
   )
-  const tree = new MerkleTree(cleanedLeaves, getHashSum)
+  // const tree = new MerkleTree(cleanedLeaves, getHashSum)
 
-  
+  const tree = new MerkleTree(cleanedLeaves, sha256Hasher, {
+    duplicateOdd: false,
+  });
+
   const vhOk = tree.getHexRoot() === verificationHash
   ok = ok && vhOk
   return [ok, result]
@@ -419,6 +428,9 @@ function calculateStatus(count: number, totalLength: number) {
  * @returns {Generator} Generator for isCorrect boolean and detail object of
  *                      each revisions.
  */
+
+let seenRevisions = []
+
 async function* generateVerifyPage(
   verificationHashes,
   aquaObject,
@@ -430,6 +442,18 @@ async function* generateVerifyPage(
   let elapsed
   let totalElapsed = 0.0
   for (const vh of verificationHashes) {
+
+    if (seenRevisions.length > 0) {
+      let exists = seenRevisions.find(item => item === vh);
+      if (exists !== undefined) {
+        console.log("Exiting circular loop")
+        yield (null, {})
+        return
+      }
+    }
+
+    seenRevisions.push(vh)
+
     const elapsedStart = hrtime()
 
     const [isCorrect, detail] = await verifyRevision(
@@ -480,6 +504,12 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
     doVerifyMerkleProof,
   )) {
     const [isCorrect, detail] = value
+
+    if (isCorrect === null) {
+      console.log("Exiting loop 1.")
+      process.exit(1)
+    }
+
     formatter.printRevisionInfo(detail, verbose)
     details.revision_details.unshift(detail)
     if (!isCorrect) {
@@ -530,6 +560,7 @@ export {
   // For notarize.js
   dict2Leaves,
   getHashSum,
+  sha256Hasher,
   getFileHashSum,
   // For the VerifyPage Chrome extension and CLI
   formatter,

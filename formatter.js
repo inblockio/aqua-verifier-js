@@ -330,6 +330,12 @@ async function verifyPage(input, verbose, doVerifyMerkleProof, token) {
     doVerifyMerkleProof
   )) {
     const [isCorrect, detail] = value
+
+    if (isCorrect === null) {
+      console.log("Exiting loop 2.")
+      process.exit(1)
+    }
+
     details.revision_details.push(detail)
     if (!isCorrect) {
       return [INVALID_VERIFICATION_STATUS, details]

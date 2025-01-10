@@ -3,6 +3,7 @@ declare const apiVersion = "0.3.0";
 declare const ERROR_VERIFICATION_STATUS = "ERROR";
 declare const dict2Leaves: (obj: any) => any[];
 declare function getHashSum(content: string): any;
+declare function sha256Hasher(data: string): any;
 declare const getFileHashSum: (filename: any) => any;
 declare function readExportFile(filename: any): Promise<any>;
 /**
@@ -35,4 +36,4 @@ declare function generateVerifyPage(verificationHashes: any, aquaObject: any, ve
 })[], void, unknown>;
 declare function verifyPage(input: any, verbose: any, doVerifyMerkleProof: any): Promise<any[]>;
 declare function checkAPIVersionCompatibility(server: any): Promise<any[]>;
-export { generateVerifyPage, verifyPage, apiVersion, ERROR_VERIFICATION_STATUS, dict2Leaves, getHashSum, getFileHashSum, formatter, checkAPIVersionCompatibility, readExportFile, };
+export { generateVerifyPage, verifyPage, apiVersion, ERROR_VERIFICATION_STATUS, dict2Leaves, getHashSum, sha256Hasher, getFileHashSum, formatter, checkAPIVersionCompatibility, readExportFile, };

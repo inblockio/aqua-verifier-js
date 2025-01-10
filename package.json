@@ -8,6 +8,7 @@
   "dependencies": {
     "browser-process-hrtime": "git+https://git@github.com/rht/browser-process-hrtime.git",
     "buffer": "^6.0.3",
+    "crypto": "^1.0.1",
     "did-resolver": "^4.1.0",
     "dids": "^5.0.3",
     "ethers": "^6.13.3",
