@@ -295,6 +295,8 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
   )
   // const tree = new MerkleTree(cleanedLeaves, getHashSum)
 
+  console.log("Cleaned leaves ", cleanedLeaves)
+  
   const tree = new MerkleTree(cleanedLeaves, sha256Hasher, {
     duplicateOdd: false,
   });
@@ -343,9 +345,12 @@ async function verifyRevision(
 ) {
   let ok: boolean = true
 
-  // We use fast scalar verification if input is a string
-  const isScalar = typeof input === "string" || input instanceof String
-
+  // We use fast scalar verification if input does not have leaves property
+  const isScalar = !input.hasOwnProperty('leaves'); 
+  console.log("input  ", input);
+  console.log("aquaObject ", aquaObject);
+  console.log("is scalar ", isScalar);
+  
   let result = {
     scalar: false,
     verification_hash: verificationHash,
@@ -360,8 +365,9 @@ async function verifyRevision(
   }
 
   if (isScalar) {
+    
     result.scalar = true
-    const actualVH = "0x" + getHashSum(input)
+    const actualVH = "0x" + getHashSum(JSON.stringify(input))
     ok = actualVH === verificationHash
   } else {
     [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)

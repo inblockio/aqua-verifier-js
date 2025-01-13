@@ -291,7 +291,23 @@ const getLatestVH = (uri) => {
 }
 
 const serializeAquaObject = (metadataFilename, aquaObject) => {
-  fs.writeFileSync(metadataFilename, JSON.stringify(aquaObject, null, 2), "utf8")
+  // fs.writeFileSync(metadataFilename, JSON.stringify(aquaObject, null, 2), "utf8")
+  // 
+  try {
+    // First convert the object to a JSON string
+    const jsonString = JSON.stringify(aquaObject, null, 2);
+    
+    // Verify we got a valid string
+    if (typeof jsonString !== 'string') {
+      throw new Error('Failed to serialize object to JSON string');
+    }
+    
+    // Write the string to file
+    fs.writeFileSync(metadataFilename, jsonString, "utf8");
+  } catch (error) {
+    console.error('Error serializing object:', error);
+    throw error; // Re-throw to handle it in the calling code
+  }
 }
 
 const getDomainName = () => {
@@ -357,15 +373,15 @@ const createNewRevision = async (
 
   if (enableScalar) {
     // A simpler version of revision -- scalar
-    const scalarData = JSON.stringify(verificationData)
+    const scalarData = verificationData; //JSON.stringify(verificationData)
     return {
-      verification_hash: "0x" + main.getHashSum(scalarData),
+      verification_hash: "0x" + main.getHashSum(JSON.stringify(verificationData)),
       data: scalarData,
     }
   }
 
   // Merklelize the dictionary
-  const leaves = main.dict2Leaves(verificationData)
+  const leaves = main.dict2Leaves(verificationData);
   // Clean up leaves by removing "1220" prefix if present
   const cleanedLeaves = leaves.map(leaf =>
     typeof leaf === 'string' && leaf.startsWith('1220')
