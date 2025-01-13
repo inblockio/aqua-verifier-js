@@ -272,9 +272,14 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
   // Verify leaves
   for (const [i, claim] of Object.keys(input).sort().entries()) {
     // const actual = getHashSum(`${claim}:${input[claim]}`)
+    let inputClaim = input[claim];
 
-    console.log(` ========== ${claim}:${input[claim]} =======`)
-    const actual = getHashSum(`${claim}:${input[claim]}`);
+    if(claim === 'file_hash'){  
+      inputClaim = inputClaim.startsWith('1220') ? inputClaim.slice(4) : inputClaim
+    }
+
+    console.log(` ========== ${claim}:${inputClaim} =======`)
+    const actual = getHashSum(`${claim}:${inputClaim}`);
     console.log("Actual ==> " + actual);
     console.log("in chain ==> " + leaves[i]);
     console.log("\n\n");
