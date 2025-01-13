@@ -297,11 +297,7 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
     if(claim === 'file_hash'){  
       inputClaim = inputClaim.startsWith('1220') ? inputClaim.slice(4) : inputClaim
     }
-
-    let inputClaim = input[claim]
-    if(claim === 'file_hash'){  
-      inputClaim = inputClaim.startsWith('1220') ? inputClaim.slice(4) : inputClaim
-    }
+    
     console.log(` ========== ${claim}:${inputClaim} =======`)
     const actual = getHashSum(`${claim}:${inputClaim}`);
     console.log("Actual ==> " + actual);
