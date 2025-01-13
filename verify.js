@@ -47,6 +47,7 @@ const server = argv.server ?? "http://localhost:9352"
     // file corresponding with the file
     filename = filename.endsWith(".aqua.json") ? filename : filename + ".aqua.json"
     const offlineData = await main.readExportFile(filename)
+
     await main.verifyPage(offlineData, verbose, !ignoreMerkleProof)
     console.log()
   } else {

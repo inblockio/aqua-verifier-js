@@ -36,9 +36,24 @@ function getElapsedTime(start) {
   return (elapsed[0] + elapsed[1] / 1e9).toFixed(precision)
 }
 
+// const dict2Leaves = (obj) => {
+//   return Object.keys(obj)
+//     .sort()  // MUST be sorted for deterministic Merkle tree
+//     .map((key) => {
+//       if (key === 'file_hash') {
+//         let val = obj[key].startsWith('1220') ? obj[key].slice(4) : obj[key];
+//         console.log("Val: ", val)
+//         return getHashSum(`${key}:${val}`)
+//       }
+//       else {
+//         return getHashSum(`${key}:${obj[key]}`)
+//       }
+//     })
+// }
+
 const dict2Leaves = (obj) => {
-  return Object.keys(obj)
-    .sort()  // MUST be sorted for deterministic Merkle tree
+  let sorted_leaves = Object.keys(obj).sort();
+  return sorted_leaves  // MUST be sorted for deterministic Merkle tree
     .map((key) => getHashSum(`${key}:${obj[key]}`))
 }
 
@@ -46,11 +61,16 @@ const dict2Leaves = (obj) => {
 // and the digest size are from the multihash itself. Instead of assuming that
 // it is SHA2-256
 function getHashSum(content: string) {
-  return content === "" ? "" : bytes.toHex(sha256.digest(content).bytes)
+  // return content === "" ? "" : bytes.toHex(sha256.digest(content).bytes)
+  let hash = bytes.toHex(sha256.digest(content).bytes)
+  // console.log("Hash with type: ", hash, typeof hash)
+  // return content === "" ? "" : bytes.toHex(sha256.digest(content).bytes)
+  return hash
 }
 
 function sha256Hasher(data: string) {
-  return crypto.createHash('sha256').update(data).digest('hex');
+  let result = crypto.createHash('sha256').update(data).digest('hex');
+  return result
 }
 
 
@@ -278,6 +298,10 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
       inputClaim = inputClaim.startsWith('1220') ? inputClaim.slice(4) : inputClaim
     }
 
+    let inputClaim = input[claim]
+    if(claim === 'file_hash'){  
+      inputClaim = inputClaim.startsWith('1220') ? inputClaim.slice(4) : inputClaim
+    }
     console.log(` ========== ${claim}:${inputClaim} =======`)
     const actual = getHashSum(`${claim}:${inputClaim}`);
     console.log("Actual ==> " + actual);
@@ -293,23 +317,26 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
   // Verify verification hash
   // const tree = new MerkleTree(leaves, getHashSum)
   // Clean up leaves by removing "1220" prefix if present
-  const cleanedLeaves = leaves.map(leaf =>
+  const cleanedLeaves = actualLeaves.map(leaf =>
     typeof leaf === 'string' && leaf.startsWith('1220')
       ? leaf.slice(4)  // Remove first 4 characters ("1220")
       : leaf
   )
   // const tree = new MerkleTree(cleanedLeaves, getHashSum)
 
-  console.log("Cleaned leaves ", cleanedLeaves)
-  
   const tree = new MerkleTree(cleanedLeaves, sha256Hasher, {
     duplicateOdd: false,
   });
 
-  const vhOk = tree.getHexRoot() === verificationHash
+  const hexRoot = tree.getHexRoot()
 
-  console.log("one ... hex root ", tree.getHexRoot());
+  const cleanedHexRoot = hexRoot.startsWith('0x') ? hexRoot.replace('0x', '0x1220') : hexRoot
+  
+  console.log("one ... hex root ", cleanedHexRoot);
   console.log("two ... verificationHash ", verificationHash);
+
+  const vhOk = cleanedHexRoot === verificationHash
+
 
   ok = ok && vhOk
   return [ok, result]
@@ -348,6 +375,8 @@ async function verifyRevision(
   doVerifyMerkleProof: boolean,
   aquaObject,
 ) {
+
+  console.log("INPUT: ", input)
   let ok: boolean = true
 
   // We use fast scalar verification if input does not have leaves property
@@ -388,6 +417,7 @@ async function verifyRevision(
       break
     case "file_hash":
       const fileHash = getFileHashSum(aquaObject.file_index[input.file_hash])
+      console.log(`Found file hash: ${fileHash}, Original file hash: ${input.file_hash}`)
       typeOk = fileHash === input.file_hash
       break
     case "signature":
