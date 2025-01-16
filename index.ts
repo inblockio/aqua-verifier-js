@@ -36,26 +36,26 @@ function getElapsedTime(start) {
   return (elapsed[0] + elapsed[1] / 1e9).toFixed(precision)
 }
 
-// const dict2Leaves = (obj) => {
-//   return Object.keys(obj)
-//     .sort()  // MUST be sorted for deterministic Merkle tree
-//     .map((key) => {
-//       if (key === 'file_hash') {
-//         let val = obj[key].startsWith('1220') ? obj[key].slice(4) : obj[key];
-//         console.log("Val: ", val)
-//         return getHashSum(`${key}:${val}`)
-//       }
-//       else {
-//         return getHashSum(`${key}:${obj[key]}`)
-//       }
-//     })
-// }
-
 const dict2Leaves = (obj) => {
-  let sorted_leaves = Object.keys(obj).sort();
-  return sorted_leaves  // MUST be sorted for deterministic Merkle tree
-    .map((key) => getHashSum(`${key}:${obj[key]}`))
+  return Object.keys(obj)
+    .sort()  // MUST be sorted for deterministic Merkle tree
+    .map((key) => {
+      if (key === 'file_hash') {
+        let val = obj[key].startsWith('1220') ? obj[key].slice(4) : obj[key];
+        console.log("Val: ", val)
+        return getHashSum(`${key}:${val}`)
+      }
+      else {
+        return getHashSum(`${key}:${obj[key]}`)
+      }
+    })
 }
+
+// const dict2Leaves = (obj) => {
+//   let sorted_leaves = Object.keys(obj).sort();
+//   return sorted_leaves  // MUST be sorted for deterministic Merkle tree
+//     .map((key) => getHashSum(`${key}:${obj[key]}`))
+// }
 
 // TODO in the Rust version, you should infer what the hashing algorithm
 // and the digest size are from the multihash itself. Instead of assuming that
@@ -328,15 +328,17 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
 
   const hexRoot = tree.getHexRoot()
 
-  const cleanedHexRoot = hexRoot.startsWith('0x') ? hexRoot.replace('0x', '0x1220') : hexRoot
+  const cleanedHexRoot = hexRoot; //hexRoot.startsWith('0x') ? hexRoot.replace('0x', '0x1220') : hexRoot
   
   console.log("one ... hex root ", cleanedHexRoot);
   console.log("two ... verificationHash ", verificationHash);
-
+ 
   const vhOk = cleanedHexRoot === verificationHash
+  console.log("three vhok ",vhOk," ... ok ", ok);
 
 
   ok = ok && vhOk
+  console.log("four... ok ", ok)
   return [ok, result]
 }
 
