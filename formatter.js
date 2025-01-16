@@ -186,7 +186,7 @@ function printRevisionInfo(detail, verbose) {
   console.log(
     `  Timestamp: ${formatDBTimestamp(detail.data.local_timestamp)}`
   )
-  console.log(`  Domain ID: ${detail.data.domain_id}`)
+  // console.log(`  Domain ID: ${detail.data.domain_id}`)
   displayVHStatus(detail.status.verification)
   if (detail.status.verification === INVALID_VERIFICATION_STATUS) {
     return

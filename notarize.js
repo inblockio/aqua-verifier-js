@@ -199,14 +199,14 @@ const prepareWitness = async (verificationHash) => {
     // Publisher / Identifier for publisher
     witness_sender_account_address: publisher,
     // Optional for aggregated witness hashes
-    witness_merkle_proof: [
-      {
-        depth: "0",
-        left_leaf: verificationHash,
-        right_leaf: null,
-        successor: merkle_root,
-      },
-    ],
+    // witness_merkle_proof: [
+    //   {
+    //     depth: "0",
+    //     left_leaf: verificationHash,
+    //     right_leaf: null,
+    //     successor: merkle_root,
+    //   },
+    // ],
   }
   return witness
 }
@@ -334,7 +334,7 @@ const createNewRevision = async (
   let verificationData = {
     previous_verification_hash: previousVerificationHash,
     nonce: prepareNonce(),
-    domain_id: getDomainName(), // TODO
+    //domain_id: getDomainName(), // TODO
     local_timestamp: timestamp,
     revision_type,
   }
@@ -449,6 +449,7 @@ const createNewRevision = async (
       revisionType = "content"
     }
 
+    
     const verificationData = await createNewRevision(
       lastRevisionHash,
       timestamp,

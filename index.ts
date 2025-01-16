@@ -199,14 +199,16 @@ async function verifyWitness(
   if (doVerifyMerkleProof) {
     // Only verify the witness merkle proof when verifyWitness is successful,
     // because this step is expensive.
-    const merkleProofIsOK = verifyMerkleIntegrity(
-      JSON.parse(witnessData.witness_merkle_proof),
-      verification_hash,
-    )
-    result.merkle_proof_status = merkleProofIsOK ? "VALID" : "INVALID"
-    if (!merkleProofIsOK) {
-      return ["INVALID", result]
-    }
+    
+    //todo this will improved
+    // const merkleProofIsOK = verifyMerkleIntegrity(
+    //   JSON.parse(witnessData.witness_merkle_proof),
+    //   verification_hash,
+    // )
+    // result.merkle_proof_status = merkleProofIsOK ? "VALID" : "INVALID"
+    // if (!merkleProofIsOK) {
+    //   return ["INVALID", result]
+    // }
   }
   return [isValid ? "VALID" : "INVALID", result]
 }
@@ -257,7 +259,7 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
     signature: ["signature"],
     witness: ["witness_merkle_root"],
   }[input.revision_type]
-  const mandatoryClaims = ["previous_verification_hash", "domain_id", "local_timestamp", "nonce", ...mandatory]
+  const mandatoryClaims = ["previous_verification_hash",  "local_timestamp", "nonce", ...mandatory]
 
   for (const claim of mandatoryClaims) {
     if (!(claim in input)) {
