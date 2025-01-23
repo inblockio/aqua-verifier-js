@@ -441,16 +441,7 @@ const createNewRevision = async (
     const verificationHashes = Object.keys(revisions)
     const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
-    /*
-    if (enableRemoveRevision) {
-      delete aquaObject.revisions[lastRevisionHash]
-      serializeAquaObject(metadataFilename, aquaObject)
-      console.log(`Most recent revision ${lastRevisionHash} has been removed`)
-      return
-    }
-    */
-
-    if (enableRemoveRevision) {
+      if (enableRemoveRevision) {
       delete aquaObject.revisions[lastRevisionHash]
       console.log(`Most recent revision ${lastRevisionHash} has been removed`)
       if (Object.keys(aquaObject.revisions).length === 0) {
@@ -485,7 +476,6 @@ const createNewRevision = async (
       revisionType = "content"
     }
 
-    
     const verificationData = await createNewRevision(
       lastRevisionHash,
       timestamp,
