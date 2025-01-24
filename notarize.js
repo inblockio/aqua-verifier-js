@@ -470,7 +470,6 @@ const createNewRevision = async (
         }
       } else {
         serializeAquaObject(metadataFilename, aquaObject)
-        console.log(`Most recent revision ${lastRevisionHash} has been removed`)
       }
       return
     }
