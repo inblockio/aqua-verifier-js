@@ -292,16 +292,16 @@ const getLatestVH = (uri) => {
 
 const serializeAquaObject = (metadataFilename, aquaObject) => {
   // fs.writeFileSync(metadataFilename, JSON.stringify(aquaObject, null, 2), "utf8")
-  // 
+  //
   try {
     // First convert the object to a JSON string
     const jsonString = JSON.stringify(aquaObject, null, 2);
-    
+
     // Verify we got a valid string
     if (typeof jsonString !== 'string') {
       throw new Error('Failed to serialize object to JSON string');
     }
-    
+
     // Write the string to file
     fs.writeFileSync(metadataFilename, jsonString, "utf8");
   } catch (error) {
@@ -310,23 +310,9 @@ const serializeAquaObject = (metadataFilename, aquaObject) => {
   }
 }
 
-const getDomainName = () => {
-  let domain = "aqua"
-
-  try {
-    const credentials = readCredentials()
-    let [wallet, walletAddress, publicKey] = getWallet(credentials.mnemonic)
-    domain = publicKey
-  } catch (error) {
-    console.error("Failed to read mnemonic:", error)
-    process.exit(1)
-  }
-  return domain;
-}
-
 const checkFileHashAlreadyNotarized = (fileHash, aquaObject) => {
   // Check if this file hash already exists in any revision
-  const existingRevision = Object.values(aquaObject.revisions).find(revision => 
+  const existingRevision = Object.values(aquaObject.revisions).find(revision =>
     (revision.file_hash && revision.file_hash === fileHash)
   );
 
@@ -359,7 +345,6 @@ const createNewRevision = async (
   let verificationData = {
     previous_verification_hash: previousVerificationHash,
     nonce: prepareNonce(),
-    //domain_id: getDomainName(), // TODO
     local_timestamp: timestamp,
     revision_type,
   }
