@@ -269,8 +269,7 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
   let ok: boolean = true
   // Ensure mandatory claims are present
   const mandatory = {
-    content: ["content"],
-    file_hash: ["file_hash"],
+    file: ["file_hash"],
     link: ["link_verification_hash"],
     signature: ["signature"],
     witness: ["witness_merkle_root"],
@@ -394,11 +393,14 @@ async function verifyRevision(
 
   let typeOk: boolean, _
   switch (input.revision_type) {
-    case "content":
-      typeOk = true
-      break
-    case "file_hash":
-      const fileHash = getFileHashSum(aquaObject.file_index[input.file_hash])
+    case "file":
+      let fileContent: Buffer
+      if (!!input.content) {
+        fileContent = Buffer.from(input.content, "utf8")
+      } else {
+        fileContent = fs.readFileSync(aquaObject.file_index[input.file_hash])
+      }
+      const fileHash = getHashSum(fileContent)
       typeOk = fileHash === input.file_hash
       break
     case "signature":
