@@ -334,36 +334,21 @@ const createNewRevision = async (
   let verificationData = {
     previous_verification_hash: previousVerificationHash,
     nonce: prepareNonce(),
+    //domain_id: getDomainName(), // TODO
     local_timestamp: timestamp,
     revision_type,
   }
 
   switch (revision_type) {
     case "content":
-    case "file_hash": // Both content and file_hash revisions include file hashes
-      const fileHash = revision_type === "content" 
-        ? main.getFileHashSumFromContent(fs.readFileSync(filename, "utf8")) 
-        : main.getFileHashSum(filename);
-
-      // Check if this file hash already exists in any revision
-      const existingRevision = Object.values(aquaObject.revisions).find(revision => 
-        (revision.file_hash && revision.file_hash === fileHash) || 
-        (revision.content && main.getFileHashSumFromContent(revision.content) === fileHash)
-      );
-
-      if (existingRevision) {
-        console.log(`Abort. No new revision created.\n \nA new content revision is obsolete as a content revision with the same file hash (${fileHash}) already exists. `);
-        process.exit(1); // Exit with a non-zero status code to indicate an error
-      }
-
-      if (revision_type === "content") {
-        verificationData["content"] = fs.readFileSync(filename, "utf8");
-      } else {
-        verificationData["file_hash"] = fileHash;
-        aquaObject.file_index[fileHash] = filename;
-      }
-      break;
-
+      const fileContent = fs.readFileSync(filename, "utf8")
+      verificationData["content"] = fileContent
+      break
+    case "file_hash":
+      const fileHash = main.getFileHashSum(filename)
+      verificationData["file_hash"] = fileHash
+      aquaObject.file_index[fileHash] = filename
+      break
     case "signature":
       const sigData = await prepareSignature(previousVerificationHash)
       verificationData = { ...verificationData, ...sigData }
@@ -441,32 +426,11 @@ const createNewRevision = async (
     const verificationHashes = Object.keys(revisions)
     const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
-    /*
     if (enableRemoveRevision) {
       delete aquaObject.revisions[lastRevisionHash]
       serializeAquaObject(metadataFilename, aquaObject)
       console.log(`Most recent revision ${lastRevisionHash} has been removed`)
       return
-    }
-    */
-
-    if (enableRemoveRevision) {
-      delete aquaObject.revisions[lastRevisionHash]
-      console.log(`Most recent revision ${lastRevisionHash} has been removed`)
-      if (Object.keys(aquaObject.revisions).length === 0) {
-        // If there are no revisions left, delete the .aqua.json file
-        try {
-          fs.unlinkSync(metadataFilename)
-          console.log(`${metadataFilename} has been deleted because there are no revisions left.`)
-          // Since we've deleted the file, there's no need to return here; the script should end.
-        } catch (err) {
-          console.error(`Failed to delete ${metadataFilename}:`, err)
-        }
-      } else {
-        serializeAquaObject(metadataFilename, aquaObject)
-        console.log(`Most recent revision ${lastRevisionHash} has been removed`)
-      }
-      return // This return ensures the function stops here, regardless of whether we deleted the file or not.
     }
 
     if (enableSignature && enableWitness) {
