@@ -198,8 +198,7 @@ function printRevisionInfo(detail, verbose) {
   }
 
   const emoji = {
-    "file_hash": "📄",
-    "content": "📄",
+    "file": "📄",
     "link": "🔗",
     "signature": "🔏",
     "witness": "⌚",
