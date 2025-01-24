@@ -108,6 +108,7 @@ const witnessMetamask = async (
   witnessNetwork,
   smartContractAddress,
 ) => {
+  console.log("Witness event tx hash: ", witnessEventVerificationHash)
   const html = witnessMetamaskHtml
     .replace("WITNESSNETWORK", witnessNetwork)
     .replace("SMARTCONTRACTADDRESS", smartContractAddress)

@@ -42,7 +42,6 @@ const dict2Leaves = (obj) => {
     .map((key) => {
       if (key === 'file_hash') {
         let val = obj[key].startsWith('1220') ? obj[key].slice(4) : obj[key];
-        console.log("Val: ", val)
         return getHashSum(`${key}:${val}`)
       }
       else {
@@ -63,7 +62,6 @@ const dict2Leaves = (obj) => {
 function getHashSum(content: string) {
   // return content === "" ? "" : bytes.toHex(sha256.digest(content).bytes)
   let hash = bytes.toHex(sha256.digest(content).bytes)
-  // console.log("Hash with type: ", hash, typeof hash)
   // return content === "" ? "" : bytes.toHex(sha256.digest(content).bytes)
   return hash
 }
@@ -138,8 +136,6 @@ function verifyMerkleIntegrity(merkleBranch, verificationHash: string) {
       calculatedSuccessor = getHashSum(node.left_leaf + node.right_leaf)
     }
     if (calculatedSuccessor !== node.successor) {
-      //console.log("Expected successor", calculatedSuccessor)
-      //console.log("Actual successor", node.successor)
       return false
     }
     prevSuccessor = node.successor
@@ -173,7 +169,7 @@ async function verifyWitness(
   witnessData,
   verification_hash: string,
   doVerifyMerkleProof: boolean,
-) {
+) { 
   const result = {
     tx_hash: witnessData.witness_transaction_hash,
     witness_network: witnessData.witness_network,
@@ -299,12 +295,7 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
     if(claim === 'file_hash'){  
       inputClaim = inputClaim.startsWith('1220') ? inputClaim.slice(4) : inputClaim
     }
-    
-    console.log(` ========== ${claim}:${inputClaim} =======`)
     const actual = getHashSum(`${claim}:${inputClaim}`);
-    console.log("Actual ==> " + actual);
-    console.log("in chain ==> " + leaves[i]);
-    console.log("\n\n");
 
     const claimOk = leaves[i] === actual
     result.status[claim] = claimOk
@@ -329,16 +320,11 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
   const hexRoot = tree.getHexRoot()
 
   const cleanedHexRoot = hexRoot; //hexRoot.startsWith('0x') ? hexRoot.replace('0x', '0x1220') : hexRoot
-  
-  console.log("one ... hex root ", cleanedHexRoot);
-  console.log("two ... verificationHash ", verificationHash);
  
   const vhOk = cleanedHexRoot === verificationHash
-  console.log("three vhok ",vhOk," ... ok ", ok);
 
 
   ok = ok && vhOk
-  console.log("four... ok ", ok)
   return [ok, result]
 }
 
@@ -376,14 +362,10 @@ async function verifyRevision(
   aquaObject,
 ) {
 
-  console.log("INPUT: ", input)
   let ok: boolean = true
 
   // We use fast scalar verification if input does not have leaves property
   const isScalar = !input.hasOwnProperty('leaves'); 
-  console.log("input  ", input);
-  console.log("aquaObject ", aquaObject);
-  console.log("is scalar ", isScalar);
   
   let result = {
     scalar: false,
@@ -417,7 +399,6 @@ async function verifyRevision(
       break
     case "file_hash":
       const fileHash = getFileHashSum(aquaObject.file_index[input.file_hash])
-      console.log(`Found file hash: ${fileHash}, Original file hash: ${input.file_hash}`)
       typeOk = fileHash === input.file_hash
       break
     case "signature":
@@ -498,7 +479,6 @@ async function* generateVerifyPage(
     if (seenRevisions.length > 0) {
       let exists = seenRevisions.find(item => item === vh);
       if (exists !== undefined) {
-        console.log("Exiting circular loop")
         yield (null, {})
         return
       }
