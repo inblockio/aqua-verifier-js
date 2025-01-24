@@ -324,6 +324,31 @@ const getDomainName = () => {
   return domain;
 }
 
+const checkFileHashAlreadyNotarized = (fileHash, aquaObject) => {
+  // Check if this file hash already exists in any revision
+  const existingRevision = Object.values(aquaObject.revisions).find(revision => 
+    (revision.file_hash && revision.file_hash === fileHash)
+  );
+
+  if (existingRevision) {
+    console.log(`Abort. No new revision created.\n \nA new content revision is obsolete as a content revision with the same file hash (${fileHash}) already exists. `);
+    process.exit(1)
+  }
+}
+
+const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType) => {
+  // Update file_index if revision_type is file
+  if (revisionType === "file") {
+    const fileHash = verificationData.data.file_hash
+    if (enableContent) {
+      const verificationHash = verificationData.verification_hash
+      aquaObject.file_index[fileHash] = `/aqua/${verificationHash}/${filename}`
+    } else {
+      aquaObject.file_index[fileHash] = filename
+    }
+  }
+}
+
 const createNewRevision = async (
   previousVerificationHash,
   timestamp,
@@ -340,14 +365,14 @@ const createNewRevision = async (
   }
 
   switch (revision_type) {
-    case "content":
-      const fileContent = fs.readFileSync(filename, "utf8")
-      verificationData["content"] = fileContent
-      break
-    case "file_hash":
-      const fileHash = main.getFileHashSum(filename)
+    case "file":
+      const fileContent = fs.readFileSync(filename)
+      const fileHash = main.getHashSum(fileContent)
+      checkFileHashAlreadyNotarized(fileHash, aquaObject)
+      if (enableContent) {
+        verificationData["content"] = fileContent.toString("utf8")
+      }
       verificationData["file_hash"] = fileHash
-      aquaObject.file_index[fileHash] = filename
       break
     case "signature":
       const sigData = await prepareSignature(previousVerificationHash)
@@ -413,10 +438,11 @@ const createNewRevision = async (
     if (!fs.existsSync(metadataFilename)) {
       aquaObject = createNewAquaObject()
       revisions = aquaObject.revisions
-      const revisionType = enableContent ? "content" : "file_hash"
+      const revisionType = "file"
       const genesis = await createNewRevision("", timestamp, revisionType, false, aquaObject)
       revisions[genesis.verification_hash] = genesis.data
       console.log(`Writing new revision ${genesis.verification_hash} to ${filename}.aqua.json`)
+      maybeUpdateFileIndex(aquaObject, genesis, revisionType)
       serializeAquaObject(metadataFilename, aquaObject)
       return
     }
@@ -427,6 +453,10 @@ const createNewRevision = async (
     const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
     if (enableRemoveRevision) {
+      if (aquaObject.revision_type === "file") {
+        const lastRevision = aquaObject.revisions[lastRevisionHash]
+        delete aquaObject.file_index[lastRevision.file_hash]
+      }
       delete aquaObject.revisions[lastRevisionHash]
       if (Object.keys(aquaObject.revisions).length === 0) {
         // If there are no revisions left, delete the .aqua.json file
@@ -449,18 +479,15 @@ const createNewRevision = async (
       process.exit(1)
     }
 
-    let revisionType = "file_hash"
+    let revisionType = "file"
     if (enableSignature) {
       revisionType = "signature"
     } else if (enableWitness) {
       revisionType = "witness"
     } else if (enableLink) {
       revisionType = "link"
-    } else if (enableContent) {
-      revisionType = "content"
-    }
+    }    
 
-    
     const verificationData = await createNewRevision(
       lastRevisionHash,
       timestamp,
@@ -471,6 +498,6 @@ const createNewRevision = async (
     const verificationHash = verificationData.verification_hash
     revisions[verificationHash] = verificationData.data
     console.log(`Writing new revision ${verificationHash} to ${filename}.aqua.json`)
-
+    maybeUpdateFileIndex(aquaObject, verificationData, revisionType)
     serializeAquaObject(metadataFilename, aquaObject)
   })()
