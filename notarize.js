@@ -458,6 +458,7 @@ const createNewRevision = async (
         delete aquaObject.file_index[lastRevision.file_hash]
       }
       delete aquaObject.revisions[lastRevisionHash]
+      console.log(`Most recent revision ${lastRevisionHash} has been removed`)
       if (Object.keys(aquaObject.revisions).length === 0) {
         // If there are no revisions left, delete the .aqua.json file
         try {
