@@ -428,8 +428,19 @@ const createNewRevision = async (
 
     if (enableRemoveRevision) {
       delete aquaObject.revisions[lastRevisionHash]
-      serializeAquaObject(metadataFilename, aquaObject)
-      console.log(`Most recent revision ${lastRevisionHash} has been removed`)
+      if (Object.keys(aquaObject.revisions).length === 0) {
+        // If there are no revisions left, delete the .aqua.json file
+        try {
+          fs.unlinkSync(metadataFilename)
+          console.log(`${metadataFilename} has been deleted because there are no revisions left.`)
+          // Since we've deleted the file, there's no need to return here; the script should end.
+        } catch (err) {
+          console.error(`Failed to delete ${metadataFilename}:`, err)
+        }
+      } else {
+        serializeAquaObject(metadataFilename, aquaObject)
+        console.log(`Most recent revision ${lastRevisionHash} has been removed`)
+      }
       return
     }
 
