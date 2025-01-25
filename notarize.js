@@ -127,7 +127,7 @@ const sleep = (ms) => {
 
 const doSignMetamask = async (verificationHash) => {
   const messageToBeSigned =
-    "I sign the following page verification_hash: [0x" + verificationHash + "]"
+    "I sign the following page verification_hash: [" + verificationHash + "]"
   const html = signMetamaskHtml.replace("MESSAGETOBESIGNED", messageToBeSigned)
   const requestListener = witnessEth.commonPrepareListener(html)
   const server = http.createServer(requestListener)
