@@ -75,7 +75,7 @@ const serverUrl = `http://${host}:${port}`
 
 const doSign = async (wallet, verificationHash) => {
   const message =
-    "I sign the following page verification_hash: [" + verificationHash + "]"
+    "I sign revision: [" + verificationHash + "]"
   const signature = await wallet.signMessage(message)
   return signature
 }
@@ -127,7 +127,7 @@ const sleep = (ms) => {
 
 const doSignMetamask = async (verificationHash) => {
   const messageToBeSigned =
-    "I sign the following page verification_hash: [" + verificationHash + "]"
+    "I sign revision: [" + verificationHash + "]"
   const html = signMetamaskHtml.replace("MESSAGETOBESIGNED", messageToBeSigned)
   const requestListener = witnessEth.commonPrepareListener(html)
   const server = http.createServer(requestListener)
