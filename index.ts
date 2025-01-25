@@ -270,7 +270,7 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
   // Ensure mandatory claims are present
   const mandatory = {
     file: ["file_hash"],
-    link: ["link_verification_hash"],
+    link: ["link_verification_hashes"],
     signature: ["signature"],
     witness: ["witness_merkle_root"],
   }[input.revision_type]
@@ -423,10 +423,14 @@ async function verifyRevision(
       typeOk = (witnessStatus === "VALID")
       break
     case "link":
-      const offlineData = await readExportFile(input.link_uri)
-      let linkStatus: string
-      [linkStatus, _] = await verifyPage(offlineData, false, doVerifyMerkleProof)
-      typeOk = (linkStatus === VERIFIED_VERIFICATION_STATUS)
+      let linkOk: boolean = true
+      for (const linkUri of input.link_uris) {
+        const offlineData = await readExportFile(linkUri)
+        let linkStatus: string
+        [linkStatus, _] = await verifyPage(offlineData, false, doVerifyMerkleProof)
+        linkOk = linkOk && (linkStatus === VERIFIED_VERIFICATION_STATUS)
+      }
+      typeOk = linkOk
       break
   }
   result.status.type_ok = typeOk ? "valid" : "invalid"

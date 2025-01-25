@@ -66,8 +66,8 @@ const enableScalar = argv["scalar"]
 const enableWitness = enableWitnessEth || enableWitnessNostr || enableWitnessTsa
 const enableContent = argv["content"]
 const enableRemoveRevision = argv["rm"]
-const linkURI = argv["link"]
-const enableLink = !!linkURI
+const linkURIs = argv["link"]
+const enableLink = !!linkURIs
 
 const port = 8420
 const host = "localhost"
@@ -371,12 +371,13 @@ const createNewRevision = async (
       )
       break
     case "link":
-      const linkVH = getLatestVH(linkURI)
+      const linkURIsArray = linkURIs.split(",")
+      const linkVHs = linkURIsArray.map(getLatestVH)
       const linkData = {
         "link_type": "aqua",
         "link_require_indepth_verification": true,
-        "link_verification_hash": linkVH,
-        "link_uri": linkURI,
+        "link_verification_hashes": linkVHs,
+        "link_uris": linkURIsArray,
       }
       verificationData = { ...verificationData, ...linkData }
   }
