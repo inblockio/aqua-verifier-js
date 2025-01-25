@@ -19,7 +19,7 @@ import * as witnessTsa from "./witness_tsa.js"
 
 const opts = {
   // This is required so that -v is position independent.
-  boolean: ["v", "witness-eth", "witness-nostr", "witness-tsa", "scalar", "content", "rm"],
+  boolean: ["v", "scalar", "content", "rm"],
   string: ["sign", "link", "witness"]
 }
 

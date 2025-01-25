@@ -52,12 +52,6 @@ function getHashSum(content: string) {
   return hash
 }
 
-function sha256Hasher(data: string) {
-  let result = crypto.createHash('sha256').update(data).digest('hex');
-  return result
-}
-
-
 const getFileHashSum = (filename) => {
   const content = fs.readFileSync(filename)
   return getHashSum(content)
@@ -564,7 +558,6 @@ export {
   // For notarize.js
   dict2Leaves,
   getHashSum,
-  sha256Hasher,
   getFileHashSum,
   // For the VerifyPage Chrome extension and CLI
   formatter,
