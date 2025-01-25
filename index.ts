@@ -246,7 +246,7 @@ const verifySignature = async (data: object, verificationHash: string) => {
       break
     case "ethereum:eip-191":
       // The padded message is required
-      const paddedMessage = `I sign revision: [${verificationHash}]`
+      const paddedMessage = `I sign this revision: [${verificationHash}]`
       try {
         const recoveredAddress = ethers.recoverAddress(
           ethers.hashMessage(paddedMessage),
