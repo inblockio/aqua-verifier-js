@@ -5,8 +5,6 @@ import { Buffer } from "buffer"
 import * as fs from "fs"
 import hrtime from "browser-process-hrtime"
 import { MerkleTree } from "merkletreejs"
-import { sha256 } from "multihashes-sync/sha2"
-import { bytes } from 'multiformats'
 
 // utilities for verifying signatures
 import * as ethers from "ethers"
@@ -46,10 +44,7 @@ const dict2Leaves = (obj) => {
 // and the digest size are from the multihash itself. Instead of assuming that
 // it is SHA2-256
 function getHashSum(content: string) {
-  // return content === "" ? "" : bytes.toHex(sha256.digest(content).bytes)
-  let hash = bytes.toHex(sha256.digest(content).bytes)
-  // return content === "" ? "" : bytes.toHex(sha256.digest(content).bytes)
-  return hash
+  return crypto.createHash("sha256").update(content).digest('hex')
 }
 
 const getFileHashSum = (filename) => {

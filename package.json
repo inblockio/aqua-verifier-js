@@ -16,8 +16,7 @@
     "key-did-provider-ed25519": "^4.0.2",
     "key-did-resolver": "^4.0.0",
     "merkletreejs": "^0.4.0",
-    "minimist": "^1.2.8",
-    "multihashes-sync": "^2.0.0"
+    "minimist": "^1.2.8"
   },
   "scripts": {
     "build": "tsc",
