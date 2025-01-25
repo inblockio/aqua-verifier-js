@@ -373,9 +373,9 @@ const createNewRevision = async (
     case "witness":
       const witness = await prepareWitness(previousVerificationHash)
       verificationData = { ...verificationData, ...witness }
-      verificationData.witness_merkle_proof = JSON.stringify(
-        verificationData.witness_merkle_proof,
-      )
+      // verificationData.witness_merkle_proof = JSON.stringify(
+      //   verificationData.witness_merkle_proof,
+      // )
       break
     case "link":
       const linkURIsArray = linkURIs.split(",")
