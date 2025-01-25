@@ -20,7 +20,7 @@ import * as witnessTsa from "./witness_tsa.js"
 const opts = {
   // This is required so that -v is position independent.
   boolean: ["v", "witness-eth", "witness-nostr", "witness-tsa", "scalar", "content", "rm"],
-  string: ["sign", "link"]
+  string: ["sign", "link", "witness"]
 }
 
 const usage = () => {
@@ -34,9 +34,11 @@ Options:
     1. the Ethereum seed phrase provided in mnemonic.txt
     2. MetaMask
     3. DID key
-  --witness-eth      Witness to Ethereum on-chain with MetaMask
-  --witness-nostr    Witness to Nostr network
-  --witness-tsa      Witness to TSA DigiCert
+  --witness [eth|nostr|tsa]
+    Witness with either of:
+    1. Ethereum on-chain with MetaMask
+    2. Nostr network
+    3. TSA DigiCert
   --link <filename.aqua.json>
     Add a link to an AQUA chain as a dependency
   --scalar
@@ -59,11 +61,9 @@ if (!filename) {
 
 const signMethod = argv["sign"]
 const enableSignature = !!signMethod
-const enableWitnessEth = argv["witness-eth"]
-const enableWitnessNostr = argv["witness-nostr"]
-const enableWitnessTsa = argv["witness-tsa"]
 const enableScalar = argv["scalar"]
-const enableWitness = enableWitnessEth || enableWitnessNostr || enableWitnessTsa
+const witnessMethod = argv["witness"]
+const enableWitness = !!witnessMethod
 const enableContent = argv["content"]
 const enableRemoveRevision = argv["rm"]
 const linkURIs = argv["link"]
@@ -166,26 +166,33 @@ const prepareWitness = async (verificationHash) => {
     transactionHash,
     publisher,
     witnessTimestamp
-  if (enableWitnessNostr) {
-    // publisher is a public key used for nostr
-    // transaction hash is an event identifier for nostr
-    ;[transactionHash, publisher, witnessTimestamp] = await witnessNostr.witness(merkle_root)
-    witness_network = "nostr"
-    smart_contract_address = "N/A"
-  } else if (enableWitnessTsa) {
-    const tsaUrl = "http://timestamp.digicert.com" // DigiCert's TSA URL
-      ;[transactionHash, publisher, witnessTimestamp] = await witnessTsa.witness(merkle_root, tsaUrl)
-    witness_network = "TSA_RFC3161"
-    smart_contract_address = tsaUrl
-  } else {
-    witness_network = "sepolia"
-    smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
-      ;[transactionHash, publisher] = await witnessEth.witnessMetamask(
-        merkle_root,
-        witness_network,
-        smart_contract_address,
-      )
-    witnessTimestamp = Date.now() / 1000
+  switch (witnessMethod) {
+    case "nostr":
+      // publisher is a public key used for nostr
+      // transaction hash is an event identifier for nostr
+      ;[transactionHash, publisher, witnessTimestamp] = await witnessNostr.witness(merkle_root)
+      witness_network = "nostr"
+      smart_contract_address = "N/A"
+      break
+    case "tsa":
+      const tsaUrl = "http://timestamp.digicert.com" // DigiCert's TSA URL
+        ;[transactionHash, publisher, witnessTimestamp] = await witnessTsa.witness(merkle_root, tsaUrl)
+      witness_network = "TSA_RFC3161"
+      smart_contract_address = tsaUrl
+      break
+    case "eth":
+      witness_network = "sepolia"
+      smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
+        ;[transactionHash, publisher] = await witnessEth.witnessMetamask(
+          merkle_root,
+          witness_network,
+          smart_contract_address,
+        )
+      witnessTimestamp = Math.floor(Date.now() / 1000)
+      break
+    default:
+      console.error(`Unknown witness method: ${witnessMethod}`)
+      process.exit(1)
   }
   const witness = {
     witness_merkle_root: merkle_root,
