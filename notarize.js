@@ -425,6 +425,11 @@ const createNewRevision = async (
       revisions = aquaObject.revisions
       const revisionType = "file"
       const genesis = await createNewRevision("", timestamp, revisionType, false, aquaObject)
+      if (enableRemoveRevision) {
+        // Don't serialize if you do --rm during genesis creation
+        console.log("There is nothing delete.")
+        return
+      }
       revisions[genesis.verification_hash] = genesis.data
       console.log(`Writing new revision ${genesis.verification_hash} to ${filename}.aqua.json`)
       maybeUpdateFileIndex(aquaObject, genesis, revisionType)
@@ -438,8 +443,8 @@ const createNewRevision = async (
     const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
     if (enableRemoveRevision) {
-      if (aquaObject.revision_type === "file") {
-        const lastRevision = aquaObject.revisions[lastRevisionHash]
+      const lastRevision = aquaObject.revisions[lastRevisionHash]
+      if (lastRevision.revision_type === "file") {
         delete aquaObject.file_index[lastRevision.file_hash]
       }
       delete aquaObject.revisions[lastRevisionHash]
