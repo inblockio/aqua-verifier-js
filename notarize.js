@@ -75,7 +75,7 @@ const serverUrl = `http://${host}:${port}`
 
 const doSign = async (wallet, verificationHash) => {
   const message =
-    "I sign the following page verification_hash: [0x" + verificationHash + "]"
+    "I sign the following page verification_hash: [" + verificationHash + "]"
   const signature = await wallet.signMessage(message)
   return signature
 }
