@@ -39,22 +39,8 @@ function getElapsedTime(start) {
 const dict2Leaves = (obj) => {
   return Object.keys(obj)
     .sort()  // MUST be sorted for deterministic Merkle tree
-    .map((key) => {
-      if (key === 'file_hash') {
-        let val = obj[key].startsWith('1220') ? obj[key].slice(4) : obj[key];
-        return getHashSum(`${key}:${val}`)
-      }
-      else {
-        return getHashSum(`${key}:${obj[key]}`)
-      }
-    })
+    .map((key) => getHashSum(`${key}:${obj[key]}`))
 }
-
-// const dict2Leaves = (obj) => {
-//   let sorted_leaves = Object.keys(obj).sort();
-//   return sorted_leaves  // MUST be sorted for deterministic Merkle tree
-//     .map((key) => getHashSum(`${key}:${obj[key]}`))
-// }
 
 // TODO in the Rust version, you should infer what the hashing algorithm
 // and the digest size are from the multihash itself. Instead of assuming that
@@ -288,14 +274,7 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
 
   // Verify leaves
   for (const [i, claim] of Object.keys(input).sort().entries()) {
-    // const actual = getHashSum(`${claim}:${input[claim]}`)
-    let inputClaim = input[claim];
-
-    if(claim === 'file_hash'){  
-      inputClaim = inputClaim.startsWith('1220') ? inputClaim.slice(4) : inputClaim
-    }
-    const actual = getHashSum(`${claim}:${inputClaim}`);
-
+    const actual = getHashSum(`${claim}:${input[claim]}`)
     const claimOk = leaves[i] === actual
     result.status[claim] = claimOk
     ok = ok && claimOk
@@ -303,24 +282,11 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
   }
 
   // Verify verification hash
-  // const tree = new MerkleTree(leaves, getHashSum)
-  // Clean up leaves by removing "1220" prefix if present
-  const cleanedLeaves = actualLeaves.map(leaf =>
-    typeof leaf === 'string' && leaf.startsWith('1220')
-      ? leaf.slice(4)  // Remove first 4 characters ("1220")
-      : leaf
-  )
-  // const tree = new MerkleTree(cleanedLeaves, getHashSum)
-
-  const tree = new MerkleTree(cleanedLeaves, sha256Hasher, {
+  const tree = new MerkleTree(leaves, getHashSum, {
     duplicateOdd: false,
-  });
-
+  })
   const hexRoot = tree.getHexRoot()
-
-  const cleanedHexRoot = hexRoot; //hexRoot.startsWith('0x') ? hexRoot.replace('0x', '0x1220') : hexRoot
- 
-  const vhOk = cleanedHexRoot === verificationHash
+  const vhOk = hexRoot === verificationHash
 
 
   ok = ok && vhOk

@@ -400,19 +400,10 @@ const createNewRevision = async (
 
   // Merklelize the dictionary
   const leaves = main.dict2Leaves(verificationData);
-  // Clean up leaves by removing "1220" prefix if present
-  const cleanedLeaves = leaves.map(leaf =>
-    typeof leaf === 'string' && leaf.startsWith('1220')
-      ? leaf.slice(4)  // Remove first 4 characters ("1220")
-      : leaf
-  )
-  // const tree = new MerkleTree(cleanedLeaves, main.getHashSum)
-
-  const tree = new MerkleTree(cleanedLeaves, main.sha256Hasher, {
+  const tree = new MerkleTree(leaves, main.getHashSum, {
     duplicateOdd: false,
   });
 
-  // const tree = new MerkleTree(leaves, main.getHashSum)
   verificationData.leaves = leaves
   return {
     verification_hash: tree.getHexRoot(),
