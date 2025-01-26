@@ -70,6 +70,11 @@ async function readExportFile(filename) {
   return offlineData
 }
 
+const getUnixPathFromAquaPath = (aquaPath: string) => {
+  const arr = aquaPath.split("/")
+  return arr.slice(3).join("/")
+}
+
 /**
  * Verifies the integrity of the merkle branch.
  * Steps:
@@ -379,11 +384,15 @@ async function verifyRevision(
       break
     case "link":
       let linkOk: boolean = true
-      for (const linkUri of input.link_uris) {
-        const offlineData = await readExportFile(linkUri)
+      for (const [idx, fileHash] of input.link_file_hashes.entries()) {
+        const fileUri = getUnixPathFromAquaPath(aquaObject.file_index[fileHash])
+        const linkAquaObject = await readExportFile(fileUri)
         let linkStatus: string
-        [linkStatus, _] = await verifyPage(offlineData, false, doVerifyMerkleProof)
-        linkOk = linkOk && (linkStatus === VERIFIED_VERIFICATION_STATUS)
+        [linkStatus, _] = await verifyPage(linkAquaObject, false, doVerifyMerkleProof)
+        const expectedVH = input.link_verification_hashes[idx]
+        const linkVerificationHashes = Object.keys(linkAquaObject.revisions)
+        const actualVH = linkVerificationHashes[linkVerificationHashes.length - 1]
+        linkOk = linkOk && (linkStatus === VERIFIED_VERIFICATION_STATUS) && (expectedVH == actualVH)
       }
       typeOk = linkOk
       break

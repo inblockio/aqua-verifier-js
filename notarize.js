@@ -330,15 +330,23 @@ const checkFileHashAlreadyNotarized = (fileHash, aquaObject) => {
 }
 
 const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType) => {
-  // Update file_index if revision_type is file
-  if (revisionType === "file") {
-    const fileHash = verificationData.data.file_hash
-    if (enableContent) {
-      const verificationHash = verificationData.verification_hash
-      aquaObject.file_index[fileHash] = `/aqua/${verificationHash}/${filename}`
-    } else {
-      aquaObject.file_index[fileHash] = filename
-    }
+  switch (revisionType) {
+    case "file":
+      const fileHash = verificationData.data.file_hash
+      if (enableContent) {
+        const verificationHash = verificationData.verification_hash
+        aquaObject.file_index[fileHash] = `/aqua/${verificationHash}/${filename}`
+      } else {
+        aquaObject.file_index[fileHash] = filename
+      }
+      break
+    case "link":
+      const linkURIsArray = linkURIs.split(",")
+      const linkVHs = verificationData.data.link_verification_hashes
+      const linkFileHashes = verificationData.data.link_file_hashes
+      for (const [idx, fileHash] of linkFileHashes.entries()) {
+        aquaObject.file_index[fileHash] = `/aqua/${linkVHs[idx]}/${linkURIsArray[idx]}`
+      }
   }
 }
 
@@ -384,7 +392,7 @@ const createNewRevision = async (
         "link_type": "aqua",
         "link_require_indepth_verification": true,
         "link_verification_hashes": linkVHs,
-        "link_uris": linkURIsArray,
+        "link_file_hashes": linkURIsArray.map(main.getFileHashSum),
       }
       verificationData = { ...verificationData, ...linkData }
   }
@@ -443,9 +451,16 @@ const createNewRevision = async (
 
     if (enableRemoveRevision) {
       const lastRevision = aquaObject.revisions[lastRevisionHash]
-      if (lastRevision.revision_type === "file") {
-        delete aquaObject.file_index[lastRevision.file_hash]
+      switch (lastRevision.revision_type) {
+        case "file":
+          delete aquaObject.file_index[lastRevision.file_hash]
+          break
+        case "link":
+          for (const fileHash of lastRevision.link_file_hashes) {
+          delete aquaObject.file_index[fileHash]
+        }
       }
+
       delete aquaObject.revisions[lastRevisionHash]
       console.log(`Most recent revision ${lastRevisionHash} has been removed`)
       if (Object.keys(aquaObject.revisions).length === 0) {
@@ -475,7 +490,7 @@ const createNewRevision = async (
       revisionType = "witness"
     } else if (enableLink) {
       revisionType = "link"
-    }    
+    }
 
     const verificationData = await createNewRevision(
       lastRevisionHash,
