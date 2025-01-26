@@ -350,6 +350,34 @@ const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType) => {
   }
 }
 
+const removeRevision = (aquaObject, lastRevisionHash, metadataFilename) => {
+  const lastRevision = aquaObject.revisions[lastRevisionHash]
+  switch (lastRevision.revision_type) {
+    case "file":
+      delete aquaObject.file_index[lastRevision.file_hash]
+      break
+    case "link":
+      for (const fileHash of lastRevision.link_file_hashes) {
+      delete aquaObject.file_index[fileHash]
+    }
+  }
+
+  delete aquaObject.revisions[lastRevisionHash]
+  console.log(`Most recent revision ${lastRevisionHash} has been removed`)
+  if (Object.keys(aquaObject.revisions).length === 0) {
+    // If there are no revisions left, delete the .aqua.json file
+    try {
+      fs.unlinkSync(metadataFilename)
+      console.log(`${metadataFilename} has been deleted because there are no revisions left.`)
+      // Since we've deleted the file, there's no need to return here; the script should end.
+    } catch (err) {
+      console.error(`Failed to delete ${metadataFilename}:`, err)
+    }
+  } else {
+    serializeAquaObject(metadataFilename, aquaObject)
+  }
+}
+
 const createNewRevision = async (
   previousVerificationHash,
   timestamp,
@@ -450,31 +478,7 @@ const createNewRevision = async (
     const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
     if (enableRemoveRevision) {
-      const lastRevision = aquaObject.revisions[lastRevisionHash]
-      switch (lastRevision.revision_type) {
-        case "file":
-          delete aquaObject.file_index[lastRevision.file_hash]
-          break
-        case "link":
-          for (const fileHash of lastRevision.link_file_hashes) {
-          delete aquaObject.file_index[fileHash]
-        }
-      }
-
-      delete aquaObject.revisions[lastRevisionHash]
-      console.log(`Most recent revision ${lastRevisionHash} has been removed`)
-      if (Object.keys(aquaObject.revisions).length === 0) {
-        // If there are no revisions left, delete the .aqua.json file
-        try {
-          fs.unlinkSync(metadataFilename)
-          console.log(`${metadataFilename} has been deleted because there are no revisions left.`)
-          // Since we've deleted the file, there's no need to return here; the script should end.
-        } catch (err) {
-          console.error(`Failed to delete ${metadataFilename}:`, err)
-        }
-      } else {
-        serializeAquaObject(metadataFilename, aquaObject)
-      }
+      removeRevision(aquaObject, lastRevisionHash, metadataFilename)
       return
     }
 
