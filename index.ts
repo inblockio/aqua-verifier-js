@@ -244,12 +244,12 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
   let ok: boolean = true
   // Ensure mandatory claims are present
   const mandatory = {
-    file: ["file_hash"],
+    file: ["file_hash", "file_nonce"],
     link: ["link_verification_hashes"],
     signature: ["signature"],
     witness: ["witness_merkle_root"],
   }[input.revision_type]
-  const mandatoryClaims = ["previous_verification_hash",  "local_timestamp", "nonce", ...mandatory]
+  const mandatoryClaims = ["previous_verification_hash",  "local_timestamp", ...mandatory]
 
   for (const claim of mandatoryClaims) {
     if (!(claim in input)) {

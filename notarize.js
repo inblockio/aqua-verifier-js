@@ -351,7 +351,6 @@ const createNewRevision = async (
 ) => {
   let verificationData = {
     previous_verification_hash: previousVerificationHash,
-    nonce: prepareNonce(),
     local_timestamp: timestamp,
     revision_type,
   }
@@ -365,6 +364,7 @@ const createNewRevision = async (
         verificationData["content"] = fileContent.toString("utf8")
       }
       verificationData["file_hash"] = fileHash
+      verificationData["file_nonce"] = prepareNonce()
       break
     case "signature":
       const sigData = await prepareSignature(previousVerificationHash)
