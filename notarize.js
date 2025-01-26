@@ -249,7 +249,7 @@ const getWallet = (mnemonic) => {
 
 const readCredentials = () => {
   return JSON.parse(
-    fs.readFileSync("credentials.json", "utf8"),
+    fs.readFileSync(`${import.meta.dirname}/credentials.json`, "utf8"),
   )
 }
 
@@ -358,8 +358,8 @@ const removeRevision = (aquaObject, lastRevisionHash, metadataFilename) => {
       break
     case "link":
       for (const fileHash of lastRevision.link_file_hashes) {
-      delete aquaObject.file_index[fileHash]
-    }
+        delete aquaObject.file_index[fileHash]
+      }
   }
 
   delete aquaObject.revisions[lastRevisionHash]
@@ -448,7 +448,7 @@ const createNewRevision = async (
 }
 
   // The main function
-  ; (async function () {
+  ; (async function() {
     const metadataFilename = filename + ".aqua.json"
     // const timestamp = getFileTimestamp(filename)
     // We use "now" instead of the modified time of the file

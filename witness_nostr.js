@@ -10,7 +10,7 @@ import WebSocket from 'ws'
 
 useWebSocketImplementation(WebSocket)
 
-const credentials = JSON.parse(fs.readFileSync("credentials.json", "utf8"))
+const credentials = JSON.parse(fs.readFileSync(`${import.meta.dirname}/credentials.json`, "utf8"))
 const skHex = credentials.nostr_sk
 const relayUrl = 'wss://relay.damus.io'
 
