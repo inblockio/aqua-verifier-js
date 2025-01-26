@@ -297,8 +297,8 @@ const getLatestVH = (uri) => {
   return verificationHashes[verificationHashes.length - 1]
 }
 
-const serializeAquaObject = (metadataFilename, aquaObject) => {
-  // fs.writeFileSync(metadataFilename, JSON.stringify(aquaObject, null, 2), "utf8")
+const serializeAquaObject = (aquaFilename, aquaObject) => {
+  // fs.writeFileSync(aquaFilename, JSON.stringify(aquaObject, null, 2), "utf8")
   //
   try {
     // First convert the object to a JSON string
@@ -310,7 +310,7 @@ const serializeAquaObject = (metadataFilename, aquaObject) => {
     }
 
     // Write the string to file
-    fs.writeFileSync(metadataFilename, jsonString, "utf8");
+    fs.writeFileSync(aquaFilename, jsonString, "utf8");
   } catch (error) {
     console.error('Error serializing object:', error);
     throw error; // Re-throw to handle it in the calling code
@@ -350,7 +350,7 @@ const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType) => {
   }
 }
 
-const removeRevision = (aquaObject, lastRevisionHash, metadataFilename) => {
+const removeRevision = (aquaObject, lastRevisionHash, aquaFilename) => {
   const lastRevision = aquaObject.revisions[lastRevisionHash]
   switch (lastRevision.revision_type) {
     case "file":
@@ -367,14 +367,14 @@ const removeRevision = (aquaObject, lastRevisionHash, metadataFilename) => {
   if (Object.keys(aquaObject.revisions).length === 0) {
     // If there are no revisions left, delete the .aqua.json file
     try {
-      fs.unlinkSync(metadataFilename)
-      console.log(`${metadataFilename} has been deleted because there are no revisions left.`)
+      fs.unlinkSync(aquaFilename)
+      console.log(`${aquaFilename} has been deleted because there are no revisions left.`)
       // Since we've deleted the file, there's no need to return here; the script should end.
     } catch (err) {
-      console.error(`Failed to delete ${metadataFilename}:`, err)
+      console.error(`Failed to delete ${aquaFilename}:`, err)
     }
   } else {
-    serializeAquaObject(metadataFilename, aquaObject)
+    serializeAquaObject(aquaFilename, aquaObject)
   }
 }
 
@@ -449,13 +449,13 @@ const createNewRevision = async (
 
   // The main function
   ; (async function() {
-    const metadataFilename = filename + ".aqua.json"
+    const aquaFilename = filename + ".aqua.json"
     // const timestamp = getFileTimestamp(filename)
     // We use "now" instead of the modified time of the file
     const now = new Date().toISOString()
     const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
     let aquaObject, revisions
-    if (!fs.existsSync(metadataFilename)) {
+    if (!fs.existsSync(aquaFilename)) {
       aquaObject = createNewAquaObject()
       revisions = aquaObject.revisions
       const revisionType = "file"
@@ -468,17 +468,17 @@ const createNewRevision = async (
       revisions[genesis.verification_hash] = genesis.data
       console.log(`Writing new revision ${genesis.verification_hash} to ${filename}.aqua.json`)
       maybeUpdateFileIndex(aquaObject, genesis, revisionType)
-      serializeAquaObject(metadataFilename, aquaObject)
+      serializeAquaObject(aquaFilename, aquaObject)
       return
     }
 
-    aquaObject = JSON.parse(fs.readFileSync(metadataFilename))
+    aquaObject = JSON.parse(fs.readFileSync(aquaFilename))
     revisions = aquaObject.revisions
     const verificationHashes = Object.keys(revisions)
     const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
     if (enableRemoveRevision) {
-      removeRevision(aquaObject, lastRevisionHash, metadataFilename)
+      removeRevision(aquaObject, lastRevisionHash, aquaFilename)
       return
     }
 
@@ -507,5 +507,5 @@ const createNewRevision = async (
     revisions[verificationHash] = verificationData.data
     console.log(`Writing new revision ${verificationHash} to ${filename}.aqua.json`)
     maybeUpdateFileIndex(aquaObject, verificationData, revisionType)
-    serializeAquaObject(metadataFilename, aquaObject)
+    serializeAquaObject(aquaFilename, aquaObject)
   })()
