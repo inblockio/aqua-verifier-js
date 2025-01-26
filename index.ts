@@ -386,7 +386,8 @@ async function verifyRevision(
       let linkOk: boolean = true
       for (const [idx, fileHash] of input.link_file_hashes.entries()) {
         const fileUri = getUnixPathFromAquaPath(aquaObject.file_index[fileHash])
-        const linkAquaObject = await readExportFile(fileUri)
+        const aquaFileUri = `${fileUri}.aqua.json`
+        const linkAquaObject = await readExportFile(aquaFileUri)
         let linkStatus: string
         [linkStatus, _] = await verifyPage(linkAquaObject, false, doVerifyMerkleProof)
         const expectedVH = input.link_verification_hashes[idx]

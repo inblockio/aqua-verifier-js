@@ -415,12 +415,27 @@ const createNewRevision = async (
       break
     case "link":
       const linkURIsArray = linkURIs.split(",")
-      const linkVHs = linkURIsArray.map(getLatestVH)
+      // Validation
+      linkURIsArray.map(uri => {
+        if (!uri.endsWith(".aqua.json")) return
+        console.error(`${uri} is an Aqua file hence not applicable`)
+        process.exit(1)
+      })
+      const linkAquaFiles = linkURIsArray.map(e => `${e}.aqua.json`)
+      const linkVHs = linkAquaFiles.map(getLatestVH)
+      const linkFileHashes = linkURIsArray.map(main.getFileHashSum)
+      // Validation again
+      linkFileHashes.map(fh => {
+        if (!(fh in aquaObject.file_index)) return
+        console.error(`${fh} detected in file index. You are not allowed to interlink Aqua files of the same file`)
+        process.exit(1)
+      })
+
       const linkData = {
         "link_type": "aqua",
         "link_require_indepth_verification": true,
         "link_verification_hashes": linkVHs,
-        "link_file_hashes": linkURIsArray.map(main.getFileHashSum),
+        "link_file_hashes": linkFileHashes,
       }
       verificationData = { ...verificationData, ...linkData }
   }
@@ -505,7 +520,7 @@ const createNewRevision = async (
     )
     const verificationHash = verificationData.verification_hash
     revisions[verificationHash] = verificationData.data
-    console.log(`Writing new revision ${verificationHash} to ${filename}.aqua.json`)
+    console.log(`Writing new revision ${verificationHash} to ${aquaFilename}`)
     maybeUpdateFileIndex(aquaObject, verificationData, revisionType)
     serializeAquaObject(aquaFilename, aquaObject)
   })()
