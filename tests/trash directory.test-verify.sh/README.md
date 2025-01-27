@@ -139,8 +139,3 @@ To generate a `content` revision you run the following command
 ./notarize.js --scalar ./LICENSE
 ```
 
-
-
-## How to run tests
-run `make test`
-the output will be  
