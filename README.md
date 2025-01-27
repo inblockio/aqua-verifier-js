@@ -142,5 +142,7 @@ To generate a `content` revision you run the following command
 
 
 ## How to run tests
-run `make test`
-the output will be  in test >  trash *(the last part is dynamic based on the test)
+- ensure to install shareness in you local systems the sharenss path is set to `~/share/sharness/sharness.sh` check out [sharness](https://github.com/felipec/sharness) for more instructions
+- run `make test`
+- the output will be  in test >  trash *(the last part is dynamic based on the test)
+- Hint : ensure your `tests/test-*.sh` file are excutable `chmod +x  tests/test-*`
