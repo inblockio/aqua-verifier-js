@@ -1,56 +1,52 @@
-#!/bin/bash
+#!/bin/sh
 
-# Function to check if previous command was successful
-check_status() {
-    if [ $? -ne 0 ]; then
-        echo "Error: Command failed"
-        exit 1
-    fi
-}
+test_description='Test file linking functionality'
 
-echo "Starting linking test sequence..."
+## ensure to install sharness
+. ~/share/sharness/sharness.sh
 
-# Notarize README.md
-echo "1. Creating AQUA file for README.md..."
-./notarize.js README.md
-check_status
+notarize="repo/notarize.js"
+verify="repo/verify.js"
 
-# Notarize LICENSE
-echo "2. Creating AQUA file for LICENSE..."
-./notarize.js LICENSE
-check_status
+test_expect_success 'Setup test environment' '
+    ln -s $(git rev-parse --show-toplevel) ./repo &&
+    cp repo/README.md README.md &&
+    cp repo/LICENSE LICENSE &&
+    cp repo/notarize.js notarize.js
+'
 
-# Notarize notarize.js
-echo "3. Creating AQUA file for notarize.js..."
-./notarize.js notarize.js
-check_status
+test_expect_success 'Create AQUA file for README.md' '
+    $notarize README.md &&
+    test -f README.md.aqua.json
+'
 
-# Create link between files
-echo "4. Creating link between files..."
-./notarize.js --link LICENSE,notarize.js README.md
-check_status
+test_expect_success 'Create AQUA file for LICENSE' '
+    $notarize LICENSE &&
+    test -f LICENSE.aqua.json
+'
 
-# Verify README.md
-echo "5. Verifying README.md..."
-./verify.js README.md
-check_status
+test_expect_success 'Create AQUA file for notarize.js' '
+    $notarize notarize.js &&
+    test -f notarize.js.aqua.json
+'
 
-echo "All operations completed successfully!"
+test_expect_success 'Create link between files' '
+    $notarize --link LICENSE,notarize.js README.md &&
+    test -f README.md.aqua.json
+'
 
+test_expect_success 'Verify linked README.md' '
+    $verify README.md
+'
 
-# # Cleanup section
-# echo -e "\nStarting cleanup operations..."
-#
-# echo "1. Removing README.md.aqua.json..."
-# rm -f README.md.aqua.json
-# check_status
-#
-# echo "2. Removing LICENSE.md.aqua.json..."
-# rm -f LICENSE.md.aqua.json
-# check_status
-#
-# echo "3. Removing notarize.js.md.aqua.json..."
-# rm -f notarize.js.md.aqua.json
-# check_status
-#
-# echo "Cleanup completed successfully!" 
+# Cleanup
+test_expect_success 'Cleanup test files' '
+    rm -f README.md.aqua.json &&
+    rm -f LICENSE.aqua.json &&
+    rm -f notarize.js.aqua.json &&
+    rm -f README.md &&
+    rm -f LICENSE &&
+    rm -f notarize.js
+'
+
+test_done 
