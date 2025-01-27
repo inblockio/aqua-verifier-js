@@ -353,7 +353,8 @@ const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType) => {
       const linkVHs = verificationData.data.link_verification_hashes
       const linkFileHashes = verificationData.data.link_file_hashes
       for (const [idx, fileHash] of linkFileHashes.entries()) {
-        aquaObject.file_index[fileHash] = `/aqua/${linkVHs[idx]}/${linkURIsArray[idx]}`
+        // aquaObject.file_index[fileHash] = `/aqua/${linkVHs[idx]}/${linkURIsArray[idx]}`
+        aquaObject.file_index[fileHash] = `${linkURIsArray[idx]}`
       }
   }
 }

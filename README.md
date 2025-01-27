@@ -143,4 +143,4 @@ To generate a `content` revision you run the following command
 
 ## How to run tests
 run `make test`
-the output will be  
+the output will be  in test >  trash *(the last part is dynamic based on the test)

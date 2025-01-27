@@ -2,7 +2,8 @@
 
 test_description='Show basic features of Sharness'
 
-. /home/kamau/share/sharness/sharness.sh
+## ensure to install sharness
+. ~/share/sharness/sharness.sh
 
 test_expect_success 'Setup test environment' '
 	ln -s $(git rev-parse --show-toplevel) ./repo
