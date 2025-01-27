@@ -17,6 +17,11 @@ import * as witnessNostr from "./witness_nostr.js"
 import * as witnessEth from "./witness_eth.js"
 import * as witnessTsa from "./witness_tsa.js"
 
+
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+
 const opts = {
   // This is required so that -v is position independent.
   boolean: ["v", "scalar", "content", "rm"],
@@ -248,8 +253,11 @@ const getWallet = (mnemonic) => {
 }
 
 const readCredentials = () => {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+
   return JSON.parse(
-    fs.readFileSync(`${import.meta.dirname}/credentials.json`, "utf8"),
+    fs.readFileSync(`${__dirname}/credentials.json`, "utf8"),
   )
 }
 

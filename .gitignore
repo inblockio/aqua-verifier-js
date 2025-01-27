@@ -3,3 +3,4 @@ index.js
 credentials.json
 mnemonic.txt
 *.aqua.json
+/test/trash*
