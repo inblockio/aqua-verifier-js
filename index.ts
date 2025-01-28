@@ -425,7 +425,7 @@ async function verifyRevision(
       if (!!input.content) {
         fileContent = Buffer.from(input.content, "utf8")
       } else {
-        fileContent = fs.readFileSync(aquaObject.file_index[input.verification_hash])
+        fileContent = fs.readFileSync(aquaObject.file_index[verificationHash])
       }
       const fileHash = getHashSum(fileContent)
       typeOk = fileHash === input.file_hash
