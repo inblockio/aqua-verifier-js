@@ -25,9 +25,9 @@ test_expect_success 'Create AQUA file for README.md' '
     test -f README.md.aqua.json
 '
 
-test_expect_success 'Sign README.md.aqua.json' '
-    $notarize README.md.aqua.json  --sign cli &&
-    test -f README.md.aqua.json.aqua.json
+test_expect_success 'Sign README.md' '
+    $notarize README.md  --sign cli &&
+    test -f README.md.aqua.json
 '
 
 
@@ -43,12 +43,9 @@ test_expect_success 'Create AQUA file for notarize.js' '
 
 
 test_expect_success 'Witness notarize.js.aqua.json' '
-    $notarize notarize.js.aqua.json  --sign did &&
-    test -f notarize.js.aqua.json.aqua.json
+    $notarize notarize.js  --sign did &&
+    test -f notarize.js.aqua.json
 '
-
-
-
 
 # Cleanup
 test_expect_success 'Cleanup test files' '

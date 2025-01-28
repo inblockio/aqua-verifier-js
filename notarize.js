@@ -426,8 +426,44 @@ const createNewRevision = async (
       // )
       break
     case "form":
-      console.log("Wer are here")
-      let form_data = fs.readFileSync(form_file_name)
+
+      try {
+        // Read the file
+        let form_data = fs.readFileSync(form_file_name);
+        
+        try {
+          // Attempt to parse the JSON data
+          let form_data_json = JSON.parse(form_data);
+          // console.log(`form_data_json: ${JSON.stringify(form_data_json)}`);
+
+          // Sort the keys
+          let form_data_sorted_keys = Object.keys(form_data_json);
+          //.sort();
+          // console.log(`form_data_sorted_keys: ${form_data_sorted_keys}`);
+
+          // Construct a new object with sorted keys
+          let form_data_sorted_with_prefix = {};
+          for (let key of form_data_sorted_keys) {
+            // console.log(`key: ${key}`);
+            form_data_sorted_with_prefix[`forms_${key}`] = form_data_json[key];
+
+          }
+          // console.log(`form_data_sorted: ${JSON.stringify(form_data_sorted_with_prefix)}`);
+
+
+          verificationData = { ...verificationData, ...form_data_sorted_with_prefix }
+
+        } catch (parseError) {
+          // Handle invalid JSON data
+          console.error("Error: The file does not contain valid JSON data.");
+        }
+      } catch (readError) {
+        // Handle file read errors (e.g., file not found, permission issues)
+        console.error("Error: Unable to read the file. Ensure the file exists and is accessible.");
+      }
+
+
+      break;
 
     case "link":
       const linkURIsArray = linkURIs.split(",")
@@ -525,8 +561,7 @@ const createNewRevision = async (
       revisionType = "witness"
     } else if (enableLink) {
       revisionType = "link"
-    }
-    else if (form_file_name) {
+    } else if (form_file_name) {
       revisionType = "form"
     }
 

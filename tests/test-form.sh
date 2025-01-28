@@ -25,27 +25,26 @@ test_expect_success 'Create AQUA file for README.md' '
     test -f README.md.aqua.json
 '
 
-test_expect_success 'Witness README.md' '
-    $notarize README.md  --witness-nostr &&
+test_expect_success 'Add Form to README.md.aqua.json' '
+    $notarize README.md  --form-file  example-form.json &&
     test -f README.md.aqua.json
 '
 
-
-
-test_expect_success 'Check notarize.js'  '
-    test -f notarize.js
+test_expect_success 'Verify the output of verify.js' '
+    $verify README.md > actual_output &&
+    if tail -n 2 actual_output | grep -q "Status: VERIFIED"; then
+        echo "Last line is '\''Status: VERIFIED'\''";
+    else
+        echo "Last line is NOT '\''Status: VERIFIED'\''" && false;
+    fi
 '
 
-test_expect_success 'Create AQUA file for notarize.js' '
-    $notarize notarize.js &&
+test_expect_success 'Forms notarize.js' '
+    $notarize notarize.js  --form-file  example-form.json &&
     test -f notarize.js.aqua.json
 '
 
 
-test_expect_success 'Witness notarize.js' '
-    $notarize notarize.js  --witness-nostr &&
-    test -f notarize.js.aqua.json
-'
 
 
 # Cleanup

@@ -247,13 +247,16 @@ const verifySignature = async (data: object, verificationHash: string) => {
 
 function verifyRevisionMerkleTreeStructure(input, result, verificationHash: string) {
   let ok: boolean = true
+
   // Ensure mandatory claims are present
   const mandatory = {
     file: ["file_hash", "file_nonce"],
     link: ["link_verification_hashes"],
     signature: ["signature"],
     witness: ["witness_merkle_root"],
+    form: [],
   }[input.revision_type]
+
   const mandatoryClaims = ["previous_verification_hash",  "local_timestamp", ...mandatory]
 
   for (const claim of mandatoryClaims) {
@@ -353,6 +356,9 @@ async function verifyRevision(
 
   let typeOk: boolean, _
   switch (input.revision_type) {
+    case "form":
+      typeOk = true;
+      break
     case "file":
       let fileContent: Buffer
       if (!!input.content) {
@@ -500,7 +506,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   const details = {
     verification_hashes: verificationHashes,
     revision_details: [],
-  }
+  } 
   for await (const value of generateVerifyPage(
     verificationHashes,
     input,
