@@ -552,7 +552,7 @@ const createNewRevision = async (
         return
       }
       revisions[genesis.verification_hash] = genesis.data
-      console.log(`Writing new revision ${genesis.verification_hash} to ${filename}.aqua.json`)
+      console.log(`Writing new ${revisionType} revision ${genesis.verification_hash} to ${filename}.aqua.json`)
       maybeUpdateFileIndex(aquaObject, genesis, revisionType)
       serializeAquaObject(aquaFilename, aquaObject)
       return
