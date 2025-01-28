@@ -52,7 +52,7 @@ Options:
     Use this flag to include the content file instead of just its hash and name
   --rm
     Remove the most recent revision of the AQUA file
-  --forms-file
+  --form
     Use this flag to include the json file with form data
 `)
 }
@@ -552,7 +552,7 @@ const createNewRevision = async (
         return
       }
       revisions[genesis.verification_hash] = genesis.data
-      console.log(`Writing new revision ${genesis.verification_hash} to ${filename}.aqua.json`)
+      console.log(`Writing new ${revisionType} revision ${genesis.verification_hash} to ${filename}.aqua.json`)
       maybeUpdateFileIndex(aquaObject, genesis, revisionType)
       serializeAquaObject(aquaFilename, aquaObject)
       return
@@ -585,7 +585,7 @@ const createNewRevision = async (
       revisionType = "form"
     }
 
-    console.log("REvision type: ", revisionType)
+    console.log("Revision type: ", revisionType)
 
     const verificationData = await createNewRevision(
       lastRevisionHash,

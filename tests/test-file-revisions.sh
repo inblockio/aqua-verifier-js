@@ -1,9 +1,8 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 test_description='Test file modifications and notarization with index updates'
 
-## ensure to install sharness
-. ~/share/sharness/sharness.sh
+. ./tests/sharness.sh
 
 notarize="repo/notarize.js"
 verify="repo/verify.js"
