@@ -385,7 +385,8 @@ async function verifyRevision(
     case "link":
       let linkOk: boolean = true
       for (const [idx, fileHash] of input.link_file_hashes.entries()) {
-        const fileUri = getUnixPathFromAquaPath(aquaObject.file_index[fileHash])
+          // const fileUri = getUnixPathFromAquaPath(aquaObject.file_index[fileHash])
+        const fileUri = aquaObject.file_index[fileHash];
         const aquaFileUri = `${fileUri}.aqua.json`
         const linkAquaObject = await readExportFile(aquaFileUri)
         let linkStatus: string
