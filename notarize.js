@@ -585,7 +585,7 @@ const createNewRevision = async (
       revisionType = "form"
     }
 
-    console.log("REvision type: ", revisionType)
+    console.log("Revision type: ", revisionType)
 
     const verificationData = await createNewRevision(
       lastRevisionHash,
