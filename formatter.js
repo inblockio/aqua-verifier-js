@@ -202,6 +202,7 @@ function printRevisionInfo(detail, verbose) {
     "link": "🔗",
     "signature": "🔏",
     "witness": "⌚",
+    "form": "📝",
   }[detail.revision_type]
 
   let additionalInfo = ""

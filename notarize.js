@@ -17,6 +17,11 @@ import * as witnessNostr from "./witness_nostr.js"
 import * as witnessEth from "./witness_eth.js"
 import * as witnessTsa from "./witness_tsa.js"
 
+
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+
 const opts = {
   // This is required so that -v is position independent.
   boolean: ["v", "scalar", "content", "rm"],
@@ -47,6 +52,8 @@ Options:
     Use this flag to include the content file instead of just its hash and name
   --rm
     Remove the most recent revision of the AQUA file
+  --form
+    Use this flag to include the json file with form data
 `)
 }
 
@@ -68,6 +75,7 @@ const enableContent = argv["content"]
 const enableRemoveRevision = argv["rm"]
 const linkURIs = argv["link"]
 const enableLink = !!linkURIs
+const form_file_name = argv["form"]
 
 const port = 8420
 const host = "localhost"
@@ -206,14 +214,14 @@ const prepareWitness = async (verificationHash) => {
     // Publisher / Identifier for publisher
     witness_sender_account_address: publisher,
     // Optional for aggregated witness hashes
-    // witness_merkle_proof: [
-    //   {
-    //     depth: "0",
-    //     left_leaf: verificationHash,
-    //     right_leaf: null,
-    //     successor: merkle_root,
-    //   },
-    // ],
+    witness_merkle_proof: [
+      {
+        depth: "0",
+        left_leaf: verificationHash,
+        right_leaf: null,
+        successor: merkle_root,
+      },
+    ],
   }
   return witness
 }
@@ -248,8 +256,11 @@ const getWallet = (mnemonic) => {
 }
 
 const readCredentials = () => {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+
   return JSON.parse(
-    fs.readFileSync(`${import.meta.dirname}/credentials.json`, "utf8"),
+    fs.readFileSync(`${__dirname}/credentials.json`, "utf8"),
   )
 }
 
@@ -331,11 +342,13 @@ const checkFileHashAlreadyNotarized = (fileHash, aquaObject) => {
 
 const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType) => {
   switch (revisionType) {
+    case "form":
     case "file":
       const fileHash = verificationData.data.file_hash
       if (enableContent) {
-        const verificationHash = verificationData.verification_hash
-        aquaObject.file_index[fileHash] = `/aqua/${verificationHash}/${filename}`
+        // const verificationHash = verificationData.verification_hash
+        // aquaObject.file_index[fileHash] = `/aqua/${verificationHash}/${filename}`
+        aquaObject.file_index[fileHash] = `${filename}`
       } else {
         aquaObject.file_index[fileHash] = filename
       }
@@ -345,7 +358,8 @@ const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType) => {
       const linkVHs = verificationData.data.link_verification_hashes
       const linkFileHashes = verificationData.data.link_file_hashes
       for (const [idx, fileHash] of linkFileHashes.entries()) {
-        aquaObject.file_index[fileHash] = `/aqua/${linkVHs[idx]}/${linkURIsArray[idx]}`
+        // aquaObject.file_index[fileHash] = `/aqua/${linkVHs[idx]}/${linkURIsArray[idx]}`
+        aquaObject.file_index[fileHash] = `${linkURIsArray[idx]}`
       }
   }
 }
@@ -413,6 +427,52 @@ const createNewRevision = async (
       //   verificationData.witness_merkle_proof,
       // )
       break
+    case "form":
+
+      try {
+        // Read the file
+        let form_data = fs.readFileSync(form_file_name);
+
+        // Calculate the hash of the file
+        const fileHash = main.getHashSum(form_data)
+        checkFileHashAlreadyNotarized(fileHash, aquaObject)
+        verificationData["file_hash"] = fileHash
+        verificationData["file_nonce"] = prepareNonce()
+
+        try {
+          // Attempt to parse the JSON data
+          let form_data_json = JSON.parse(form_data);
+          // console.log(`form_data_json: ${JSON.stringify(form_data_json)}`);
+
+          // Sort the keys
+          let form_data_sorted_keys = Object.keys(form_data_json);
+          //.sort();
+          // console.log(`form_data_sorted_keys: ${form_data_sorted_keys}`);
+
+          // Construct a new object with sorted keys
+          let form_data_sorted_with_prefix = {};
+          for (let key of form_data_sorted_keys) {
+            // console.log(`key: ${key}`);
+            form_data_sorted_with_prefix[`forms_${key}`] = form_data_json[key];
+
+          }
+          // console.log(`form_data_sorted: ${JSON.stringify(form_data_sorted_with_prefix)}`);
+
+
+          verificationData = { ...verificationData, ...form_data_sorted_with_prefix }
+
+        } catch (parseError) {
+          // Handle invalid JSON data
+          console.error("Error: The file does not contain valid JSON data.");
+        }
+      } catch (readError) {
+        // Handle file read errors (e.g., file not found, permission issues)
+        console.error("Error: Unable to read the file. Ensure the file exists and is accessible.");
+      }
+
+
+      break;
+
     case "link":
       const linkURIsArray = linkURIs.split(",")
       // Validation
@@ -463,17 +523,28 @@ const createNewRevision = async (
 }
 
   // The main function
-  ; (async function() {
+  ; (async function () {
     const aquaFilename = filename + ".aqua.json"
     // const timestamp = getFileTimestamp(filename)
     // We use "now" instead of the modified time of the file
     const now = new Date().toISOString()
     const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
     let aquaObject, revisions
-    if (!fs.existsSync(aquaFilename)) {
+    if (!fs.existsSync(aquaFilename)  ) {
+
+      let revisionType = "file"
+      if (form_file_name) {
+        revisionType = "form"
+
+        if (form_file_name != aquaFilename.replace(/\.aqua\.json$/, "")) {
+          console.log(`First Revision  : Form file name is not the same as the aqua file name \n  Form : ${form_file_name}  File : ${aquaFilename}`)
+          process.exit(1)
+        }
+      }
+
       aquaObject = createNewAquaObject()
       revisions = aquaObject.revisions
-      const revisionType = "file"
+
       const genesis = await createNewRevision("", timestamp, revisionType, false, aquaObject)
       if (enableRemoveRevision) {
         // Don't serialize if you do --rm during genesis creation
@@ -481,10 +552,11 @@ const createNewRevision = async (
         return
       }
       revisions[genesis.verification_hash] = genesis.data
-      console.log(`Writing new revision ${genesis.verification_hash} to ${filename}.aqua.json`)
+      console.log(`Writing new ${revisionType} revision ${genesis.verification_hash} to ${filename}.aqua.json`)
       maybeUpdateFileIndex(aquaObject, genesis, revisionType)
       serializeAquaObject(aquaFilename, aquaObject)
       return
+
     }
 
     aquaObject = JSON.parse(fs.readFileSync(aquaFilename))
@@ -509,7 +581,11 @@ const createNewRevision = async (
       revisionType = "witness"
     } else if (enableLink) {
       revisionType = "link"
+    } else if (form_file_name) {
+      revisionType = "form"
     }
+
+    console.log("Revision type: ", revisionType)
 
     const verificationData = await createNewRevision(
       lastRevisionHash,
