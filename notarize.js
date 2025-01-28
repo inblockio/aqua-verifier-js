@@ -47,7 +47,8 @@ Options:
   --link <filename.aqua.json>
     Add a link to an AQUA chain as a dependency
   --scalar
-    Use this flag to use a more lightweight, "scalar" aquafication
+    Use this flag to use a more lightweight, "scalar" aquafication.
+    This is the default option.
   --content
     Use this flag to include the content file instead of just its hash and name
   --rm
@@ -69,8 +70,8 @@ if (!filename) {
 
 const signMethod = argv["sign"]
 const enableSignature = !!signMethod
-// all revsion are scalar by default other tha forms revisons
-// the idea is to reduce the comoute cost
+// all revisions are scalar by default other than the forms revisions
+// to reduce comput cost and time
 let enableScalar = argv["scalar"]
 let vTree =argv["vtree"]
 const witnessMethod = argv["witness"]
