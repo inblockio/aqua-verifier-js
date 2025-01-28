@@ -52,7 +52,7 @@ Options:
     Use this flag to include the content file instead of just its hash and name
   --rm
     Remove the most recent revision of the AQUA file
-  --forms-file
+  --form
     Use this flag to include the json file with form data
 `)
 }
@@ -585,7 +585,7 @@ const createNewRevision = async (
       revisionType = "form"
     }
 
-    console.log("REvision type: ", revisionType)
+    console.log("Revision type: ", revisionType)
 
     const verificationData = await createNewRevision(
       lastRevisionHash,
