@@ -66,9 +66,13 @@ if (!filename) {
   process.exit(1)
 }
 
+
 const signMethod = argv["sign"]
 const enableSignature = !!signMethod
-const enableScalar = argv["scalar"]
+// all revsion are scalar by default other tha forms revisons
+// the idea is to reduce the comoute cost
+let enableScalar = argv["scalar"]
+let vTree =argv["vtree"]
 const witnessMethod = argv["witness"]
 const enableWitness = !!witnessMethod
 const enableContent = argv["content"]
@@ -399,6 +403,8 @@ const createNewRevision = async (
   enableScalar,
   aquaObject,
 ) => {
+
+  console.log(`Enable scala ${enableScalar}...`)
   let verificationData = {
     previous_verification_hash: previousVerificationHash,
     local_timestamp: timestamp,
@@ -530,8 +536,11 @@ const createNewRevision = async (
     const now = new Date().toISOString()
     const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
     let aquaObject, revisions
-    if (!fs.existsSync(aquaFilename)  ) {
 
+    enableScalar = true;
+    
+    if (!fs.existsSync(aquaFilename)  ) {
+     
       let revisionType = "file"
       if (form_file_name) {
         revisionType = "form"
@@ -545,7 +554,7 @@ const createNewRevision = async (
       aquaObject = createNewAquaObject()
       revisions = aquaObject.revisions
 
-      const genesis = await createNewRevision("", timestamp, revisionType, false, aquaObject)
+      const genesis = await createNewRevision("", timestamp, revisionType, enableScalar, aquaObject)
       if (enableRemoveRevision) {
         // Don't serialize if you do --rm during genesis creation
         console.log("There is nothing delete.")
@@ -573,6 +582,13 @@ const createNewRevision = async (
       formatter.log_red("ERROR: you cannot sign & witness at the same time")
       process.exit(1)
     }
+    console.log("Enable scalar: ", enableScalar)
+
+   
+    if (vTree) {
+      console.log("Enable vTree: ", vTree)
+      enableScalar = false;
+    }
 
     let revisionType = "file"
     if (enableSignature) {
@@ -583,10 +599,12 @@ const createNewRevision = async (
       revisionType = "link"
     } else if (form_file_name) {
       revisionType = "form"
+      enableScalar = false;
     }
 
     console.log("Revision type: ", revisionType)
 
+    
     const verificationData = await createNewRevision(
       lastRevisionHash,
       timestamp,
