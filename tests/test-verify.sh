@@ -37,13 +37,14 @@ test_expect_success 'Verify the output of verify.js' '
 
 
 # Cleanup
-# test_expect_success 'Cleanup test files' '
-#     rm -f README.md.aqua.json &&
-#     rm -f LICENSE.aqua.json &&
-#     rm -f notarize.js.aqua.json &&
-#     rm -f README.md &&
-#     rm -f LICENSE &&
-#     rm -f notarize.js
-# '
+test_expect_success 'Cleanup test files' '
+    rm -f README.md.aqua.json &&
+    rm -f LICENSE.aqua.json &&
+    rm -f notarize.js.aqua.json &&
+    rm -f README.md &&
+    rm -f LICENSE &&
+    rm -f notarize.js &&
+    rm -f actual_output
+'
 
 test_done 
