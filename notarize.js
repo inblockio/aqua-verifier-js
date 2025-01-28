@@ -52,6 +52,8 @@ Options:
     Use this flag to include the content file instead of just its hash and name
   --rm
     Remove the most recent revision of the AQUA file
+  --forms-file
+    Use this flag to include the json file with form data
 `)
 }
 
@@ -73,6 +75,7 @@ const enableContent = argv["content"]
 const enableRemoveRevision = argv["rm"]
 const linkURIs = argv["link"]
 const enableLink = !!linkURIs
+const form_file_name = argv["form-file"]
 
 const port = 8420
 const host = "localhost"
@@ -422,6 +425,10 @@ const createNewRevision = async (
       //   verificationData.witness_merkle_proof,
       // )
       break
+    case "form":
+      console.log("Wer are here")
+      let form_data = fs.readFileSync(form_file_name)
+
     case "link":
       const linkURIsArray = linkURIs.split(",")
       // Validation
@@ -472,7 +479,7 @@ const createNewRevision = async (
 }
 
   // The main function
-  ; (async function() {
+  ; (async function () {
     const aquaFilename = filename + ".aqua.json"
     // const timestamp = getFileTimestamp(filename)
     // We use "now" instead of the modified time of the file
@@ -519,6 +526,11 @@ const createNewRevision = async (
     } else if (enableLink) {
       revisionType = "link"
     }
+    else if (form_file_name) {
+      revisionType = "form"
+    }
+
+    console.log("REvision type: ", revisionType)
 
     const verificationData = await createNewRevision(
       lastRevisionHash,
