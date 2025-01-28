@@ -538,7 +538,9 @@ const createNewRevision = async (
     const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
     let aquaObject, revisions
 
-    enableScalar = true;
+    if (!form_file_name) {
+      enableScalar = true;
+    }
     
     if (!fs.existsSync(aquaFilename)  ) {
      
