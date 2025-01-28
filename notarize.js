@@ -342,11 +342,13 @@ const checkFileHashAlreadyNotarized = (fileHash, aquaObject) => {
 
 const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType) => {
   switch (revisionType) {
+    case "form":
     case "file":
       const fileHash = verificationData.data.file_hash
       if (enableContent) {
-        const verificationHash = verificationData.verification_hash
-        aquaObject.file_index[fileHash] = `/aqua/${verificationHash}/${filename}`
+        // const verificationHash = verificationData.verification_hash
+        // aquaObject.file_index[fileHash] = `/aqua/${verificationHash}/${filename}`
+        aquaObject.file_index[fileHash] = `${filename}`
       } else {
         aquaObject.file_index[fileHash] = filename
       }
@@ -430,7 +432,13 @@ const createNewRevision = async (
       try {
         // Read the file
         let form_data = fs.readFileSync(form_file_name);
-        
+
+        // Calculate the hash of the file
+        const fileHash = main.getHashSum(form_data)
+        checkFileHashAlreadyNotarized(fileHash, aquaObject)
+        verificationData["file_hash"] = fileHash
+        verificationData["file_nonce"] = prepareNonce()
+
         try {
           // Attempt to parse the JSON data
           let form_data_json = JSON.parse(form_data);
@@ -523,9 +531,15 @@ const createNewRevision = async (
     const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
     let aquaObject, revisions
     if (!fs.existsSync(aquaFilename)) {
+
+      let revisionType = "file"
+      if (form_file_name) {
+        revisionType = "form"
+      }
+
       aquaObject = createNewAquaObject()
       revisions = aquaObject.revisions
-      const revisionType = "file"
+
       const genesis = await createNewRevision("", timestamp, revisionType, false, aquaObject)
       if (enableRemoveRevision) {
         // Don't serialize if you do --rm during genesis creation
@@ -537,6 +551,7 @@ const createNewRevision = async (
       maybeUpdateFileIndex(aquaObject, genesis, revisionType)
       serializeAquaObject(aquaFilename, aquaObject)
       return
+
     }
 
     aquaObject = JSON.parse(fs.readFileSync(aquaFilename))
