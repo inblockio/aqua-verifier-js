@@ -75,7 +75,7 @@ const enableContent = argv["content"]
 const enableRemoveRevision = argv["rm"]
 const linkURIs = argv["link"]
 const enableLink = !!linkURIs
-const form_file_name = argv["form-file"]
+const form_file_name = argv["form"]
 
 const port = 8420
 const host = "localhost"
@@ -530,11 +530,16 @@ const createNewRevision = async (
     const now = new Date().toISOString()
     const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
     let aquaObject, revisions
-    if (!fs.existsSync(aquaFilename)) {
+    if (!fs.existsSync(aquaFilename)  ) {
 
       let revisionType = "file"
       if (form_file_name) {
         revisionType = "form"
+
+        if (form_file_name != aquaFilename.replace(/\.aqua\.json$/, "")) {
+          console.log(`First Revision  : Form file name is not the same as the aqua file name \n  Form : ${form_file_name}  File : ${aquaFilename}`)
+          process.exit(1)
+        }
       }
 
       aquaObject = createNewAquaObject()
