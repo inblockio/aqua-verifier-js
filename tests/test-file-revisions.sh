@@ -2,7 +2,7 @@
 
 test_description='Test file modifications and notarization with index updates'
 
-. ./tests/sharness.sh
+. ~/share/sharness/sharness.sh
 
 notarize="repo/notarize.js"
 verify="repo/verify.js"
