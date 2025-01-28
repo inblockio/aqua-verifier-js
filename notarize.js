@@ -447,10 +447,10 @@ const createNewRevision = async (
       verificationData["file_hash"] = fileHash
       verificationData["file_nonce"] = prepareNonce()
 
+      let form_data_json
       try {
         // Attempt to parse the JSON data
-        let form_data_json = JSON.parse(form_data)
-        // console.log(`form_data_json: ${JSON.stringify(form_data_json)}`);
+        form_data_json = JSON.parse(form_data)
       } catch (parseError) {
         // Handle invalid JSON data
         console.error("Error: The file does not contain valid JSON data.")
@@ -459,22 +459,15 @@ const createNewRevision = async (
 
       // Sort the keys
       let form_data_sorted_keys = Object.keys(form_data_json)
-      //.sort();
-      // console.log(`form_data_sorted_keys: ${form_data_sorted_keys}`);
-
-      // Construct a new object with sorted keys
       let form_data_sorted_with_prefix = {}
       for (let key of form_data_sorted_keys) {
-        // console.log(`key: ${key}`);
         form_data_sorted_with_prefix[`forms_${key}`] = form_data_json[key]
       }
-      // console.log(`form_data_sorted: ${JSON.stringify(form_data_sorted_with_prefix)}`);
 
       verificationData = {
         ...verificationData,
         ...form_data_sorted_with_prefix,
       }
-
       break
 
     case "link":
