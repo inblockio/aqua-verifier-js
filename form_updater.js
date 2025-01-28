@@ -60,46 +60,33 @@ function updateForm(filename, key, content) {
     // Update in place by renaming the key and setting value to empty string
     const deletedKey = `${formKey}.deleted`;
 
-    console.log(`latestRevision =  ${JSON.stringify(latestRevision)}`);
     let newRevision = {};
     for (let key in latestRevision) {
-      console.log(`key = ${key}`);
       if (formKey == key) {
-        console.log(`found key = ${key}`);
-        newRevision[deletedKey] = null; //latestRevision[key];
+        newRevision[deletedKey] = null;
       } else {
-        console.log(`not found key = ${key}`);
         newRevision[key] = latestRevision[key];
       }
     }
     revisions[latestRevisionHash] = newRevision;
-
   } else {
     // Update operation
     if (formKey.endsWith('.deleted')) {
       // Restore deleted field
       const originalKey = formKey.replace('.deleted', '');
-  
+
       let newRevision = {};
       for (let key in latestRevision) {
-        console.log(`key = ${key}`);
         if (formKey == key) {
-          console.log(`found key = ${key}`);
-          newRevision[originalKey] = content; //latestRevision[key];
+          newRevision[originalKey] = content;
         } else {
-          console.log(`not found key = ${key}`);
           newRevision[key] = latestRevision[key];
         }
       }
       revisions[latestRevisionHash] = newRevision;
-        // latestRevision[originalKey] = content;
-        // delete latestRevision[formKey];
-        // console.log(`Restored and updated ${originalKey}`);
-      
     } else {
       // Regular update
       latestRevision[formKey] = content;
-      console.log(`Updated ${formKey}`);
     }
   }
 
