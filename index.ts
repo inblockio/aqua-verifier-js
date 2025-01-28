@@ -425,7 +425,7 @@ async function verifyRevision(
       if (!!input.content) {
         fileContent = Buffer.from(input.content, "utf8")
       } else {
-        fileContent = fs.readFileSync(aquaObject.file_index[input.file_hash])
+        fileContent = fs.readFileSync(aquaObject.file_index[input.verification_hash])
       }
       const fileHash = getHashSum(fileContent)
       typeOk = fileHash === input.file_hash
@@ -451,9 +451,9 @@ async function verifyRevision(
       break
     case "link":
       let linkOk: boolean = true
-      for (const [idx, fileHash] of input.link_file_hashes.entries()) {
+      for (const [idx, vh] of input.link_verification_hashes.entries()) {
         // const fileUri = getUnixPathFromAquaPath(aquaObject.file_index[fileHash])
-        const fileUri = aquaObject.file_index[fileHash];
+        const fileUri = aquaObject.file_index[vh];
         const aquaFileUri = `${fileUri}.aqua.json`
         const linkAquaObject = await readExportFile(aquaFileUri)
         let linkStatus: string

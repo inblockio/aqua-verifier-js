@@ -349,22 +349,14 @@ const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType) => {
   switch (revisionType) {
     case "form":
     case "file":
-      const fileHash = verificationData.data.file_hash
-      if (enableContent) {
-        // const verificationHash = verificationData.verification_hash
-        // aquaObject.file_index[fileHash] = `/aqua/${verificationHash}/${filename}`
-        aquaObject.file_index[fileHash] = `${filename}`
-      } else {
-        aquaObject.file_index[fileHash] = filename
-      }
+      const verificationHash = verificationData.verification_hash
+      aquaObject.file_index[verificationHash] = filename
       break
     case "link":
       const linkURIsArray = linkURIs.split(",")
       const linkVHs = verificationData.data.link_verification_hashes
-      const linkFileHashes = verificationData.data.link_file_hashes
-      for (const [idx, fileHash] of linkFileHashes.entries()) {
-        // aquaObject.file_index[fileHash] = `/aqua/${linkVHs[idx]}/${linkURIsArray[idx]}`
-        aquaObject.file_index[fileHash] = `${linkURIsArray[idx]}`
+      for (const [idx, vh] of linkVHs.entries()) {
+        aquaObject.file_index[vh] = `${linkURIsArray[idx]}`
       }
   }
 }
@@ -376,8 +368,8 @@ const removeRevision = (aquaObject, lastRevisionHash, aquaFilename) => {
       delete aquaObject.file_index[lastRevision.file_hash]
       break
     case "link":
-      for (const fileHash of lastRevision.link_file_hashes) {
-        delete aquaObject.file_index[fileHash]
+      for (const vh of lastRevision.link_verification_hashes) {
+        delete aquaObject.file_index[vh]
       }
   }
 
