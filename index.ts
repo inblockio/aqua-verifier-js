@@ -149,7 +149,7 @@ async function verifyWitness(
   witnessData,
   verification_hash: string,
   doVerifyMerkleProof: boolean,
-) { 
+) {
   const result = {
     tx_hash: witnessData.witness_transaction_hash,
     witness_network: witnessData.witness_network,
@@ -195,7 +195,7 @@ async function verifyWitness(
   if (doVerifyMerkleProof) {
     // Only verify the witness merkle proof when verifyWitness is successful,
     // because this step is expensive.
-    
+
     //todo this will improved
     // const merkleProofIsOK = verifyMerkleIntegrity(
     //   JSON.parse(witnessData.witness_merkle_proof),
@@ -245,8 +245,9 @@ const verifySignature = async (data: object, verificationHash: string) => {
   return [signatureOk, status]
 }
 
-function verifyRevisionMerkleTreeStructure(input, result, verificationHash: string) {
+function verifyRevisionMerkleTreeStructure(input, result: VerificationResult, verificationHash: string) {
   let ok: boolean = true
+  let vhOk: boolean = true
 
   // Ensure mandatory claims are present
   const mandatory = {
@@ -257,7 +258,7 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
     form: [],
   }[input.revision_type]
 
-  const mandatoryClaims = ["previous_verification_hash",  "local_timestamp", ...mandatory]
+  const mandatoryClaims = ["previous_verification_hash", "local_timestamp", ...mandatory]
 
   for (const claim of mandatoryClaims) {
     if (!(claim in input)) {
@@ -265,29 +266,89 @@ function verifyRevisionMerkleTreeStructure(input, result, verificationHash: stri
     }
   }
 
+
+
   const leaves = input.leaves
   delete input.leaves
   const actualLeaves = []
+  let fieldsWithPartialVerification: string[] = []
+  let fieldsWithVerification: string[] = []
 
-  // Verify leaves
-  for (const [i, claim] of Object.keys(input).sort().entries()) {
-    const actual = getHashSum(`${claim}:${input[claim]}`)
-    const claimOk = leaves[i] === actual
-    result.status[claim] = claimOk
-    ok = ok && claimOk
-    actualLeaves.push(actual)
+  if (input.revision_type === 'form') {
+    let contains_deleted_fields = false
+
+    Object.keys(input).sort().forEach((field, i: number) => {
+      let new_hash = getHashSum(`${field}:${input[field]}`)
+
+      if (!field.endsWith('.deleted')) {
+        if (field.startsWith('forms_')) {
+          fieldsWithVerification.push(`${field}: ${input[field]}`)
+        }
+        if (new_hash !== leaves[i]) {
+          ok = false
+          console.log(`🚫 New hash does not match existing hash ${leaves[i]}:${new_hash} at index: ${i}`)
+        }
+      } else {
+        contains_deleted_fields = true
+        fieldsWithPartialVerification.push(field)
+      }
+    })
+
+    if (contains_deleted_fields) {
+      console.warn(`\n  🚨 Warning: The following fields cannot be verified:`)
+      fieldsWithPartialVerification.forEach((field, i: number) => console.log(`   ${i + 1}. ${field.replace('.deleted', '')}\n`))
+    }
+
+    console.log("\n  The following fields were verified successfully: ")
+    fieldsWithVerification.forEach(field => console.log(`   ✅${field}\n`))
+
   }
+  else {
 
-  // Verify verification hash
-  const tree = new MerkleTree(leaves, getHashSum, {
-    duplicateOdd: false,
-  })
-  const hexRoot = tree.getHexRoot()
-  const vhOk = hexRoot === verificationHash
+    // Verify leaves
+    for (const [i, claim] of Object.keys(input).sort().entries()) {
+      const actual = getHashSum(`${claim}:${input[claim]}`)
+      const claimOk = leaves[i] === actual
+      result.status[claim] = claimOk
+      ok = ok && claimOk
+      actualLeaves.push(actual)
+    }
+
+    // Verify verification hash
+    const tree = new MerkleTree(leaves, getHashSum, {
+      duplicateOdd: false,
+    })
+    const hexRoot = tree.getHexRoot()
+    vhOk = hexRoot === verificationHash
+  }
 
 
   ok = ok && vhOk
   return [ok, result]
+}
+
+
+interface Status {
+  verification: string;
+  type_ok: boolean;
+}
+
+interface WitnessResult {
+  [key: string]: any
+}
+
+interface Input {
+  revision_type: string;
+}
+
+interface VerificationResult {
+  scalar: boolean;
+  verification_hash: string;
+  status: Status;
+  witness_result: WitnessResult;
+  file_hash: string;
+  data: Input;
+  revision_type: string;
 }
 
 /**
@@ -327,9 +388,9 @@ async function verifyRevision(
   let ok: boolean = true
 
   // We use fast scalar verification if input does not have leaves property
-  const isScalar = !input.hasOwnProperty('leaves'); 
-  
-  let result = {
+  const isScalar = !input.hasOwnProperty('leaves');
+
+  let result: VerificationResult = {
     scalar: false,
     verification_hash: verificationHash,
     status: {
@@ -343,7 +404,7 @@ async function verifyRevision(
   }
 
   if (isScalar) {
-    
+
     result.scalar = true
     const actualVH = "0x" + getHashSum(JSON.stringify(input))
     ok = actualVH === verificationHash
@@ -391,7 +452,7 @@ async function verifyRevision(
     case "link":
       let linkOk: boolean = true
       for (const [idx, fileHash] of input.link_file_hashes.entries()) {
-          // const fileUri = getUnixPathFromAquaPath(aquaObject.file_index[fileHash])
+        // const fileUri = getUnixPathFromAquaPath(aquaObject.file_index[fileHash])
         const fileUri = aquaObject.file_index[fileHash];
         const aquaFileUri = `${fileUri}.aqua.json`
         const linkAquaObject = await readExportFile(aquaFileUri)
@@ -506,7 +567,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
   const details = {
     verification_hashes: verificationHashes,
     revision_details: [],
-  } 
+  }
   for await (const value of generateVerifyPage(
     verificationHashes,
     input,
