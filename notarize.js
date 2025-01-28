@@ -405,7 +405,7 @@ const createNewRevision = async (
   aquaObject,
 ) => {
 
-  console.log(`Enable scala ${enableScalar}...`)
+  console.log(`Enable scalar ${enableScalar}...`)
   let verificationData = {
     previous_verification_hash: previousVerificationHash,
     local_timestamp: timestamp,
