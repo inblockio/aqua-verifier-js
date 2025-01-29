@@ -21,7 +21,7 @@ import { fileURLToPath } from "url"
 import { dirname } from "path"
 
 // import { Wallet, Mnemonic } from 'ethers';
-import {readCredentials, getWallet} from "./utils.js"
+import { readCredentials, getWallet } from "./utils.js"
 
 const opts = {
   // This is required so that -v is position independent.
@@ -81,6 +81,7 @@ const enableRemoveRevision = argv["rm"]
 const linkURIs = argv["link"]
 const enableLink = !!linkURIs
 const form_file_name = argv["form"]
+const network = argv["network"]
 
 const port = 8420
 const host = "localhost"
@@ -170,13 +171,120 @@ const prepareNonce = () => {
   return new Buffer.from(seed).toString("base64url")
 }
 
+
+
+const createRevionWithMulipleAquaChain = async (timestamp, revisionType) => {
+
+  // read files
+  let all_aqua_files = filename.split(",");
+
+  let all_file_aqua_objects = [];
+  for (const file of all_aqua_files) {
+    const filePath = `${file}.aqua.json`;
+
+    if (!fs.existsSync(filePath)) {
+      console.error(`File does not exist: ${filePath}`);
+      process.exit(1);
+    }
+
+    try {
+      const fileContent = await fs.readFileSync(filePath, "utf-8");
+      const aquaObject = JSON.parse(fileContent);
+      console.log(`Successfully read: ${filePath}`);
+      all_file_aqua_objects.push(aquaObject);
+    } catch (error) {
+      console.error(`Error reading ${filePath}:`, error);
+      process.exit(1);
+    }
+  }
+  console.log("All files read successfully \n", all_file_aqua_objects);
+  // get the last verification hash
+  let lastRevionHashes = [];
+
+  for (const file of all_file_aqua_objects) {
+    const verificationHashes = Object.keys(file.revisions);
+    lastRevionHashes.push(verificationHashes[verificationHashes.length - 1]);
+  }
+  console.log("All last revision hashes  \n", lastRevionHashes);
+
+  const tree2 = new MerkleTree(lastRevionHashes, main.getHashSum, {
+    duplicateOdd: false,
+  })
+
+  let merkleRoot = tree2.getHexRoot();
+  let merkleProofArray = [];
+
+  lastRevionHashes.forEach((hash) => {
+    let merkleProof = tree2.getHexProof(hash);
+    merkleProofArray.push(merkleProof);
+  });
+
+  console.log("Merkle proof: ", merkleProofArray);
+
+  let witnessResult = await prepareWitness(merkleRoot);
+
+  witnessResult.witness_merkle_proof = lastRevionHashes;
+
+
+  for (let index = 0; index < all_aqua_files.length; index++) {
+    const current_file = all_aqua_files[index];
+    const current_file_aqua_object = all_file_aqua_objects[index];
+
+
+    // let previousVerificationHash = current_file_aqua_object.revisions.keys.pop();
+    const revisionKeys = Object.keys(current_file_aqua_object.revisions);
+    const latestRevisionKey = revisionKeys.pop(); // Get the last key
+
+    console.log("Latest revision key:", latestRevisionKey);
+
+    let verificationData = {
+      previous_verification_hash: latestRevisionKey,
+      local_timestamp: timestamp,
+      revision_type: revisionType,
+      ...witnessResult
+    }
+
+    // if (enableScalar) {
+    //   // A simpler version of revision -- scalar
+    //   const scalarData = verificationData //JSON.stringify(verificationData)
+    //   return {
+    //     verification_hash:
+    //       "0x" + main.getHashSum(JSON.stringify(verificationData)),
+    //     data: scalarData,
+    //   }
+    // }
+
+    const revisions = current_file_aqua_object.revisions
+
+    // Merklelize the dictionary
+    const leaves = main.dict2Leaves(verificationData)
+    const tree = new MerkleTree(leaves, main.getHashSum, {
+      duplicateOdd: false,
+    })
+
+    verificationData.leaves = leaves;
+    const verificationHash = tree.getHexRoot()
+    revisions[verificationHash] = verificationData
+    console.log(`\n\n Writing new revision ${verificationHash} to ${current_file} current file current_file_aqua_object ${JSON.stringify(current_file_aqua_object)} \n\n `)
+    maybeUpdateFileIndex(current_file_aqua_object, {
+      verification_hash: verificationHash,
+      data: verificationData
+    }, revisionType);
+    const filePath = `${current_file}.aqua.json`;
+    serializeAquaObject( filePath, current_file_aqua_object)
+  }
+}
+
 const prepareWitness = async (verificationHash) => {
+
   const merkle_root = verificationHash
   let witness_network,
     smart_contract_address,
     transactionHash,
     publisher,
-    witnessTimestamp
+    witnessTimestamp;
+
+
   switch (witnessMethod) {
     case "nostr":
       // publisher is a public key used for nostr
@@ -220,12 +328,13 @@ const prepareWitness = async (verificationHash) => {
     witness_sender_account_address: publisher,
     // Optional for aggregated witness hashes
     witness_merkle_proof: [
-      {
-        depth: "0",
-        left_leaf: verificationHash,
-        right_leaf: null,
-        successor: merkle_root,
-      },
+      verificationHash
+      // {
+      //   depth: "0",
+      //   left_leaf: verificationHash,
+      //   right_leaf: null,
+      //   successor: merkle_root,
+      // },
     ],
   }
   return witness
@@ -278,10 +387,10 @@ const prepareSignature = async (previousVerificationHash) => {
       break
     case "did":
       const credentials = readCredentials()
-      if(credentials['did:key'].length === 0 || !credentials['did:key']){
-  
+      if (credentials['did:key'].length === 0 || !credentials['did:key']) {
+
         console.log("DID key is required.  Please get a key from https://hub.ebsi.eu/tools/did-generator")
-        
+
         process.exit(1)
       }
 
@@ -514,6 +623,7 @@ const createNewRevision = async (
     }
   }
 
+
   // Merklelize the dictionary
   const leaves = main.dict2Leaves(verificationData)
   const tree = new MerkleTree(leaves, main.getHashSum, {
@@ -525,6 +635,8 @@ const createNewRevision = async (
     verification_hash: tree.getHexRoot(),
     data: verificationData,
   }
+
+
 }
 
 const createGenesisRevision = async (aquaFilename, timestamp) => {
@@ -577,6 +689,24 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
       enableScalar = false
     }
 
+
+    let revisionType = "file"
+    if (enableSignature) {
+      revisionType = "signature"
+    } else if (enableWitness) {
+      revisionType = "witness"
+    } else if (enableLink) {
+      revisionType = "link"
+    } else if (form_file_name) {
+      revisionType = "form"
+      enableScalar = false
+    }
+
+    if (revisionType == "witness" && filename.includes(",")) {
+      createRevionWithMulipleAquaChain(timestamp, revisionType)
+      return
+    }
+
     if (!fs.existsSync(aquaFilename)) {
       createGenesisRevision(aquaFilename, timestamp)
       return
@@ -597,17 +727,9 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
       process.exit(1)
     }
 
-    let revisionType = "file"
-    if (enableSignature) {
-      revisionType = "signature"
-    } else if (enableWitness) {
-      revisionType = "witness"
-    } else if (enableLink) {
-      revisionType = "link"
-    } else if (form_file_name) {
-      revisionType = "form"
-      enableScalar = false
-    }
+
+
+
 
     console.log("Revision type: ", revisionType)
 
@@ -623,4 +745,5 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
     console.log(`Writing new revision ${verificationHash} to ${aquaFilename}`)
     maybeUpdateFileIndex(aquaObject, verificationData, revisionType)
     serializeAquaObject(aquaFilename, aquaObject)
+
   })()

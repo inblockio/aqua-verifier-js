@@ -3,8 +3,9 @@
     "compilerOptions": {
         "declaration": true,
         "target": "ES6",
-        "module": "ES6",
+        "module": "NodeNext",
         "noEmit": false,
-        "noEmitOnError": false
+        "noEmitOnError": false,
+        "moduleResolution" : "NodeNext",
     }
 }

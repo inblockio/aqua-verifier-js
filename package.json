@@ -6,7 +6,6 @@
   "types": "index.d.ts",
   "type": "module",
   "dependencies": {
-    "@types/minimist": "^1.2.5",
     "browser-process-hrtime": "git+https://git@github.com/rht/browser-process-hrtime.git",
     "buffer": "^6.0.3",
     "crypto": "^1.0.1",
@@ -17,8 +16,7 @@
     "key-did-provider-ed25519": "^4.0.2",
     "key-did-resolver": "^4.0.0",
     "merkletreejs": "^0.4.0",
-    "minimist": "^1.2.8",
-    "undici": "^7.3.0"
+    "minimist": "^1.2.8"
   },
   "scripts": {
     "build": "tsc",

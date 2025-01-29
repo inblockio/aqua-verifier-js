@@ -10,7 +10,7 @@ project_root=$(git rev-parse --show-toplevel)
 # Set up paths relative to the project root
 notarize="${project_root}/notarize.js"
 verify="${project_root}/verify.js"
-form_updater="${project_root}/form_updater.ts"
+form_updater="${project_root}/form_updater.js"
 example_form="${project_root}/tests/form_testdata/example-form.json"
 example_form_attestation="${project_root}/tests/form_testdata/example-form-attestation.json"
 

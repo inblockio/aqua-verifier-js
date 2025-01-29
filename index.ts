@@ -52,6 +52,8 @@ const getFileHashSum = (filename) => {
   return getHashSum(content)
 }
 
+
+
 async function readExportFile(filename) {
   if (!fs.existsSync(filename)) {
     formatter.log_red(`ERROR: The file ${filename} does not exist.`)
