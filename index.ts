@@ -87,42 +87,50 @@ const getUnixPathFromAquaPath = (aquaPath: string) => {
  * @param   {string} verificationHash
  * @returns {boolean} Whether the merkle integrity is OK.
  */
-function verifyMerkleIntegrity(merkleBranch, verificationHash: string) {
+function verifyMerkleIntegrity(merkleBranch, merkleRoot: string) {
   if (merkleBranch.length === 0) {
     return false
   }
 
-  let prevSuccessor = null
-  for (const idx in merkleBranch) {
-    const node = merkleBranch[idx]
-    const leaves = [node.left_leaf, node.right_leaf]
-    if (prevSuccessor) {
-      if (!leaves.includes(prevSuccessor)) {
-        return false
-      }
-    } else {
-      // This means we are at the beginning of the loop.
-      if (!leaves.includes(verificationHash)) {
-        // In the beginning, either the left or right leaf must match the
-        // verification hash.
-        return false
-      }
-    }
+  // let prevSuccessor = null
+  // for (const idx in merkleBranch) {
+  //   const node = merkleBranch[idx]
+  //   const leaves = [node.left_leaf, node.right_leaf]
+  //   if (prevSuccessor) {
+  //     if (!leaves.includes(prevSuccessor)) {
+  //       return false
+  //     }
+  //   } else {
+  //     // This means we are at the beginning of the loop.
+  //     if (!leaves.includes(verificationHash)) {
+  //       // In the beginning, either the left or right leaf must match the
+  //       // verification hash.
+  //       return false
+  //     }
+  //   }
 
-    let calculatedSuccessor: string
-    if (!node.left_leaf) {
-      calculatedSuccessor = node.right_leaf
-    } else if (!node.right_leaf) {
-      calculatedSuccessor = node.left_leaf
-    } else {
-      calculatedSuccessor = getHashSum(node.left_leaf + node.right_leaf)
-    }
-    if (calculatedSuccessor !== node.successor) {
-      return false
-    }
-    prevSuccessor = node.successor
-  }
-  return true
+  //   let calculatedSuccessor: string
+  //   if (!node.left_leaf) {
+  //     calculatedSuccessor = node.right_leaf
+  //   } else if (!node.right_leaf) {
+  //     calculatedSuccessor = node.left_leaf
+  //   } else {
+  //     calculatedSuccessor = getHashSum(node.left_leaf + node.right_leaf)
+  //   }
+  //   if (calculatedSuccessor !== node.successor) {
+  //     return false
+  //   }
+  //   prevSuccessor = node.successor
+  // }
+
+  let witnessMerkleProofLeaves = merkleBranch
+  const tree = new MerkleTree(witnessMerkleProofLeaves, getHashSum, {
+    duplicateOdd: false,
+  })
+  const hexRoot = tree.getHexRoot()
+  let merkleRootOk = hexRoot === merkleRoot
+
+  return merkleRootOk
 }
 
 /**
@@ -199,14 +207,16 @@ async function verifyWitness(
     // because this step is expensive.
 
     //todo this will improved
-    // const merkleProofIsOK = verifyMerkleIntegrity(
-    //   JSON.parse(witnessData.witness_merkle_proof),
-    //   verification_hash,
-    // )
-    // result.merkle_proof_status = merkleProofIsOK ? "VALID" : "INVALID"
-    // if (!merkleProofIsOK) {
-    //   return ["INVALID", result]
-    // }
+    const merkleProofIsOK = verifyMerkleIntegrity(
+      // JSON.parse(witnessData.witness_merkle_proof),
+      // verification_hash,
+      witnessData.witness_merkle_proof,
+      witnessData.witness_merkle_root
+    )
+    result.merkle_proof_status = merkleProofIsOK ? "VALID" : "INVALID"
+    if (!merkleProofIsOK) {
+      return ["INVALID", result]
+    }
   }
   return [isValid ? "VALID" : "INVALID", result]
 }
@@ -248,6 +258,7 @@ const verifySignature = async (data: object, verificationHash: string) => {
 }
 
 function verifyRevisionMerkleTreeStructure(input, result: VerificationResult, verificationHash: string) {
+  console.log("verification hash: ", verificationHash)
   let ok: boolean = true
   let vhOk: boolean = true
 
@@ -267,7 +278,6 @@ function verifyRevisionMerkleTreeStructure(input, result: VerificationResult, ve
       return [false, { error_message: `mandatory field ${claim} is not present` }]
     }
   }
-
 
 
   const leaves = input.leaves
@@ -305,6 +315,15 @@ function verifyRevisionMerkleTreeStructure(input, result: VerificationResult, ve
     fieldsWithVerification.forEach(field => console.log(`   ✅${field}\n`))
 
   }
+  // For witness, we verify the merkle root
+  // else if (input.revision_type === "witness") {
+  //   let witnessMerkleProofLeaves = input.witness_merkle_proof
+  //   const tree = new MerkleTree(witnessMerkleProofLeaves, getHashSum, {
+  //     duplicateOdd: false,
+  //   })
+  //   const hexRoot = tree.getHexRoot()
+  //   vhOk = hexRoot === input.witness_merkle_root
+  // }
   else {
 
     // Verify leaves
@@ -320,6 +339,7 @@ function verifyRevisionMerkleTreeStructure(input, result: VerificationResult, ve
     const tree = new MerkleTree(leaves, getHashSum, {
       duplicateOdd: false,
     })
+
     const hexRoot = tree.getHexRoot()
     vhOk = hexRoot === verificationHash
   }
@@ -411,6 +431,7 @@ async function verifyRevision(
     const actualVH = "0x" + getHashSum(JSON.stringify(input))
     ok = actualVH === verificationHash
   } else {
+    console.log("Verifying merkle proof");
     [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)
     if (!ok) {
       return [ok, result]
