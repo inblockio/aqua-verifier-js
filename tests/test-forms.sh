@@ -15,9 +15,7 @@ example_form="${project_root}/tests/form_testdata/example-form.json"
 example_form_attestation="${project_root}/tests/form_testdata/example-form-attestation.json"
 
 test_expect_success 'Setup test environment' '
-    mkdir -p ${project_root}/tests/form_testdata &&
-    cp ${example_form} ${project_root}/tests/form_testdata/ &&
-    cp ${example_form} ${project_root}/tests/form_testdata/example-form-attestation.json
+    mkdir -p ${project_root}/tests/form_testdata 
 '
 
 test_expect_success 'Verify test files exist' '
@@ -55,11 +53,10 @@ test_expect_success 'Update age field' '
 '
 
 test_expect_success 'Final verification' '
-    ${verify} ${example_form}.aqua.json
-'
+    ${verify} ${example_form}'
 
 test_expect_success 'Cleanup test files' '
-    rm -f ${example_form}.aqua.json &&
+    rm -f ${example_form}.aqua.json
 '
 
 test_done
