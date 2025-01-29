@@ -10,17 +10,17 @@ import WebSocket from 'ws'
 
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-
+import { readCredentials } from './credentials.js';
 
 useWebSocketImplementation(WebSocket)
 
-const credentials_func = () => {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
+// const credentials_func = () => {
+//   const __filename = fileURLToPath(import.meta.url);
+//   const __dirname = dirname(__filename);
 
-  return JSON.parse(fs.readFileSync(`${__dirname}/credentials.json`, "utf8"))
-}
-const credentials = credentials_func()
+//   return JSON.parse(fs.readFileSync(`${__dirname}/credentials.json`, "utf8"))
+// }
+const credentials = readCredentials ();//credentials_func()
 // const credentials = JSON.parse(fs.readFileSync(`${import.meta.dirname}/credentials.json`, "utf8"))
 const skHex = credentials.nostr_sk
 const relayUrl = 'wss://relay.damus.io'

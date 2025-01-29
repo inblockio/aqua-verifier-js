@@ -20,6 +20,9 @@ import * as witnessTsa from "./witness_tsa.js"
 import { fileURLToPath } from "url"
 import { dirname } from "path"
 
+// import { Wallet, Mnemonic } from 'ethers';
+import {readCredentials, getWallet} from "./utils.js"
+
 const opts = {
   // This is required so that -v is position independent.
   boolean: ["v", "scalar", "content", "rm"],
@@ -249,20 +252,8 @@ const getFileTimestamp = (filename) => {
   return timestamp
 }
 
-const getWallet = (mnemonic) => {
-  // Always trim the last new line
-  const wallet = ethers.Wallet.fromPhrase(mnemonic.trim())
-  const walletAddress = wallet.address.toLowerCase()
-  console.log("Wallet address", walletAddress)
-  return [wallet, walletAddress, wallet.publicKey]
-}
 
-const readCredentials = () => {
-  const __filename = fileURLToPath(import.meta.url)
-  const __dirname = dirname(__filename)
 
-  return JSON.parse(fs.readFileSync(`${__dirname}/credentials.json`, "utf8"))
-}
 
 const prepareSignature = async (previousVerificationHash) => {
   let signature, walletAddress, publicKey, signature_type
