@@ -499,7 +499,7 @@ const createNewRevision = async (
 
       const linkData = {
         "link_type": "aqua",
-        "link_require_indepth_verification": true,
+        // "link_require_indepth_verification": true,
         "link_verification_hashes": linkVHs,
         "link_file_hashes": linkFileHashes,
       }
@@ -539,6 +539,11 @@ const createNewRevision = async (
 
     enableScalar = true;
     
+    if (vTree) {
+      console.log("Enable vTree: ", vTree)
+      enableScalar = false;
+    }
+
     if (!fs.existsSync(aquaFilename)  ) {
      
       let revisionType = "file"
@@ -585,11 +590,7 @@ const createNewRevision = async (
     console.log("Enable scalar: ", enableScalar)
 
    
-    if (vTree) {
-      console.log("Enable vTree: ", vTree)
-      enableScalar = false;
-    }
-
+   
     let revisionType = "file"
     if (enableSignature) {
       revisionType = "signature"
