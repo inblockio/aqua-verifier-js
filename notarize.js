@@ -346,22 +346,18 @@ const checkFileHashAlreadyNotarized = (fileHash, aquaObject) => {
 }
 
 const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType) => {
-  let fileHash = "";
-  console.log("Revision type: ", revisionType)
-  console.log("2. type: ", verificationData)
-  console.log("3.  type: ", aquaObject)
-  console.log("4.  form_file_name: ", form_file_name)
+  let verificationHash = "";
+
   switch (revisionType) {
     case "form":
-      // const verificationHash = verificationData.verification_hash
-      
-      fileHash = verificationData.data.file_hash
-      aquaObject.file_index[fileHash] = form_file_name
+      verificationHash = verificationData.verification_hash
+      // fileHash = verificationData.data.file_hash
+      aquaObject.file_index[verificationHash] = form_file_name
       break
     case "file":
-      // const verificationHash = verificationData.verification_hash
-      fileHash = verificationData.file_hash
-      aquaObject.file_index[fileHash] = filename
+      verificationHash = verificationData.verification_hash
+      // fileHash = verificationData.data.file_hash
+      aquaObject.file_index[verificationHash] = filename
       break
     case "link":
       const linkURIsArray = linkURIs.split(",")

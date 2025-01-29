@@ -177,9 +177,9 @@ function printRevisionInfo(detail, verbose) {
   }
 
   if (detail.scalar) {
-    console.log("  Scalar revision detected")
+    console.log("  ⏺️ Scalar revision detected")
     displayVHStatus(detail.status.verification)
-    return
+    // return
   }
 
   console.log(`  Elapsed: ${detail.elapsed} s`)

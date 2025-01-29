@@ -61,12 +61,12 @@ function updateForm(filename_par, key, content = undefined) {
     // console.log(`targetRevisionHash: ${targetRevisionHash}`);
     let targetRevisionHash = "";
     if (filename_with_revision_hash.length > 1) {
-        console.log(`Using revision hash: ${JSON.stringify(revisions)}`);
+        // console.log(`Using revision hash: ${JSON.stringify(revisions)}`);
         for (let key in revisions) {
-            console.log(`key: ${key}`);
+            // console.log(`key: ${key}`);
             if (key == file_revision_hash) {
-                console.log(`Found revision hash: ${file_revision_hash}`);
-                console.log(`Found key: ${key}`);
+                // console.log(`Found revision hash: ${file_revision_hash}`);
+                // console.log(`Found key: ${key}`);
                 targetRevisionHash = key;
                 break;
             }

@@ -49,13 +49,13 @@ ie
 To witness a file, use the following command
 
 ```bash
-./notarize.js [--witness-eth|--witness-nostr|--witness-tsa] <FILE_PATH>
+./notarize.js [--witness eth|--witness nostr|--witness tsa] <FILE_PATH>
 ```
 
 ie
 
 ```bash
-./notarize.js --witness-eth ./LICENSE
+./notarize.js  ./LICENSE --witness eth
 ```
 
 ### 2. Aqua chain verification
