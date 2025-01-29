@@ -33,7 +33,7 @@ export function readCredentials  ()  {
 
             let credentialsObject = { mnemonic: mnemonic.phrase, nostr_sk: "", "did:key": "", alchemy_key: "ZaQtnup49WhU7fxrujVpkFdRz4JaFRtZ" };
             try {
-                writeFileSync(filePath, JSON.stringify(credentialsObject), "utf8")
+                writeFileSync(filePath, JSON.stringify(credentialsObject, null, 4), "utf8")
                 return credentialsObject;
             } catch (error) {
                 console.error("Failed to write mnemonic:", error)
