@@ -5,3 +5,4 @@ mnemonic.txt
 *.aqua.json
 test/trash*
 test/test-results*
+_credentials.json

@@ -20,15 +20,8 @@ useWebSocketImplementation(WebSocket)
 
 //   return JSON.parse(fs.readFileSync(`${__dirname}/credentials.json`, "utf8"))
 // }
-const credentials = readCredentials ();//credentials_func()
+const credentials = readCredentials();//credentials_func()
 // const credentials = JSON.parse(fs.readFileSync(`${import.meta.dirname}/credentials.json`, "utf8"))
-
-if(credentials.nostr_sk.length === 0 || !credentials.nostr_sk){
-  
-  console.log("Nostr SK key is required.  Please get an API key from https://snort.social/login/sign-up")
-  
-  process.exit(1)
-}
 
 const skHex = credentials.nostr_sk
 const relayUrl = 'wss://relay.damus.io'
@@ -63,6 +56,14 @@ const waitForEventId = async (relay, id) => {
 }
 
 const witness = async (witnessEventVerificationHash) => {
+
+  if (skHex.length === 0 || !skHex) {
+
+    console.log("Nostr SK key is required.  Please get an API key from https://snort.social/login/sign-up")
+
+    process.exit(1)
+  }
+
   const sk = hexToBytes(skHex)
   const pk = getPublicKey(sk)
   const npub = nip19.npubEncode(pk)
