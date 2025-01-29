@@ -7,7 +7,6 @@
   "type": "module",
   "dependencies": {
     "@types/minimist": "^1.2.5",
-    "@types/node": "^22.12.0",
     "browser-process-hrtime": "git+https://git@github.com/rht/browser-process-hrtime.git",
     "buffer": "^6.0.3",
     "crypto": "^1.0.1",
