@@ -576,7 +576,6 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
       enableScalar = true
     }
     if (vTree) {
-      console.log("Enable vTree: ", vTree)
       enableScalar = false
     }
 
@@ -599,9 +598,6 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
       formatter.log_red("ERROR: you cannot sign & witness at the same time")
       process.exit(1)
     }
-    console.log("Enable scalar: ", enableScalar)
-
-
 
     let revisionType = "file"
     if (enableSignature) {
