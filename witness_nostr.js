@@ -10,7 +10,7 @@ import WebSocket from 'ws'
 
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { readCredentials } from './credentials.js';
+import { readCredentials } from './utils.js';
 
 useWebSocketImplementation(WebSocket)
 
@@ -22,6 +22,14 @@ useWebSocketImplementation(WebSocket)
 // }
 const credentials = readCredentials ();//credentials_func()
 // const credentials = JSON.parse(fs.readFileSync(`${import.meta.dirname}/credentials.json`, "utf8"))
+
+if(credentials.nostr_sk.length === 0 || !credentials.nostr_sk){
+  
+  console.log("Nostr SK key is required.  Please get an API key from https://snort.social/login/sign-up")
+  
+  process.exit(1)
+}
+
 const skHex = credentials.nostr_sk
 const relayUrl = 'wss://relay.damus.io'
 

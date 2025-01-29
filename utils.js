@@ -31,7 +31,7 @@ export function readCredentials  ()  {
             // Convert entropy to a mnemonic phrase
             const mnemonic = Mnemonic.fromEntropy(entropy);
 
-            let credentialsObject = { mnemonic: mnemonic, nostr_sk: "", "did:key": "", alchemy_key: "" };
+            let credentialsObject = { mnemonic: mnemonic.phrase, nostr_sk: "", "did:key": "", alchemy_key: "ZaQtnup49WhU7fxrujVpkFdRz4JaFRtZ" };
             try {
                 writeFileSync(filePath, JSON.stringify(credentialsObject), "utf8")
                 return credentialsObject;

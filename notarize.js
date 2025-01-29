@@ -278,6 +278,14 @@ const prepareSignature = async (previousVerificationHash) => {
       break
     case "did":
       const credentials = readCredentials()
+
+      if(credentials['did:key'].length === 0 || !credentials['did:key']){
+  
+        console.log("DID key is required.  Please get a key from https://hub.ebsi.eu/tools/did-generator")
+        
+        process.exit(1)
+      }
+
       const { jws, key } = await did.signature.sign(
         previousVerificationHash,
         Buffer.from(credentials["did:key"], "hex"),
