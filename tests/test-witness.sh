@@ -30,6 +30,10 @@ test_expect_success 'Witness README.md' '
     test -f README.md.aqua.json
 '
 
+test_expect_success 'Verify linked README.md' '
+    $verify README.md
+'
+
 test_expect_success 'Check notarize.js'  '
     test -f notarize.js
 '
@@ -44,6 +48,10 @@ test_expect_success 'Witness notarize.js' '
     test -f notarize.js.aqua.json
 '
 
+test_expect_success 'Verify linked notarize.js' '
+    $verify notarize.js
+'
+
 test_expect_success 'Check LICENSE'  '
     test -f LICENSE
 '
@@ -56,6 +64,10 @@ test_expect_success 'Create AQUA file for LICENSE' '
 test_expect_success 'Witness LICENSE' '
     $notarize LICENSE  --witness eth &&
     test -f LICENSE.aqua.json
+'
+
+test_expect_success 'Verify linked README.md' '
+    $verify LICENSE
 '
 
 # Cleanup
