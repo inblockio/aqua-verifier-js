@@ -6,6 +6,7 @@
   "types": "index.d.ts",
   "type": "module",
   "dependencies": {
+    "@types/minimist": "^1.2.5",
     "browser-process-hrtime": "git+https://git@github.com/rht/browser-process-hrtime.git",
     "buffer": "^6.0.3",
     "crypto": "^1.0.1",

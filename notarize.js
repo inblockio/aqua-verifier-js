@@ -185,19 +185,19 @@ const prepareWitness = async (verificationHash) => {
       break
     case "tsa":
       const tsaUrl = "http://timestamp.digicert.com" // DigiCert's TSA URL
-      ;[transactionHash, publisher, witnessTimestamp] =
-        await witnessTsa.witness(merkle_root, tsaUrl)
+        ;[transactionHash, publisher, witnessTimestamp] =
+          await witnessTsa.witness(merkle_root, tsaUrl)
       witness_network = "TSA_RFC3161"
       smart_contract_address = tsaUrl
       break
     case "eth":
       witness_network = "sepolia"
       smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
-      ;[transactionHash, publisher] = await witnessEth.witnessMetamask(
-        merkle_root,
-        witness_network,
-        smart_contract_address,
-      )
+        ;[transactionHash, publisher] = await witnessEth.witnessMetamask(
+          merkle_root,
+          witness_network,
+          smart_contract_address,
+        )
       witnessTimestamp = Math.floor(Date.now() / 1000)
       break
     default:
@@ -277,7 +277,7 @@ const prepareSignature = async (previousVerificationHash) => {
       try {
         const credentials = readCredentials()
         let wallet
-        ;[wallet, walletAddress, publicKey] = getWallet(credentials.mnemonic)
+          ;[wallet, walletAddress, publicKey] = getWallet(credentials.mnemonic)
         signature = await doSign(wallet, previousVerificationHash)
       } catch (error) {
         console.error("Failed to read mnemonic:", error)
@@ -346,11 +346,22 @@ const checkFileHashAlreadyNotarized = (fileHash, aquaObject) => {
 }
 
 const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType) => {
+  let fileHash = "";
+  console.log("Revision type: ", revisionType)
+  console.log("2. type: ", verificationData)
+  console.log("3.  type: ", aquaObject)
+  console.log("4.  form_file_name: ", form_file_name)
   switch (revisionType) {
     case "form":
+      // const verificationHash = verificationData.verification_hash
+      
+      fileHash = verificationData.data.file_hash
+      aquaObject.file_index[fileHash] = form_file_name
+      break
     case "file":
-      const verificationHash = verificationData.verification_hash
-      aquaObject.file_index[verificationHash] = filename
+      // const verificationHash = verificationData.verification_hash
+      fileHash = verificationData.file_hash
+      aquaObject.file_index[fileHash] = filename
       break
     case "link":
       const linkURIsArray = linkURIs.split(",")
@@ -398,7 +409,7 @@ const createNewRevision = async (
   enableScalar,
   aquaObject,
 ) => {
-  
+
   let verificationData = {
     previous_verification_hash: previousVerificationHash,
     local_timestamp: timestamp,
@@ -558,68 +569,68 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
   serializeAquaObject(aquaFilename, aquaObject)
 }
 
-// The main function
-;(async function () {
-  const aquaFilename = filename + ".aqua.json"
-  // const timestamp = getFileTimestamp(filename)
-  // We use "now" instead of the modified time of the file
-  const now = new Date().toISOString()
-  const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
-  if (!form_file_name) {
-    enableScalar = true
-  }
-  if (vTree) {
-    console.log("Enable vTree: ", vTree)
-    enableScalar = false
-  }
+  // The main function
+  ; (async function () {
+    const aquaFilename = filename + ".aqua.json"
+    // const timestamp = getFileTimestamp(filename)
+    // We use "now" instead of the modified time of the file
+    const now = new Date().toISOString()
+    const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
+    if (!form_file_name) {
+      enableScalar = true
+    }
+    if (vTree) {
+      console.log("Enable vTree: ", vTree)
+      enableScalar = false
+    }
 
-  if (!fs.existsSync(aquaFilename)) {
-    createGenesisRevision(aquaFilename, timestamp)
-    return
-  }
+    if (!fs.existsSync(aquaFilename)) {
+      createGenesisRevision(aquaFilename, timestamp)
+      return
+    }
 
-  const aquaObject = JSON.parse(fs.readFileSync(aquaFilename))
-  const revisions = aquaObject.revisions
-  const verificationHashes = Object.keys(revisions)
-  const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
+    const aquaObject = JSON.parse(fs.readFileSync(aquaFilename))
+    const revisions = aquaObject.revisions
+    const verificationHashes = Object.keys(revisions)
+    const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
-  if (enableRemoveRevision) {
-    removeRevision(aquaObject, lastRevisionHash, aquaFilename)
-    return
-  }
+    if (enableRemoveRevision) {
+      removeRevision(aquaObject, lastRevisionHash, aquaFilename)
+      return
+    }
 
-  if (enableSignature && enableWitness) {
-    formatter.log_red("ERROR: you cannot sign & witness at the same time")
-    process.exit(1)
-  }
-  console.log("Enable scalar: ", enableScalar)
+    if (enableSignature && enableWitness) {
+      formatter.log_red("ERROR: you cannot sign & witness at the same time")
+      process.exit(1)
+    }
+    console.log("Enable scalar: ", enableScalar)
 
-  
 
-  let revisionType = "file"
-  if (enableSignature) {
-    revisionType = "signature"
-  } else if (enableWitness) {
-    revisionType = "witness"
-  } else if (enableLink) {
-    revisionType = "link"
-  } else if (form_file_name) {
-    revisionType = "form"
-    enableScalar = false
-  }
 
-  console.log("Revision type: ", revisionType)
+    let revisionType = "file"
+    if (enableSignature) {
+      revisionType = "signature"
+    } else if (enableWitness) {
+      revisionType = "witness"
+    } else if (enableLink) {
+      revisionType = "link"
+    } else if (form_file_name) {
+      revisionType = "form"
+      enableScalar = false
+    }
 
-  const verificationData = await createNewRevision(
-    lastRevisionHash,
-    timestamp,
-    revisionType,
-    enableScalar,
-    aquaObject,
-  )
-  const verificationHash = verificationData.verification_hash
-  revisions[verificationHash] = verificationData.data
-  console.log(`Writing new revision ${verificationHash} to ${aquaFilename}`)
-  maybeUpdateFileIndex(aquaObject, verificationData, revisionType)
-  serializeAquaObject(aquaFilename, aquaObject)
-})()
+    console.log("Revision type: ", revisionType)
+
+    const verificationData = await createNewRevision(
+      lastRevisionHash,
+      timestamp,
+      revisionType,
+      enableScalar,
+      aquaObject,
+    )
+    const verificationHash = verificationData.verification_hash
+    revisions[verificationHash] = verificationData.data
+    console.log(`Writing new revision ${verificationHash} to ${aquaFilename}`)
+    maybeUpdateFileIndex(aquaObject, verificationData, revisionType)
+    serializeAquaObject(aquaFilename, aquaObject)
+  })()

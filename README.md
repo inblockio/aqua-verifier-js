@@ -150,7 +150,7 @@ To create a form revision
 
 ### 8. Updat Aqua forms 
 
-* To delete a form entry  `./form_updater.js example_form.json.aqua.json --delete age`
+* To delete a form entry  `./form_updater.js example_form.json.aqua.json@abcd --delete age`
  
 *  to update a form entry ie undelete it `./form_updater.js example_form.json.aqua.json --update forms_age 200`
  
