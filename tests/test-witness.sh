@@ -26,11 +26,9 @@ test_expect_success 'Create AQUA file for README.md' '
 '
 
 test_expect_success 'Witness README.md' '
-    $notarize README.md  --witness-nostr &&
+    $notarize README.md  --witness nostr &&
     test -f README.md.aqua.json
 '
-
-
 
 test_expect_success 'Check notarize.js'  '
     test -f notarize.js
@@ -41,9 +39,8 @@ test_expect_success 'Create AQUA file for notarize.js' '
     test -f notarize.js.aqua.json
 '
 
-
 test_expect_success 'Witness notarize.js' '
-    $notarize notarize.js  --witness-nostr &&
+    $notarize notarize.js  --witness tsa &&
     test -f notarize.js.aqua.json
 '
 
