@@ -134,7 +134,7 @@ const witnessMetamask = async (
   }
 }
 
-export const witnessCli = async (walletPrivateKey, witness_event_verification_hash, smart_contract_address, providerUrl) => {
+export const witnessCli = async (walletPrivateKey, witness_event_verification_hash, smart_contract_address, ethNetwork, providerUrl) => {
   try {
     // const provider = new ethers.JsonRpcProvider(providerUrl);
     const provider = ethers.getDefaultProvider(ethNetwork)

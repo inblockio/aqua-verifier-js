@@ -339,6 +339,7 @@ const prepareWitness = async (verificationHash) => {
           wallet.privateKey,
           merkle_root,
           smart_contract_address,
+          witness_network,
           null
         )
 
