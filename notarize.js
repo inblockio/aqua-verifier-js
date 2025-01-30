@@ -330,6 +330,7 @@ const prepareWitness = async (verificationHash) => {
 
         if (!gasEstimateResult.hasEnoughBalance) {
           console.log(`You do not have enough balance to cater for gas fees`)
+          console.log(`Add some faucets to this wallet address: ${walletAddress}\n`)
           process.exit(1)
         }
 
