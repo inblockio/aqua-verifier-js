@@ -14,6 +14,8 @@ test_expect_success 'Setup test environment' '
     cp repo/README.md README.md &&
     cp repo/LICENSE LICENSE &&
     cp repo/notarize.js notarize.js
+    cp repo/formatter.js formatter.js
+    cp repo/index.js index.js
 '
 
 test_expect_success 'Check README.md'  '
@@ -30,8 +32,12 @@ test_expect_success 'Witness README.md' '
     test -f README.md.aqua.json
 '
 
-test_expect_success 'Verify linked README.md' '
+test_expect_success 'Verify witnessed README.md' '
     $verify README.md
+'
+
+test_expect_success 'Remove revision from README.md' '
+    $notarize README.md --rm
 '
 
 test_expect_success 'Check notarize.js'  '
@@ -61,15 +67,27 @@ test_expect_success 'Create AQUA file for LICENSE' '
     test -f LICENSE.aqua.json
 '
 
+test_expect_success 'Create AQUA file for formatter.js' '
+    $notarize formatter.js &&
+    test -f formatter.js.aqua.json
+'
+
 test_expect_success 'Witness LICENSE' '
-    $notarize LICENSE  --witness eth --type cli &&
+    $notarize README.md,LICENSE,formatter.js --witness eth --type cli &&
     test -f LICENSE.aqua.json
 '
 
-test_expect_success 'Verify linked README.md' '
+test_expect_success 'Verify witnessed README.md' '
     $verify LICENSE
 '
 
+test_expect_success 'Verify witnessed index.js' '
+    $verify README.md
+'
+
+test_expect_success 'Verify witnessed formatter.js' '
+    $verify formatter.js
+'
 # Cleanup
 test_expect_success 'Cleanup test files' '
     rm -f README.md.aqua.json &&
