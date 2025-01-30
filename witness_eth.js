@@ -134,6 +134,70 @@ const witnessMetamask = async (
   }
 }
 
+export const witnessCli = async (walletPrivateKey, witness_event_verification_hash, smart_contract_address, providerUrl) => {
+  try {
+    // const provider = new ethers.JsonRpcProvider(providerUrl);
+    const provider = ethers.getDefaultProvider(ethNetwork)
+
+    // Create a wallet from private key
+    const wallet = new ethers.Wallet(walletPrivateKey, provider);
+    const sender = wallet.address;
+
+    console.log(`Using wallet: ${sender}`);
+
+    // Validate witness hash format
+    if (!witness_event_verification_hash.startsWith("0x")) {
+      throw new Error("Invalid witness verification hash: must start with '0x'");
+    }
+
+    const tx = {
+      from: sender,
+      to: smart_contract_address,
+      data: "0x9cef4ea1" + witness_event_verification_hash.slice(2),
+    };
+
+    // Get sender balance
+    const balance = await provider.getBalance(sender);
+    const balanceInEth = ethers.formatEther(balance);
+    console.log(`Sender Balance: ${balanceInEth} ETH`);
+
+    // Estimate gas
+    const estimatedGas = await provider.estimateGas(tx);
+    console.log(`Estimated Gas: ${estimatedGas.toString()} units`);
+
+    // Get gas price
+    const feeData = await provider.getFeeData();
+    const gasPrice = feeData.gasPrice;
+    console.log(`Gas Price: ${ethers.formatUnits(gasPrice, "gwei")} Gwei`);
+
+    // Calculate total gas fee
+    const gasCost = estimatedGas * gasPrice;
+    const gasCostInEth = ethers.formatEther(gasCost);
+    console.log(`Estimated Gas Fee: ${gasCostInEth} ETH`);
+
+    // Check if sender has enough balance
+    if (balance < gasCost) {
+      throw new Error("Insufficient balance for gas fee.");
+    }
+
+    // Sign and send transaction
+    const signedTx = await wallet.sendTransaction({
+      ...tx,
+      gasLimit: estimatedGas,
+      gasPrice: gasPrice
+    });
+
+    console.log(`Transaction sent! Hash: ${signedTx.hash}`);
+
+    return { error: null, transactionHash: signedTx.hash };
+
+  } catch (error) {
+    console.error("Error sending transaction:", error);
+    return { error: error.message };
+  }
+};
+
+
 const verify = async (
   ethNetwork,
   transactionHash,

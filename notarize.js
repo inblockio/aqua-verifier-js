@@ -21,7 +21,7 @@ import { fileURLToPath } from "url"
 import { dirname } from "path"
 
 // import { Wallet, Mnemonic } from 'ethers';
-import { readCredentials, getWallet } from "./utils.js"
+import { readCredentials, getWallet, estimateWitnessGas } from "./utils.js"
 
 const opts = {
   // This is required so that -v is position independent.
@@ -56,6 +56,10 @@ Options:
     Remove the most recent revision of the AQUA file
   --form
     Use this flag to include the json file with form data
+  --network
+    Use this flag to switch between 'mainnet' and 'sepolia' when witnessing
+  --type 
+    Use this flag to switch between metamask and cli wallet when witnessing 
 `)
 }
 
@@ -82,6 +86,7 @@ const linkURIs = argv["link"]
 const enableLink = !!linkURIs
 const form_file_name = argv["form"]
 const network = argv["network"]
+const witness_platform_type = argv["type"]
 
 const port = 8420
 const host = "localhost"
@@ -271,7 +276,7 @@ const createRevionWithMulipleAquaChain = async (timestamp, revisionType) => {
       data: verificationData
     }, revisionType);
     const filePath = `${current_file}.aqua.json`;
-    serializeAquaObject( filePath, current_file_aqua_object)
+    serializeAquaObject(filePath, current_file_aqua_object)
   }
 }
 
@@ -283,7 +288,6 @@ const prepareWitness = async (verificationHash) => {
     transactionHash,
     publisher,
     witnessTimestamp;
-
 
   switch (witnessMethod) {
     case "nostr":
@@ -307,12 +311,54 @@ const prepareWitness = async (verificationHash) => {
         useNetwork = "mainnet"
       }
       witness_network = useNetwork
-      smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
-        ;[transactionHash, publisher] = await witnessEth.witnessMetamask(
+      smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611";
+
+      if (witness_platform_type === "cli") {
+        let creds = readCredentials();
+        let [wallet, walletAddress, publicKey] = getWallet(creds.mnemonic);
+
+        console.log("Wallet address: ", walletAddress)
+
+        let gasEstimateResult = await estimateWitnessGas(walletAddress, merkle_root, witness_network, smart_contract_address, null);
+
+        console.log("Gas estimate result: ", gasEstimateResult)
+
+        if (gasEstimateResult.error !== null) {
+          console.log(`Unable to Estimate gas fee: ${gasEstimateResult?.error}`)
+          process.exit(1)
+        }
+
+        if (!gasEstimateResult.hasEnoughBalance) {
+          console.log(`You do not have enough balance to cater for gas fees`)
+          process.exit(1)
+        }
+
+
+        // = async (walletPrivateKey, witness_event_verification_hash, smart_contract_address, providerUrl) 
+        let witnessCliResult = await witnessEth.witnessCli(
+          wallet.privateKey,
+          merkle_root,
+          smart_contract_address,
+          null
+        )
+
+        console.log("cli signing result: ", witnessCliResult)
+
+        if(witnessCliResult.error !== null){
+          console.log(`Unable to witnesss: ${witnessCliResult.error}`,)
+          process.exit(1)
+        }
+
+        transactionHash = witnessCliResult.transactionHash
+        publisher = walletAddress
+      } else {
+        [transactionHash, publisher] = await witnessEth.witnessMetamask(
           merkle_root,
           witness_network,
           smart_contract_address,
         )
+      }
+
       witnessTimestamp = Math.floor(Date.now() / 1000)
       break
     default:
