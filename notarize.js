@@ -271,7 +271,7 @@ const createRevionWithMulipleAquaChain = async (timestamp, revisionType) => {
       data: verificationData
     }, revisionType);
     const filePath = `${current_file}.aqua.json`;
-    serializeAquaObject( filePath, current_file_aqua_object)
+    serializeAquaObject(filePath, current_file_aqua_object)
   }
 }
 
@@ -681,6 +681,22 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
 
   // The main function
   ; (async function () {
+
+    let nameContainsAtSign = false;
+    let fileNameOnly = "";
+    let  revisionSpecified = "";
+
+    if (filename.includes("@")) {
+      const filenameParts = filename.split("@");
+      if (filenameParts.length > 2) {
+        console.error("Invalid filename format.  Please use only one '@' symbol to separate the filename from the revision hash.");
+        process.exit(1);
+      }
+      nameContainsAtSign = true;
+      fileNameOnly = filenameParts[0];
+      revisionSpecified = filenameParts[1];
+    }
+
     const aquaFilename = filename + ".aqua.json"
     // const timestamp = getFileTimestamp(filename)
     // We use "now" instead of the modified time of the file
@@ -719,6 +735,8 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
     const aquaObject = JSON.parse(fs.readFileSync(aquaFilename))
     const revisions = aquaObject.revisions
     const verificationHashes = Object.keys(revisions)
+
+    
     const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
     if (enableRemoveRevision) {
@@ -730,10 +748,6 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
       formatter.log_red("ERROR: you cannot sign & witness at the same time")
       process.exit(1)
     }
-
-
-
-
 
     console.log("Revision type: ", revisionType)
 
