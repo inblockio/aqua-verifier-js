@@ -19,7 +19,6 @@ verify.js [OPTIONS] --api <page title>
 Options:
   -v                     Verbose
   --server               <The url of the server, e.g. https://pkc.inblock.io>
-  --ignore-merkle-proof  Ignore verifying the witness merkle proof of each revision
   --api                 (If present) The title to read from for the data
 If the --server is not specified, it defaults to http://localhost:9352`)
 }
@@ -34,8 +33,6 @@ if (argv._.length < 1) {
 
 const verbose = argv.v
 
-const ignoreMerkleProof = argv["ignore-merkle-proof"] ?? false
-
 const server = argv.server ?? "http://localhost:9352"
 
 
@@ -48,7 +45,7 @@ const server = argv.server ?? "http://localhost:9352"
     filename = filename.endsWith(".aqua.json") ? filename : filename + ".aqua.json"
     const offlineData = await main.readExportFile(filename)
 
-    await main.verifyPage(offlineData, verbose, !ignoreMerkleProof)
+    await main.verifyPage(offlineData, verbose)
     console.log()
   } else {
     const title = argv.api
@@ -71,6 +68,6 @@ const server = argv.server ?? "http://localhost:9352"
       formatter.log_red(`Server version: ${serverVersion}`)
       return
     }
-    await main.verifyPageFromMwAPI(server, title, verbose, !ignoreMerkleProof)
+    await main.verifyPageFromMwAPI(server, title, verbose)
   }
 })()
