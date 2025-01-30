@@ -62,7 +62,7 @@ test_expect_success 'Create AQUA file for LICENSE' '
 '
 
 test_expect_success 'Witness LICENSE' '
-    $notarize LICENSE  --witness eth &&
+    $notarize LICENSE  --witness eth --type cli &&
     test -f LICENSE.aqua.json
 '
 
