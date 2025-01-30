@@ -302,7 +302,11 @@ const prepareWitness = async (verificationHash) => {
       smart_contract_address = tsaUrl
       break
     case "eth":
-      witness_network = "sepolia"
+      let useNetwork = "sepolia"
+      if (network === "mainnet") {
+        useNetwork = "mainnet"
+      }
+      witness_network = useNetwork
       smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
         ;[transactionHash, publisher] = await witnessEth.witnessMetamask(
           merkle_root,
