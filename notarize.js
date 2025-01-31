@@ -254,15 +254,17 @@ const createRevionWithMulipleAquaChain = async (timestamp, revisionType) => {
     //   }
     // }
 
-    const revisions = current_file_aqua_object.revisions
+    if (enableScalar == false || vtree == true) {
+      const revisions = current_file_aqua_object.revisions
 
-    // Merklelize the dictionary
-    const leaves = main.dict2Leaves(verificationData)
-    const tree = new MerkleTree(leaves, main.getHashSum, {
-      duplicateOdd: false,
-    })
+      // Merklelize the dictionary
+      const leaves = main.dict2Leaves(verificationData)
+      const tree = new MerkleTree(leaves, main.getHashSum, {
+        duplicateOdd: false,
+      })
 
-    verificationData.leaves = leaves;
+      verificationData.leaves = leaves;
+    }
     const verificationHash = tree.getHexRoot()
     revisions[verificationHash] = verificationData
     console.log(`\n\n Writing new revision ${verificationHash} to ${current_file} current file current_file_aqua_object ${JSON.stringify(current_file_aqua_object)} \n\n `)
@@ -271,7 +273,7 @@ const createRevionWithMulipleAquaChain = async (timestamp, revisionType) => {
       data: verificationData
     }, revisionType);
     const filePath = `${current_file}.aqua.json`;
-    serializeAquaObject( filePath, current_file_aqua_object)
+    serializeAquaObject(filePath, current_file_aqua_object)
   }
 }
 
