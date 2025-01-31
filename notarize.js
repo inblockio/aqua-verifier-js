@@ -365,7 +365,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
       verification_hash: verificationHash,
       data: verificationData
     }, revisionType);
-    const filePath = `${current_file}.aqua.json`;
+    const filePath = `${fileNameOnly}.aqua.json`;
     serializeAquaObject(filePath, current_file_aqua_object)
   }
   return true;
