@@ -188,7 +188,7 @@ const prepareNonce = () => {
   return randomBytes(32).toString('base64url');
 }
 
-const createRevisionWithMultipleAquaChain = async (timestamp, revisionType , aquaFileName) => {
+const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aquaFileName) => {
   if (!filename.includes(",")) {
     console.error("Multiple files must be separated by commas");
     process.exit(1);
@@ -196,10 +196,41 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType , aqu
 
   // read files
   let all_aqua_files = filename.split(",");
+  // let all_file_aqua_objects = [];
 
-  let all_file_aqua_objects = [];
-  for (const file of all_aqua_files) {
-    const filePath = `${file}.aqua.json`;
+  // ie filename.aqua.json => "specified revision"
+  // if specified revision is empty use last revision
+  const all_file_aqua_objects_map = new Map();
+  let all_file_aqua_objects_list = [];
+  const revisionSPecifiedMap = new Map();
+
+  for (const file_item of all_aqua_files) {
+
+    let fileNameOnly = ""
+    let revisionSpecified = ""
+
+    console.log("File name loop ", file_item);
+    if (file_item.includes("@")) {
+
+      const filenameParts = file_item.split("@");
+      if (filenameParts.length > 2) {
+        console.error(`Invalid filename format.  Please use only one '@' symbol to separate the filename from the revision hash. file name ${filenameParts}`);
+        process.exit(1);
+      }
+      fileNameOnly = filenameParts[0];
+
+      revisionSpecified = filenameParts[1];
+
+      if (revisionSpecified.length == 0) {
+        console.error("Revision hash is empty.  Please provide a valid revision hash.");
+        process.exit(1);
+      }
+
+      revisionSPecifiedMap.set(fileNameOnly, revisionSpecified);
+    } else {
+      fileNameOnly = file_item;
+    }
+    const filePath = `${fileNameOnly}.aqua.json`;
 
     if (!fs.existsSync(filePath)) {
       console.error(`File does not exist: ${filePath}`);
@@ -210,30 +241,51 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType , aqu
       const fileContent = await fs.readFileSync(filePath, "utf-8");
       const aquaObject = JSON.parse(fileContent);
       console.log(`Successfully read: ${filePath}`);
-      all_file_aqua_objects.push(aquaObject);
+      // all_file_aqua_objects.push(aquaObject);
+      all_file_aqua_objects_map.set(fileNameOnly, aquaObject);
+      all_file_aqua_objects_list.push(aquaObject)
     } catch (error) {
       console.error(`Error reading ${filePath}:`, error);
       process.exit(1);
     }
   }
-  console.log("All files read successfully \n", all_file_aqua_objects);
+  console.log("All files read successfully \n", all_file_aqua_objects_map);
   // get the last verification hash
-  let lastRevionHashes = [];
+  let lastRevisionOrSpecifiedHashes = [];
 
-  for (const file of all_file_aqua_objects) {
-    const verificationHashes = Object.keys(file.revisions);
-    lastRevionHashes.push(verificationHashes[verificationHashes.length - 1]);
+  for (const [key, value] of all_file_aqua_objects_map) {
+
+    console.log(`key ${key}  and value ${value}`);
+
+    const verificationHashes = Object.keys(value.revisions);
+    // if aqua filname has specified revision use it instead of the last revision
+
+    if (revisionSPecifiedMap.has(key)) {
+      let revisionSpecified = revisionSPecifiedMap.get(key);
+      if (verificationHashes.includes(revisionSpecified)) {
+        lastRevisionOrSpecifiedHashes.push(revisionSpecified)
+      } else {
+        console.error(`Error revision  ${revisionSpecified} in  file ${key}.aqua.json not found`);
+        process.exit(1);
+      }
+    } else {
+
+      lastRevisionOrSpecifiedHashes.push(verificationHashes[verificationHashes.length - 1]);
+    }
+
+    // 
   }
-  console.log("All last revision hashes  \n", lastRevionHashes);
 
-  const tree2 = new MerkleTree(lastRevionHashes, main.getHashSum, {
+  console.log("All last revision hashes  \n", lastRevisionOrSpecifiedHashes);
+
+  const tree2 = new MerkleTree(lastRevisionOrSpecifiedHashes, main.getHashSum, {
     duplicateOdd: false,
   })
 
   let merkleRoot = tree2.getHexRoot();
   let merkleProofArray = [];
 
-  lastRevionHashes.forEach((hash) => {
+  lastRevisionOrSpecifiedHashes.forEach((hash) => {
     let merkleProof = tree2.getHexProof(hash);
     merkleProofArray.push(merkleProof);
   });
@@ -242,18 +294,42 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType , aqu
 
   let witnessResult = await prepareWitness(merkleRoot);
 
-  witnessResult.witness_merkle_proof = lastRevionHashes;
+  witnessResult.witness_merkle_proof = lastRevisionOrSpecifiedHashes;
 
+
+
+  console.log("All Aqua objects ", JSON.stringify(all_file_aqua_objects_list));
 
   for (let index = 0; index < all_aqua_files.length; index++) {
     const current_file = all_aqua_files[index];
-    const current_file_aqua_object = all_file_aqua_objects[index];
+    const current_file_aqua_object = all_file_aqua_objects_list[index];
+    console.log("current_file_aqua_object ", JSON.stringify(current_file_aqua_object))
 
-
-    // let previousVerificationHash = current_file_aqua_object.revisions.keys.pop();
     const revisionKeys = Object.keys(current_file_aqua_object.revisions);
-    const latestRevisionKey = revisionKeys.pop(); // Get the last key
+    // if no specified revision use the last one 
+    // if one is specified use the last one 
+    console.log("Current file ", current_file);
+    const filenameParts = current_file.split("@");
+    if (filenameParts.length > 2) {
+      console.error(`Invalid filename format.  Please use only one '@' symbol to separate the filename from the revision hash. file name ${filenameParts}`);
+      process.exit(1);
+    }
+    let fileNameOnly = filenameParts[0];
 
+    let latestRevisionKey = ""
+    console.log("All revisions map ", JSON.stringify(revisionSPecifiedMap))
+    if (revisionSPecifiedMap.has(fileNameOnly)) {
+      console.log()
+      
+
+      latestRevisionKey = revisionSPecifiedMap.get(fileNameOnly);
+
+      console.log("Setting previous revision to a specific on ", latestRevisionKey);
+
+    } else {
+      latestRevisionKey = revisionKeys.pop(); // Get the last key
+
+    }
     console.log("Latest revision key:", latestRevisionKey);
 
     let verificationData = {
@@ -288,7 +364,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType , aqu
     maybeUpdateFileIndex(current_file_aqua_object, {
       verification_hash: verificationHash,
       data: verificationData
-    }, revisionType );
+    }, revisionType);
     const filePath = `${current_file}.aqua.json`;
     serializeAquaObject(filePath, current_file_aqua_object)
   }
@@ -755,10 +831,11 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     let fileNameOnly = "";
     let revisionSpecified = "";
 
-    if (filename.includes("@")) {
+
+    if (filename.includes("@") && !filename.includes(",")) {
       const filenameParts = filename.split("@");
       if (filenameParts.length > 2) {
-        console.error("Invalid filename format.  Please use only one '@' symbol to separate the filename from the revision hash.");
+        console.error("-> Invalid filename format.  Please use only one '@' symbol to separate the filename from the revision hash.");
         process.exit(1);
       }
       fileNameOnly = filenameParts[0];
@@ -798,7 +875,9 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
       enableScalar = false
     }
 
+    console.log("Hey ...")
     if (revisionType == "witness" && filename.includes(",")) {
+      console.log("Here .... 2 ")
       createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
       return
     }

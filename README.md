@@ -58,6 +58,22 @@ ie
 ./notarize.js  ./LICENSE --witness eth
 ```
 
+To witness multiple aqua chains 
+
+ie 
+```bash
+./notarize.js LICENSE,README.md --witness eth --vtree --type sepolia
+```
+
+
+
+To witness multiple file with specific revision 
+ie 
+```bash
+./notarize.js LICENSE@0x_specific_revision_,README.md@0x_specific_revision_ --witness eth --vtree --type sepolia
+```
+
+
 ### 2. Aqua chain verification
 
 To verify an aqua chain use the following command
@@ -148,7 +164,7 @@ please note for genesis the filane name should be the same with form name
 To create a form revision 
 `/notarize.js LICENCE --form example_form.json `
 
-### 8. Updat Aqua forms 
+### 8. Update Aqua forms 
 
 * To delete a form entry  `./form_updater.js example_form.json.aqua.json@abcd --delete age`
  
