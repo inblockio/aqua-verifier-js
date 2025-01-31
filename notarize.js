@@ -21,7 +21,7 @@ import { fileURLToPath } from "url"
 import { dirname } from "path"
 
 // import { Wallet, Mnemonic } from 'ethers';
-import { readCredentials, getWallet } from "./utils.js"
+import { readCredentials, getWallet, estimateWitnessGas } from "./utils.js"
 
 const opts = {
   // This is required so that -v is position independent.
@@ -56,6 +56,10 @@ Options:
     Remove the most recent revision of the AQUA file
   --form
     Use this flag to include the json file with form data
+  --network
+    Use this flag to switch between 'mainnet' and 'sepolia' when witnessing
+  --type 
+    Use this flag to switch between metamask and cli wallet when witnessing 
 `)
 }
 
@@ -82,6 +86,7 @@ const linkURIs = argv["link"]
 const enableLink = !!linkURIs
 const form_file_name = argv["form"]
 const network = argv["network"]
+const witness_platform_type = argv["type"]
 
 const port = 8420
 const host = "localhost"
@@ -139,42 +144,56 @@ const sleep = (ms) => {
 }
 
 const doSignMetamask = async (verificationHash) => {
+  const maxAttempts = 24; // 2 minute timeout (12 * 5 seconds)
+  let attempts = 0;
+  
   const messageToBeSigned = "I sign this revision: [" + verificationHash + "]"
   const html = signMetamaskHtml.replace("MESSAGETOBESIGNED", messageToBeSigned)
   const requestListener = witnessEth.commonPrepareListener(html)
   const server = http.createServer(requestListener)
-  server.listen(port, host, () => {
-    console.log(`Server is running on ${serverUrl}`)
-  })
-  let response, content
-  while (true) {
-    response = await fetch(serverUrl + "/result")
-    content = await response.json()
-    if (content.signature) {
-      const signature = content.signature
-      const walletAddress = content.wallet_address
-      const publicKey = ethers.SigningKey.recoverPublicKey(
-        ethers.hashMessage(messageToBeSigned),
-        signature,
-      )
-      console.log(`The signature has been retrieved: ${signature}`)
-      server.close()
-      return [signature, walletAddress, publicKey]
+  try {
+    server.listen(port, host, () => {
+      console.log(`Server is running on ${serverUrl}`)
+    })
+    let response, content
+    while (attempts < maxAttempts) {
+      response = await fetch(serverUrl + "/result")
+      content = await response.json()
+      if (content.signature) {
+        const signature = content.signature
+        const walletAddress = content.wallet_address
+        const publicKey = ethers.SigningKey.recoverPublicKey(
+          ethers.hashMessage(messageToBeSigned),
+          signature,
+        )
+        console.log(`The signature has been retrieved: ${signature}`)
+        server.close()
+        return [signature, walletAddress, publicKey]
+      }
+      console.log("Waiting for the signature...")
+      attempts++;
+      await sleep(5000);
     }
-    console.log("Waiting for the signature...")
-    await sleep(5000)
+    
+    console.error("Signature timeout: No response from MetaMask");
+    server.close();
+    process.exit(1);
+  } catch (error) {
+    server.close();
+    throw error;
   }
 }
 
 const prepareNonce = () => {
-  const seed = randomBytes(32)
-  return new Buffer.from(seed).toString("base64url")
+  return randomBytes(32).toString('base64url');
 }
 
-
-
-const createRevionWithMulipleAquaChain = async (timestamp, revisionType) => {
-
+const createRevisionWithMultipleAquaChain = async (timestamp, revisionType) => {
+  if (!filename.includes(",")) {
+    console.error("Multiple files must be separated by commas");
+    process.exit(1);
+  }
+  
   // read files
   let all_aqua_files = filename.split(",");
 
@@ -273,9 +292,14 @@ const createRevionWithMulipleAquaChain = async (timestamp, revisionType) => {
     const filePath = `${current_file}.aqua.json`;
     serializeAquaObject(filePath, current_file_aqua_object)
   }
+  return true;
 }
 
 const prepareWitness = async (verificationHash) => {
+  if (!witnessMethod) {
+    console.error("Witness method must be specified");
+    process.exit(1);
+  }
 
   const merkle_root = verificationHash
   let witness_network,
@@ -283,7 +307,6 @@ const prepareWitness = async (verificationHash) => {
     transactionHash,
     publisher,
     witnessTimestamp;
-
 
   switch (witnessMethod) {
     case "nostr":
@@ -307,12 +330,56 @@ const prepareWitness = async (verificationHash) => {
         useNetwork = "mainnet"
       }
       witness_network = useNetwork
-      smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611"
-        ;[transactionHash, publisher] = await witnessEth.witnessMetamask(
+      smart_contract_address = "0x45f59310ADD88E6d23ca58A0Fa7A55BEE6d2a611";
+
+      if (witness_platform_type === "cli") {
+        let creds = readCredentials();
+        let [wallet, walletAddress, publicKey] = getWallet(creds.mnemonic);
+
+        console.log("Wallet address: ", walletAddress)
+
+        let gasEstimateResult = await estimateWitnessGas(walletAddress, merkle_root, witness_network, smart_contract_address, null);
+
+        console.log("Gas estimate result: ", gasEstimateResult)
+
+        if (gasEstimateResult.error !== null) {
+          console.log(`Unable to Estimate gas fee: ${gasEstimateResult?.error}`)
+          process.exit(1)
+        }
+
+        if (!gasEstimateResult.hasEnoughBalance) {
+          console.log(`You do not have enough balance to cater for gas fees`)
+          console.log(`Add some faucets to this wallet address: ${walletAddress}\n`)
+          process.exit(1)
+        }
+
+
+        // = async (walletPrivateKey, witness_event_verification_hash, smart_contract_address, providerUrl) 
+        let witnessCliResult = await witnessEth.witnessCli(
+          wallet.privateKey,
+          merkle_root,
+          smart_contract_address,
+          witness_network,
+          null
+        )
+
+        console.log("cli signing result: ", witnessCliResult)
+
+        if(witnessCliResult.error !== null){
+          console.log(`Unable to witnesss: ${witnessCliResult.error}`,)
+          process.exit(1)
+        }
+
+        transactionHash = witnessCliResult.transactionHash
+        publisher = walletAddress
+      } else {
+        [transactionHash, publisher] = await witnessEth.witnessMetamask(
           merkle_root,
           witness_network,
           smart_contract_address,
         )
+      }
+
       witnessTimestamp = Math.floor(Date.now() / 1000)
       break
     default:
@@ -423,22 +490,13 @@ const getLatestVH = (uri) => {
 }
 
 const serializeAquaObject = (aquaFilename, aquaObject) => {
-  // fs.writeFileSync(aquaFilename, JSON.stringify(aquaObject, null, 2), "utf8")
-  //
   try {
-    // First convert the object to a JSON string
-    const jsonString = JSON.stringify(aquaObject, null, 2)
-
-    // Verify we got a valid string
-    if (typeof jsonString !== "string") {
-      throw new Error("Failed to serialize object to JSON string")
-    }
-
-    // Write the string to file
-    fs.writeFileSync(aquaFilename, jsonString, "utf8")
+ // Convert the object to a JSON string
+    const jsonString = JSON.stringify(aquaObject, null, 2);
+    fs.writeFileSync(aquaFilename, jsonString, "utf8");
   } catch (error) {
-    console.error("Error serializing object:", error)
-    throw error // Re-throw to handle it in the calling code
+    console.error("Error writing file:", error);
+    process.exit(1);
   }
 }
 
@@ -457,6 +515,11 @@ const checkFileHashAlreadyNotarized = (fileHash, aquaObject) => {
 }
 
 const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType) => {
+  const validRevisionTypes = ["file", "form", "link"];
+  //if (!validRevisionTypes.includes(revisionType)) {
+  //  console.error(`Invalid revision type for file index: ${revisionType}`);
+  //  return;
+  //}
   let verificationHash = "";
 
   switch (revisionType) {
@@ -516,6 +579,11 @@ const createNewRevision = async (
   enableScalar,
   aquaObject,
 ) => {
+  const validRevisionTypes = ["file", "signature", "witness", "form", "link"];
+  if (!validRevisionTypes.includes(revision_type)) {
+    console.error(`Invalid revision type: ${revision_type}`);
+    process.exit(1);
+  }
 
   let verificationData = {
     previous_verification_hash: previousVerificationHash,
@@ -723,7 +791,7 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
     }
 
     if (revisionType == "witness" && filename.includes(",")) {
-      createRevionWithMulipleAquaChain(timestamp, revisionType)
+      createRevisionWithMultipleAquaChain(timestamp, revisionType)
       return
     }
 
