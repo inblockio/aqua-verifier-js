@@ -188,7 +188,7 @@ const prepareNonce = () => {
   return randomBytes(32).toString('base64url');
 }
 
-const createRevisionWithMultipleAquaChain = async (timestamp, revisionType) => {
+const createRevisionWithMultipleAquaChain = async (timestamp, revisionType , aquaFileName) => {
   if (!filename.includes(",")) {
     console.error("Multiple files must be separated by commas");
     process.exit(1);
@@ -288,7 +288,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType) => {
     maybeUpdateFileIndex(current_file_aqua_object, {
       verification_hash: verificationHash,
       data: verificationData
-    }, revisionType);
+    }, revisionType );
     const filePath = `${current_file}.aqua.json`;
     serializeAquaObject(filePath, current_file_aqua_object)
   }
@@ -514,7 +514,7 @@ const checkFileHashAlreadyNotarized = (fileHash, aquaObject) => {
   }
 }
 
-const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType) => {
+const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType, aquaFileName) => {
   const validRevisionTypes = ["file", "form", "link"];
   //if (!validRevisionTypes.includes(revisionType)) {
   //  console.error(`Invalid revision type for file index: ${revisionType}`);
@@ -531,7 +531,7 @@ const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType) => {
     case "file":
       verificationHash = verificationData.verification_hash
       // fileHash = verificationData.data.file_hash
-      aquaObject.file_index[verificationHash] = filename
+      aquaObject.file_index[verificationHash] = aquaFileName //filename
       break
     case "link":
       const linkURIsArray = linkURIs.split(",")
@@ -573,6 +573,7 @@ const removeRevision = (aquaObject, lastRevisionHash, aquaFilename) => {
 }
 
 const createNewRevision = async (
+  fileNameOnly,
   targetHash,
   timestamp,
   revision_type,
@@ -594,7 +595,7 @@ const createNewRevision = async (
   let fileHash
   switch (revision_type) {
     case "file":
-      const fileContent = fs.readFileSync(filename)
+      const fileContent = fs.readFileSync(fileNameOnly); //filename)
       fileHash = main.getHashSum(fileContent)
       checkFileHashAlreadyNotarized(fileHash, aquaObject)
       if (enableContent) {
@@ -711,7 +712,7 @@ const createNewRevision = async (
 
 }
 
-const createGenesisRevision = async (aquaFilename, timestamp) => {
+const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
   let revisionType = "file"
   if (form_file_name) {
     revisionType = "form"
@@ -728,6 +729,7 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
   const revisions = aquaObject.revisions
 
   const genesis = await createNewRevision(
+    fileNameOnly,
     "",
     timestamp,
     revisionType,
@@ -797,12 +799,12 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
     }
 
     if (revisionType == "witness" && filename.includes(",")) {
-      createRevisionWithMultipleAquaChain(timestamp, revisionType)
+      createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
       return
     }
 
     if (!fs.existsSync(aquaFilename)) {
-      createGenesisRevision(aquaFilename, timestamp)
+      createGenesisRevision(aquaFilename, timestamp, fileNameOnly)
       return
     }
 
@@ -840,6 +842,7 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
     console.log("➡️   Revision type: ", revisionType)
 
     const verificationData = await createNewRevision(
+      fileNameOnly,
       revisionHashSpecified,
       timestamp,
       revisionType,
@@ -849,7 +852,7 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
     const verificationHash = verificationData.verification_hash
     revisions[verificationHash] = verificationData.data
     console.log(`Writing new revision ${verificationHash} to ${aquaFilename}`)
-    maybeUpdateFileIndex(aquaObject, verificationData, revisionType)
+    maybeUpdateFileIndex(aquaObject, verificationData, revisionType, aquaFilename)
     serializeAquaObject(aquaFilename, aquaObject)
 
   })()
