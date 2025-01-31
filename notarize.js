@@ -469,7 +469,7 @@ const prepareSignature = async (previousVerificationHash) => {
         previousVerificationHash,
         Buffer.from(credentials["did:key"], "hex"),
       )
-      signature = jws
+      signature = jws.payload
       walletAddress = key
       publicKey = key
       signature_type = "did:key"
@@ -750,9 +750,8 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
   // The main function
   ; (async function () {
 
-    let nameContainsAtSign = false;
     let fileNameOnly = "";
-    let  revisionSpecified = "";
+    let revisionSpecified = "";
 
     if (filename.includes("@")) {
       const filenameParts = filename.split("@");
@@ -760,12 +759,17 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
         console.error("Invalid filename format.  Please use only one '@' symbol to separate the filename from the revision hash.");
         process.exit(1);
       }
-      nameContainsAtSign = true;
       fileNameOnly = filenameParts[0];
+
       revisionSpecified = filenameParts[1];
+
+      if (revisionSpecified.length == 0) {
+        console.error("Revision hash is empty.  Please provide a valid revision hash.");
+        process.exit(1);
+      }
     }
 
-    const aquaFilename = filename + ".aqua.json"
+    const aquaFilename = fileNameOnly + ".aqua.json"
     // const timestamp = getFileTimestamp(filename)
     // We use "now" instead of the modified time of the file
     const now = new Date().toISOString()
@@ -804,13 +808,25 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
     const revisions = aquaObject.revisions
     const verificationHashes = Object.keys(revisions)
 
-    
-    const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
     if (enableRemoveRevision) {
       removeRevision(aquaObject, lastRevisionHash, aquaFilename)
       return
     }
+
+    let lastRevisionHash = ""
+
+    if (lastRevisionHash.length > 0) {
+      lastRevisionHash = revisionSpecified
+
+      if (!verificationHashes.includes(lastRevisionHash)) {
+        console.error(`Revision hash ${lastRevisionHash} not found in ${aquaFilename}`);
+        process.exit(1);
+      }
+    } else {
+      lastRevisionHash = verificationHashes[verificationHashes.length - 1]
+    }
+
 
     if (enableSignature && enableWitness) {
       formatter.log_red("ERROR: you cannot sign & witness at the same time")
