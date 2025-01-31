@@ -574,6 +574,7 @@ const removeRevision = (aquaObject, lastRevisionHash, aquaFilename) => {
 
 const createNewRevision = async (
   previousVerificationHash,
+  targetHash,
   timestamp,
   revision_type,
   enableScalar,
@@ -604,11 +605,11 @@ const createNewRevision = async (
       verificationData["file_nonce"] = prepareNonce()
       break
     case "signature":
-      const sigData = await prepareSignature(previousVerificationHash)
+      const sigData = await prepareSignature(targetHash)
       verificationData = { ...verificationData, ...sigData }
       break
     case "witness":
-      const witness = await prepareWitness(previousVerificationHash)
+      const witness = await prepareWitness(targetHash)
       verificationData = { ...verificationData, ...witness }
       // verificationData.witness_merkle_proof = JSON.stringify(
       //   verificationData.witness_merkle_proof,
@@ -729,6 +730,7 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
 
   const genesis = await createNewRevision(
     "",
+    "",
     timestamp,
     revisionType,
     enableScalar,
@@ -767,6 +769,8 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
         console.error("Revision hash is empty.  Please provide a valid revision hash.");
         process.exit(1);
       }
+    } else {
+      fileNameOnly = filename;
     }
 
     const aquaFilename = fileNameOnly + ".aqua.json"
@@ -814,29 +818,33 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
       return
     }
 
-    let lastRevisionHash = ""
+    const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
+    let revisionHashSpecified = ""
 
-    if (lastRevisionHash.length > 0) {
-      lastRevisionHash = revisionSpecified
+    if (revisionSpecified.length > 0) {
+      console.log("📍  Revision specified: ", revisionSpecified)
 
-      if (!verificationHashes.includes(lastRevisionHash)) {
-        console.error(`Revision hash ${lastRevisionHash} not found in ${aquaFilename}`);
+
+      if (!verificationHashes.includes(revisionSpecified)) {
+        console.error(`❌  Revision hash ${revisionSpecified} not found in ${aquaFilename}`);
         process.exit(1);
       }
+      revisionHashSpecified = revisionSpecified
     } else {
-      lastRevisionHash = verificationHashes[verificationHashes.length - 1]
+      revisionHashSpecified = verificationHashes[verificationHashes.length - 1]
     }
 
 
     if (enableSignature && enableWitness) {
-      formatter.log_red("ERROR: you cannot sign & witness at the same time")
+      formatter.log_red("❌ you cannot sign & witness at the same time")
       process.exit(1)
     }
 
-    console.log("Revision type: ", revisionType)
+    console.log("➡️   Revision type: ", revisionType)
 
     const verificationData = await createNewRevision(
       lastRevisionHash,
+      revisionHashSpecified,
       timestamp,
       revisionType,
       enableScalar,
