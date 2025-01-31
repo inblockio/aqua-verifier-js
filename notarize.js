@@ -146,7 +146,7 @@ const sleep = (ms) => {
 const doSignMetamask = async (verificationHash) => {
   const maxAttempts = 24; // 2 minute timeout (12 * 5 seconds)
   let attempts = 0;
-  
+
   const messageToBeSigned = "I sign this revision: [" + verificationHash + "]"
   const html = signMetamaskHtml.replace("MESSAGETOBESIGNED", messageToBeSigned)
   const requestListener = witnessEth.commonPrepareListener(html)
@@ -174,7 +174,7 @@ const doSignMetamask = async (verificationHash) => {
       attempts++;
       await sleep(5000);
     }
-    
+
     console.error("Signature timeout: No response from MetaMask");
     server.close();
     process.exit(1);
@@ -193,7 +193,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType) => {
     console.error("Multiple files must be separated by commas");
     process.exit(1);
   }
-  
+
   // read files
   let all_aqua_files = filename.split(",");
 
@@ -273,17 +273,15 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType) => {
     //   }
     // }
 
-    if (enableScalar == false || vtree == true) {
-      const revisions = current_file_aqua_object.revisions
-
-      // Merklelize the dictionary
-      const leaves = main.dict2Leaves(verificationData)
-      const tree = new MerkleTree(leaves, main.getHashSum, {
-        duplicateOdd: false,
-      })
-
+    const revisions = current_file_aqua_object.revisions
+    // Merklelize the dictionary
+    const leaves = main.dict2Leaves(verificationData)
+    if (enableScalar == false || vTree == true) {
       verificationData.leaves = leaves;
     }
+    const tree = new MerkleTree(leaves, main.getHashSum, {
+      duplicateOdd: false,
+    })
     const verificationHash = tree.getHexRoot()
     revisions[verificationHash] = verificationData
     console.log(`\n\n Writing new revision ${verificationHash} to ${current_file} current file current_file_aqua_object ${JSON.stringify(current_file_aqua_object)} \n\n `)
@@ -367,7 +365,7 @@ const prepareWitness = async (verificationHash) => {
 
         console.log("cli signing result: ", witnessCliResult)
 
-        if(witnessCliResult.error !== null){
+        if (witnessCliResult.error !== null) {
           console.log(`Unable to witnesss: ${witnessCliResult.error}`,)
           process.exit(1)
         }
@@ -493,7 +491,7 @@ const getLatestVH = (uri) => {
 
 const serializeAquaObject = (aquaFilename, aquaObject) => {
   try {
- // Convert the object to a JSON string
+    // Convert the object to a JSON string
     const jsonString = JSON.stringify(aquaObject, null, 2);
     fs.writeFileSync(aquaFilename, jsonString, "utf8");
   } catch (error) {
