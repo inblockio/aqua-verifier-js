@@ -573,7 +573,6 @@ const removeRevision = (aquaObject, lastRevisionHash, aquaFilename) => {
 }
 
 const createNewRevision = async (
-  previousVerificationHash,
   targetHash,
   timestamp,
   revision_type,
@@ -587,7 +586,7 @@ const createNewRevision = async (
   }
 
   let verificationData = {
-    previous_verification_hash: previousVerificationHash,
+    previous_verification_hash: targetHash, //previousVerificationHash,
     local_timestamp: timestamp,
     revision_type,
   }
@@ -730,7 +729,6 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
 
   const genesis = await createNewRevision(
     "",
-    "",
     timestamp,
     revisionType,
     enableScalar,
@@ -812,7 +810,6 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
     const revisions = aquaObject.revisions
     const verificationHashes = Object.keys(revisions)
 
-
     if (enableRemoveRevision) {
       removeRevision(aquaObject, lastRevisionHash, aquaFilename)
       return
@@ -843,7 +840,6 @@ const createGenesisRevision = async (aquaFilename, timestamp) => {
     console.log("➡️   Revision type: ", revisionType)
 
     const verificationData = await createNewRevision(
-      lastRevisionHash,
       revisionHashSpecified,
       timestamp,
       revisionType,
