@@ -249,13 +249,13 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
       process.exit(1);
     }
   }
-  console.log("All files read successfully \n", all_file_aqua_objects_map);
+  console.log("All files read successfully \n", );
   // get the last verification hash
   let lastRevisionOrSpecifiedHashes = [];
 
   for (const [key, value] of all_file_aqua_objects_map) {
 
-    console.log(`key ${key}  and value ${value}`);
+    // console.log(`key ${key}  and value ${value}`);
 
     const verificationHashes = Object.keys(value.revisions);
     // if aqua filname has specified revision use it instead of the last revision
@@ -339,15 +339,6 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
       ...witnessResult
     }
 
-    // if (enableScalar) {
-    //   // A simpler version of revision -- scalar
-    //   const scalarData = verificationData //JSON.stringify(verificationData)
-    //   return {
-    //     verification_hash:
-    //       "0x" + main.getHashSum(JSON.stringify(verificationData)),
-    //     data: scalarData,
-    //   }
-    // }
 
     const revisions = current_file_aqua_object.revisions
     // Merklelize the dictionary
@@ -875,9 +866,8 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
       enableScalar = false
     }
 
-    console.log("Hey ...")
     if (revisionType == "witness" && filename.includes(",")) {
-      console.log("Here .... 2 ")
+ 
       createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
       return
     }
