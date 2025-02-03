@@ -85,7 +85,7 @@ export function createAquaTree(aquaObject: any) {
     }
 }
 
-export function logTree(node: RevisionTree, prefix: string = "", isLast: boolean = true): void {
+export function logAquaTree(node: RevisionTree, prefix: string = "", isLast: boolean = true): void {
     // Log the current node's hash
     console.log(prefix + (isLast ? "└── " : "├── ") + node.hash);
 
@@ -95,6 +95,6 @@ export function logTree(node: RevisionTree, prefix: string = "", isLast: boolean
     // Recursively log each child
     node.children.forEach((child, index) => {
         const isChildLast = index === node.children.length - 1;
-        logTree(child, newPrefix, isChildLast);
+        logAquaTree(child, newPrefix, isChildLast);
     });
 }

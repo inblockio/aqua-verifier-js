@@ -70,8 +70,7 @@ export function createAquaObjectTree(aquaObject) {
 export function createAquaTree(aquaObject) {
     let tree = createAquaObjectTree(aquaObject);
     let pathResult = findHashWithLongestPath(tree);
-    return Object.assign(Object.assign({}, aquaObject), { tree,
-        pathResult });
+    return Object.assign(Object.assign({}, aquaObject), { tree, treeMapping: pathResult });
 }
 export function logTree(node, prefix = "", isLast = true) {
     // Log the current node's hash
