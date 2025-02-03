@@ -733,7 +733,7 @@ const createNewRevision = async (
     case "file":
     
     
-      if (enableContent.length > 0) {
+      if (enableContent !=  undefined  && enableContent.length > 0) {
       
         const fileContent = fs.readFileSync(enableContent); //filename)
         fileHash = main.getHashSum(fileContent)
@@ -1013,7 +1013,7 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     console.log(`1. Writing new revision ${verificationHash} to ${aquaFilename}`)
 
     let  theIndexFileName = fileNameOnly;
-    if(enableContent.length > 0 ){
+    if(enableContent != undefined && enableContent.length > 0 ){
       theIndexFileName=enableContent
     }
     maybeUpdateFileIndex(aquaObject, verificationData, revisionType,enableContent )
