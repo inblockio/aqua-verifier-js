@@ -1019,4 +1019,8 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     maybeUpdateFileIndex(aquaObject, verificationData, revisionType,enableContent )
     serializeAquaObject(aquaFilename, aquaObject)
 
+    // Tree creation
+    let aquaObjectWithTree = createAquaObjectTreee(aquaObject)
+
+    serializeAquaObject(aquaFilename, aquaObjectWithTree)
   })()
