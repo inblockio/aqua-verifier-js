@@ -25,8 +25,8 @@ import { readCredentials, getWallet, estimateWitnessGas } from "./utils.js"
 
 const opts = {
   // This is required so that -v is position independent.
-  boolean: ["v", "scalar", "content", "rm"],
-  string: ["sign", "link", "witness"],
+  boolean: ["v", "scalar",  "rm"],
+  string: ["sign", "link", "witness", "content"],
 }
 
 const usage = () => {
@@ -81,6 +81,7 @@ let vTree = argv["vtree"]
 const witnessMethod = argv["witness"]
 const enableWitness = !!witnessMethod
 const enableContent = argv["content"]
+
 const enableRemoveRevision = argv["rm"]
 const linkURIs = argv["link"]
 const enableLink = !!linkURIs
@@ -730,11 +731,23 @@ const createNewRevision = async (
   let fileHash
   switch (revision_type) {
     case "file":
-      const fileContent = fs.readFileSync(fileNameOnly); //filename)
-      fileHash = main.getHashSum(fileContent)
-      checkFileHashAlreadyNotarized(fileHash, aquaObject)
-      if (enableContent) {
+    
+    
+      if (enableContent.length > 0) {
+      
+        const fileContent = fs.readFileSync(enableContent); //filename)
+        fileHash = main.getHashSum(fileContent)
+     
+        checkFileHashAlreadyNotarized(fileHash, aquaObject)
+
         verificationData["content"] = fileContent.toString("utf8")
+        
+        console.log("📄 content flag detected  file  :", enableContent);
+      }else{
+        const fileContent = fs.readFileSync(fileNameOnly); //filename)
+        fileHash = main.getHashSum(fileContent)
+    
+        checkFileHashAlreadyNotarized(fileHash, aquaObject)
       }
       verificationData["file_hash"] = fileHash
       verificationData["file_nonce"] = prepareNonce()
@@ -793,7 +806,7 @@ const createNewRevision = async (
       break
 
     case "link":
-      console.log(" linkURIs ", linkURIs);
+      // console.log(" linkURIs ", linkURIs);
       const linkURIsArray = linkURIs.split(",")
       // Validation
       linkURIsArray.map((uri) => {
@@ -802,11 +815,11 @@ const createNewRevision = async (
         process.exit(1)
       })
 
-      console.log(" linkURIsArray ", JSON.stringify(linkURIsArray));
+      // console.log(" linkURIsArray ", JSON.stringify(linkURIsArray));
       const linkAquaFiles = linkURIsArray.map((e) => `${e}.aqua.json`)
       const linkVHs = linkAquaFiles.map(getLatestVH)
 
-      console.log("linkVHs ", linkVHs);
+      // console.log("linkVHs ", linkVHs);
 
       const linkFileHashes = linkURIsArray.map(main.getFileHashSum)
       // Validation again
@@ -998,7 +1011,12 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     const verificationHash = verificationData.verification_hash
     revisions[verificationHash] = verificationData.data
     console.log(`1. Writing new revision ${verificationHash} to ${aquaFilename}`)
-    maybeUpdateFileIndex(aquaObject, verificationData, revisionType, aquaFilename)
+
+    let  theIndexFileName = fileNameOnly;
+    if(enableContent.length > 0 ){
+      theIndexFileName=enableContent
+    }
+    maybeUpdateFileIndex(aquaObject, verificationData, revisionType,enableContent )
     serializeAquaObject(aquaFilename, aquaObject)
 
   })()
