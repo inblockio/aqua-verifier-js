@@ -944,6 +944,9 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
       if (revisionType == "witness" || revisionType == "link") {
         createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
         return
+      }else{
+        console.log("❌ only revision type witness and link work with multiple aqua chain as the file name")
+        process.exit(1)
       }
     }
 
