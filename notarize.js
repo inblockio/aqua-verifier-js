@@ -17,6 +17,8 @@ import * as witnessNostr from "./witness_nostr.js"
 import * as witnessEth from "./witness_eth.js"
 import * as witnessTsa from "./witness_tsa.js"
 
+import { createAquaTree } from "./aquavhtree.js"
+
 import { fileURLToPath } from "url"
 import { dirname } from "path"
 
@@ -25,7 +27,7 @@ import { readCredentials, getWallet, estimateWitnessGas } from "./utils.js"
 
 const opts = {
   // This is required so that -v is position independent.
-  boolean: ["v", "scalar",  "rm"],
+  boolean: ["v", "scalar", "rm"],
   string: ["sign", "link", "witness", "content"],
 }
 
@@ -309,7 +311,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
     let linkURIsArray = [];
     if (linkURIs.includes(",")) {
       linkURIsArray = linkURIs.split(",")
-    }else{
+    } else {
       linkURIsArray.push(linkURIs);
     }
 
@@ -317,7 +319,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
     const linkVerificationHash = linkAquaFiles.map(getLatestVH)
     const linkFileHashes = linkURIsArray.map(main.getFileHashSum)
 
-    console.log(`&&&&&&&&&& ${linkFileHashes} \n ` );
+    console.log(`&&&&&&&&&& ${linkFileHashes} \n `);
 
     revisionResult = {
       link_type: "aqua",
@@ -328,7 +330,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
 
   }
 
- 
+
   for (let index = 0; index < all_aqua_files.length; index++) {
     const current_file = all_aqua_files[index];
     const current_file_aqua_object = all_file_aqua_objects_list[index];
@@ -731,22 +733,22 @@ const createNewRevision = async (
   let fileHash
   switch (revision_type) {
     case "file":
-    
-    
-      if (enableContent !=  undefined  && enableContent.length > 0) {
-      
+
+
+      if (enableContent != undefined && enableContent.length > 0) {
+
         const fileContent = fs.readFileSync(enableContent); //filename)
         fileHash = main.getHashSum(fileContent)
-     
+
         checkFileHashAlreadyNotarized(fileHash, aquaObject)
 
         verificationData["content"] = fileContent.toString("utf8")
-        
+
         console.log("📄 content flag detected  file  :", enableContent);
-      }else{
+      } else {
         const fileContent = fs.readFileSync(fileNameOnly); //filename)
         fileHash = main.getHashSum(fileContent)
-    
+
         checkFileHashAlreadyNotarized(fileHash, aquaObject)
       }
       verificationData["file_hash"] = fileHash
@@ -957,7 +959,7 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
       if (revisionType == "witness" || revisionType == "link") {
         createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
         return
-      }else{
+      } else {
         console.log("❌ only revision type witness and link work with multiple aqua chain as the file name")
         process.exit(1)
       }
@@ -1012,15 +1014,15 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     revisions[verificationHash] = verificationData.data
     console.log(`1. Writing new revision ${verificationHash} to ${aquaFilename}`)
 
-    let  theIndexFileName = fileNameOnly;
-    if(enableContent != undefined && enableContent.length > 0 ){
-      theIndexFileName=enableContent
+    let theIndexFileName = fileNameOnly;
+    if (enableContent != undefined && enableContent.length > 0) {
+      theIndexFileName = enableContent
     }
-    maybeUpdateFileIndex(aquaObject, verificationData, revisionType,enableContent )
+    maybeUpdateFileIndex(aquaObject, verificationData, revisionType, enableContent)
     serializeAquaObject(aquaFilename, aquaObject)
 
     // Tree creation
-    let aquaObjectWithTree = createAquaObjectTreee(aquaObject)
+    let aquaObjectWithTree = createAquaTree(aquaObject)
 
     serializeAquaObject(aquaFilename, aquaObjectWithTree)
   })()
