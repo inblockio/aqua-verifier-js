@@ -1,4 +1,4 @@
-###- data-accounting-external-verifier
+## data-accounting-external-verifier
 JS Client,  scripts for signing , witnessiing and verifying revisiion <br/>
 
 ## Functional description
@@ -126,13 +126,13 @@ ie
 To link an Aqua chain to another use the `--link` option as follows
 
 ```bash
-./notarize.js --link <FILE_PATH.aqua.json> <FILE_PATH>
+./notarize.js  <FILE_PATH>  --link  <FILE_PATH.aqua.json>
 ```
 
 ie
 
 ```bash
-./notarize.js --link ./README.md.aqua.json ./LICENSE
+./notarize.js   --link ./LICENSE ./README.md.aqua.json
 ```
 
 This will link `README.md.aqua.json` to `LICENSE` file and it will be written into `LICENSE.aqua.json` file
