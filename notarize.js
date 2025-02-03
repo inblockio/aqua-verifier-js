@@ -249,7 +249,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
       process.exit(1);
     }
   }
-  console.log("All files read successfully \n", );
+  console.log("All files read successfully \n",);
   // get the last verification hash
   let lastRevisionOrSpecifiedHashes = [];
 
@@ -278,32 +278,60 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
 
   console.log("All last revision hashes  \n", lastRevisionOrSpecifiedHashes);
 
-  const tree2 = new MerkleTree(lastRevisionOrSpecifiedHashes, main.getHashSum, {
-    duplicateOdd: false,
-  })
 
-  let merkleRoot = tree2.getHexRoot();
-  let merkleProofArray = [];
+  let revisionResult = {};
 
-  lastRevisionOrSpecifiedHashes.forEach((hash) => {
-    let merkleProof = tree2.getHexProof(hash);
-    merkleProofArray.push(merkleProof);
-  });
+  if (revisionType == "witness") {
+    const tree2 = new MerkleTree(lastRevisionOrSpecifiedHashes, main.getHashSum, {
+      duplicateOdd: false,
+    })
 
-  console.log("Merkle proof: ", merkleProofArray);
+    let merkleRoot = tree2.getHexRoot();
+    let merkleProofArray = [];
 
-  let witnessResult = await prepareWitness(merkleRoot);
+    lastRevisionOrSpecifiedHashes.forEach((hash) => {
+      let merkleProof = tree2.getHexProof(hash);
+      merkleProofArray.push(merkleProof);
+    });
 
-  witnessResult.witness_merkle_proof = lastRevisionOrSpecifiedHashes;
+    console.log("Merkle proof: ", merkleProofArray);
 
 
 
-  console.log("All Aqua objects ", JSON.stringify(all_file_aqua_objects_list));
+    revisionResult = await prepareWitness(merkleRoot);
 
+    revisionResult.witness_merkle_proof = lastRevisionOrSpecifiedHashes;
+  } else {
+
+
+    console.log(`linkURIs ${linkURIs}`)
+    let linkURIsArray = [];
+    if (linkURIs.includes(",")) {
+      linkURIsArray = linkURIs.split(",")
+    }else{
+      linkURIsArray.push(linkURIs);
+    }
+
+    const linkAquaFiles = linkURIsArray.map((e) => `${e}.aqua.json`)
+    const linkVerificationHash = linkAquaFiles.map(getLatestVH)
+    const linkFileHashes = linkURIsArray.map(main.getFileHashSum)
+
+    console.log(`&&&&&&&&&& ${linkFileHashes} \n ` );
+
+    revisionResult = {
+      link_type: "aqua",
+      //link_require_indepth_verification: true,
+      link_verification_hashes: linkVerificationHash,
+      link_file_hashes: linkFileHashes,
+    }
+
+  }
+
+ 
   for (let index = 0; index < all_aqua_files.length; index++) {
     const current_file = all_aqua_files[index];
     const current_file_aqua_object = all_file_aqua_objects_list[index];
-    console.log("current_file_aqua_object ", JSON.stringify(current_file_aqua_object))
+    // console.log("current_file_aqua_object ", JSON.stringify(current_file_aqua_object))
 
     const revisionKeys = Object.keys(current_file_aqua_object.revisions);
     // if no specified revision use the last one 
@@ -320,7 +348,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
     console.log("All revisions map ", JSON.stringify(revisionSPecifiedMap))
     if (revisionSPecifiedMap.has(fileNameOnly)) {
       console.log()
-      
+
 
       latestRevisionKey = revisionSPecifiedMap.get(fileNameOnly);
 
@@ -332,11 +360,38 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
     }
     console.log("Latest revision key:", latestRevisionKey);
 
-    let verificationData = {
-      previous_verification_hash: latestRevisionKey,
-      local_timestamp: timestamp,
-      revision_type: revisionType,
-      ...witnessResult
+    let verificationData = {};
+
+    if (revisionType == "witness") {
+      verificationData = {
+        previous_verification_hash: latestRevisionKey,
+        local_timestamp: timestamp,
+        revision_type: revisionType,
+        ...revisionResult
+      }
+    } else if (revisionType == "link") {
+
+      // console.log("Array 1 of revision results " + JSON.stringify(revisionResult.link_file_hashes));
+      // console.log("Array 2 of current_file_aqua_object " + JSON.stringify(current_file_aqua_object));
+      // for (let item in current_file_aqua_object.file_index) {
+      //   console.log("item  ", item);
+      //   if (revisionResult.link_file_hashes.includes(item)){
+      //     console.error(
+      //       `${fh} detected in file index. You are not allowed to interlink Aqua files of the same file`,
+      //     )
+      //   process.exit(1)
+      //   }
+      // }
+
+      verificationData = {
+        previous_verification_hash: latestRevisionKey,
+        local_timestamp: timestamp,
+        revision_type: revisionType,
+        ...revisionResult
+      }
+    } else {
+      console.log("Create revision with multiple aqua chain.")
+      process.exit(1)
     }
 
 
@@ -351,7 +406,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
     })
     const verificationHash = tree.getHexRoot()
     revisions[verificationHash] = verificationData
-    console.log(`\n\n Writing new revision ${verificationHash} to ${current_file} current file current_file_aqua_object ${JSON.stringify(current_file_aqua_object)} \n\n `)
+    // console.log(`\n\n Writing new revision ${verificationHash} to ${current_file} current file current_file_aqua_object ${JSON.stringify(current_file_aqua_object)} \n\n `)
     maybeUpdateFileIndex(current_file_aqua_object, {
       verification_hash: verificationHash,
       data: verificationData
@@ -365,6 +420,12 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
 const prepareWitness = async (verificationHash) => {
   if (!witnessMethod) {
     console.error("Witness method must be specified");
+    process.exit(1);
+  }
+
+  let options_array = ["nostr", "tsa", "eth"];
+  if (!options_array.includes(witnessMethod)) {
+    console.log(`❌ An invalid witness method provided ${witnessMethod}.\n💡 Hint use on of  ${options_array.join(",")}`);
     process.exit(1);
   }
 
@@ -504,6 +565,11 @@ const getFileTimestamp = (filename) => {
 
 const prepareSignature = async (previousVerificationHash) => {
   let signature, walletAddress, publicKey, signature_type
+  let options_array = ["metamask", "cli", "did"];
+  if (!options_array.includes(signMethod)) {
+    console.log(`❌ An invalid sign method provided ${signMethod}.\n💡 Hint use on of  ${options_array.join(",")}`);
+    process.exit(1);
+  }
   switch (signMethod) {
     case "metamask":
       ;[signature, walletAddress, publicKey] = await doSignMetamask(
@@ -589,6 +655,7 @@ const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType, aquaFi
   //}
   let verificationHash = "";
 
+
   switch (revisionType) {
     case "form":
       verificationHash = verificationData.verification_hash
@@ -601,6 +668,7 @@ const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType, aquaFi
       aquaObject.file_index[verificationHash] = aquaFileName //filename
       break
     case "link":
+
       const linkURIsArray = linkURIs.split(",")
       const linkVHs = verificationData.data.link_verification_hashes
       for (const [idx, vh] of linkVHs.entries()) {
@@ -725,6 +793,7 @@ const createNewRevision = async (
       break
 
     case "link":
+      console.log(" linkURIs ", linkURIs);
       const linkURIsArray = linkURIs.split(",")
       // Validation
       linkURIsArray.map((uri) => {
@@ -732,8 +801,13 @@ const createNewRevision = async (
         console.error(`${uri} is an Aqua file hence not applicable`)
         process.exit(1)
       })
+
+      console.log(" linkURIsArray ", JSON.stringify(linkURIsArray));
       const linkAquaFiles = linkURIsArray.map((e) => `${e}.aqua.json`)
       const linkVHs = linkAquaFiles.map(getLatestVH)
+
+      console.log("linkVHs ", linkVHs);
+
       const linkFileHashes = linkURIsArray.map(main.getFileHashSum)
       // Validation again
       linkFileHashes.map((fh) => {
@@ -746,7 +820,7 @@ const createNewRevision = async (
 
       const linkData = {
         link_type: "aqua",
-        link_require_indepth_verification: true,
+        //link_require_indepth_verification: true,
         link_verification_hashes: linkVHs,
         link_file_hashes: linkFileHashes,
       }
@@ -810,9 +884,9 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
   }
   revisions[genesis.verification_hash] = genesis.data
   console.log(
-    `Writing new ${revisionType} revision ${genesis.verification_hash} to ${filename}.aqua.json`,
+    `- Writing new ${revisionType} revision ${genesis.verification_hash} to ${filename}.aqua.json`,
   )
-  maybeUpdateFileIndex(aquaObject, genesis, revisionType)
+  maybeUpdateFileIndex(aquaObject, genesis, revisionType, fileNameOnly)
   serializeAquaObject(aquaFilename, aquaObject)
 }
 
@@ -866,10 +940,11 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
       enableScalar = false
     }
 
-    if (revisionType == "witness" && filename.includes(",")) {
- 
-      createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
-      return
+    if (filename.includes(",")) {
+      if (revisionType == "witness" || revisionType == "link") {
+        createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
+        return
+      }
     }
 
     if (!fs.existsSync(aquaFilename)) {
@@ -891,7 +966,6 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
 
     if (revisionSpecified.length > 0) {
       console.log("📍  Revision specified: ", revisionSpecified)
-
 
       if (!verificationHashes.includes(revisionSpecified)) {
         console.error(`❌  Revision hash ${revisionSpecified} not found in ${aquaFilename}`);
@@ -920,7 +994,7 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     )
     const verificationHash = verificationData.verification_hash
     revisions[verificationHash] = verificationData.data
-    console.log(`Writing new revision ${verificationHash} to ${aquaFilename}`)
+    console.log(`1. Writing new revision ${verificationHash} to ${aquaFilename}`)
     maybeUpdateFileIndex(aquaObject, verificationData, revisionType, aquaFilename)
     serializeAquaObject(aquaFilename, aquaObject)
 
