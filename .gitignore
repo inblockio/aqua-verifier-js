@@ -8,3 +8,5 @@ test/test-results*
 test/test-results
 test/form_testdata
 _credentials.json
+sharness/*
+sharness/sharness.sh

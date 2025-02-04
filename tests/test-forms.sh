@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
 test_description='Test form notarization, verification, and updates'
-
-. ~/share/sharness/sharness.sh
+. ./tests/sharness/sharness.sh
 
 # Get the project root directory
 project_root=$(git rev-parse --show-toplevel)

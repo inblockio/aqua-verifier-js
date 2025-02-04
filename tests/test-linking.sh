@@ -2,8 +2,7 @@
 
 test_description='Test file linking functionality'
 
-## ensure to install sharness
-. ~/share/sharness/sharness.sh
+. ./tests/sharness/sharness.sh
 
 notarize="repo/notarize.js"
 verify="repo/verify.js"
