@@ -6,7 +6,6 @@ mnemonic.txt
 tests/trash*
 tests/test-results*
 tests/test-results
-tests/form_testdata
 _credentials.json
 tests/sharness/
 tests/sharness/sharness.sh
