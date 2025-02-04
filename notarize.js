@@ -694,6 +694,9 @@ const removeRevision = (aquaObject, lastRevisionHash, aquaFilename) => {
 
   delete aquaObject.revisions[lastRevisionHash]
   console.log(`Most recent revision ${lastRevisionHash} has been removed`)
+  //todo
+  //remove from revision tree 
+  
   if (Object.keys(aquaObject.revisions).length === 0) {
     // If there are no revisions left, delete the .aqua.json file
     try {
@@ -973,13 +976,14 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     const aquaObject = JSON.parse(fs.readFileSync(aquaFilename))
     const revisions = aquaObject.revisions
     const verificationHashes = Object.keys(revisions)
+    const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
     if (enableRemoveRevision) {
       removeRevision(aquaObject, lastRevisionHash, aquaFilename)
+
       return
     }
 
-    const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
     let revisionHashSpecified = ""
 
     if (revisionSpecified.length > 0) {

@@ -72,7 +72,7 @@ export function createAquaTree(aquaObject) {
     let pathResult = findHashWithLongestPath(tree);
     return Object.assign(Object.assign({}, aquaObject), { tree, treeMapping: pathResult });
 }
-export function logTree(node, prefix = "", isLast = true) {
+export function logAquaTree(node, prefix = "", isLast = true) {
     // Log the current node's hash
     console.log(prefix + (isLast ? "└── " : "├── ") + node.hash);
     // Update the prefix for children
@@ -80,6 +80,6 @@ export function logTree(node, prefix = "", isLast = true) {
     // Recursively log each child
     node.children.forEach((child, index) => {
         const isChildLast = index === node.children.length - 1;
-        logTree(child, newPrefix, isChildLast);
+        logAquaTree(child, newPrefix, isChildLast);
     });
 }

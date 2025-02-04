@@ -7,4 +7,4 @@ export declare function findHashWithLongestPath(tree: RevisionTree): {
 };
 export declare function createAquaObjectTree(aquaObject: any): RevisionTree;
 export declare function createAquaTree(aquaObject: any): any;
-export declare function logTree(node: RevisionTree, prefix?: string, isLast?: boolean): void;
+export declare function logAquaTree(node: RevisionTree, prefix?: string, isLast?: boolean): void;

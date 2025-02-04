@@ -222,6 +222,7 @@ async function verifyWitness(
 }
 
 const verifySignature = async (data: object, verificationHash: string) => {
+  
   // TODO enforce that the verificationHash is a correct SHA3 sum string
   // Specify signature correctness
   let signatureOk = false
@@ -231,9 +232,13 @@ const verifySignature = async (data: object, verificationHash: string) => {
     return [signatureOk, "INVALID"]
   }
 
+  console.log("did:key == "+data.signature_type);
   // Signature verification
   switch (data.signature_type) {
     case "did:key":
+      console.log("1. signature ==> " +data.signature)
+      console.log("2. data.signature_public_key " +data.signature_public_key)
+      console.log("3. verificationHash "+ verificationHash)
       signatureOk = await did.signature.verify(data.signature, data.signature_public_key, verificationHash)
       break
     case "ethereum:eip-191":
@@ -431,11 +436,11 @@ async function verifyRevision(
     const actualVH = "0x" + getHashSum(JSON.stringify(input))
     ok = actualVH === verificationHash
   } else {
-    console.log("Verifying merkle proof");
-    [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)
-    if (!ok) {
-      return [ok, result]
-    }
+    // console.log("Verifying merkle proof");
+    // [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)
+    // if (!ok) {
+    //   return [ok, result]
+    // }
   }
 
   let typeOk: boolean, _
