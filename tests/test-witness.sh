@@ -5,8 +5,7 @@ test_description='Test file verification functionality'
 notarize="repo/notarize.js"
 verify="repo/verify.js"
 
-## ensure to install sharness
-. ~/share/sharness/sharness.sh
+. ./tests/sharness/sharness.sh
 
 
 test_expect_success 'Setup test environment' '
@@ -77,7 +76,7 @@ test_expect_success 'Witness LICENSE' '
     test -f LICENSE.aqua.json
 '
 
-test_expect_success 'Verify witnessed README.md' '
+test_expect_success 'Verify witnessed LICENSE ' '
     $verify LICENSE
 '
 

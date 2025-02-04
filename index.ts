@@ -222,7 +222,7 @@ async function verifyWitness(
 }
 
 const verifySignature = async (data: object, verificationHash: string) => {
-  
+
   // TODO enforce that the verificationHash is a correct SHA3 sum string
   // Specify signature correctness
   let signatureOk = false
@@ -232,13 +232,10 @@ const verifySignature = async (data: object, verificationHash: string) => {
     return [signatureOk, "INVALID"]
   }
 
-  console.log("did:key == "+data.signature_type);
+  console.log("did:key == " + data.signature_type);
   // Signature verification
   switch (data.signature_type) {
     case "did:key":
-      console.log("1. signature ==> " +data.signature)
-      console.log("2. data.signature_public_key " +data.signature_public_key)
-      console.log("3. verificationHash "+ verificationHash)
       signatureOk = await did.signature.verify(data.signature, data.signature_public_key, verificationHash)
       break
     case "ethereum:eip-191":
@@ -453,6 +450,8 @@ async function verifyRevision(
       if (!!input.content) {
         fileContent = Buffer.from(input.content, "utf8")
       } else {
+        console.log("File index", JSON.stringify(aquaObject.file_index));
+        console.log("Has needed  ", verificationHash);
         fileContent = fs.readFileSync(aquaObject.file_index[verificationHash])
       }
       const fileHash = getHashSum(fileContent)
