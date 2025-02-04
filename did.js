@@ -6,8 +6,10 @@ import * as KeyResolver from 'key-did-resolver'
 
 const signature = {
   verify: async (jws, key, hash) => {
-    const expected = {message: `I sign this revision: [${hash}]`}
+    
+    const expected = { message: `I sign this revision: [${hash}]` }
     try {
+     
       const resolver = KeyResolver.getResolver()
       const result = await (new DID({ resolver })).verifyJWS(jws)
       if (expected.message !== result.payload.message) return false
@@ -19,7 +21,7 @@ const signature = {
     return true
   },
   sign: async (verificationHash, privateKey) => {
-    const payload = {message: `I sign this revision: [${verificationHash}]`}
+    const payload = { message: `I sign this revision: [${verificationHash}]` }
 
     // const seed = randomBytes(32)
     // console.log(new Buffer.from(seed).toString("hex"))
@@ -28,7 +30,11 @@ const signature = {
     const did = new DID({ provider, resolver })
     await did.authenticate()
 
-    const jws = await did.createJWS(payload)
+    console.log("DID Key ID: ", did.id);
+
+    const jws = await did.createJWS(payload, { did: did.id })
+    console.log("Generated JWS: ", jws)  // Debugging line
+
     return { jws, key: did.id }
   }
 }
