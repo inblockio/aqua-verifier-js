@@ -318,14 +318,15 @@ function verifyRevisionMerkleTreeStructure(input, result: VerificationResult, ve
 
   }
   // For witness, we verify the merkle root
-  // else if (input.revision_type === "witness") {
-  //   let witnessMerkleProofLeaves = input.witness_merkle_proof
-  //   const tree = new MerkleTree(witnessMerkleProofLeaves, getHashSum, {
-  //     duplicateOdd: false,
-  //   })
-  //   const hexRoot = tree.getHexRoot()
-  //   vhOk = hexRoot === input.witness_merkle_root
-  // }
+  else if (input.revision_type === "witness" && input.witness_merkle_proof.length > 1) {
+    let witnessMerkleProofLeaves = input.witness_merkle_proof
+    const tree = new MerkleTree(witnessMerkleProofLeaves, getHashSum, {
+      duplicateOdd: false,
+    })
+    const hexRoot = tree.getHexRoot()
+    vhOk = hexRoot === input.witness_merkle_root
+  }
+
   else {
 
     // Verify leaves
@@ -428,11 +429,11 @@ async function verifyRevision(
   }
 
   if (isScalar) {
-    console.log("We should see me  input "+ JSON.stringify(input));
+    console.log("We should see me  input " + JSON.stringify(input));
 
     result.scalar = true
 
-    if (input.witness_merkle_proof  && input.witness_merkle_proof.length > 1) {
+    if (input.witness_merkle_proof && input.witness_merkle_proof.length > 1) {
       console.log("@@@ Verifying merkle proof...");
       [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)
       if (!ok) {
