@@ -605,7 +605,7 @@ const prepareSignature = async (previousVerificationHash) => {
         previousVerificationHash,
         Buffer.from(credentials["did:key"], "hex"),
       )
-      signature = jws.payload
+      signature = jws //jws.payload
       walletAddress = key
       publicKey = key
       signature_type = "did:key"
@@ -694,8 +694,7 @@ const removeRevision = (aquaObject, lastRevisionHash, aquaFilename) => {
 
   delete aquaObject.revisions[lastRevisionHash]
   console.log(`Most recent revision ${lastRevisionHash} has been removed`)
-  //todo
-  //remove from revision tree 
+ 
   
   if (Object.keys(aquaObject.revisions).length === 0) {
     // If there are no revisions left, delete the .aqua.json file
@@ -709,7 +708,9 @@ const removeRevision = (aquaObject, lastRevisionHash, aquaFilename) => {
       console.error(`Failed to delete ${aquaFilename}:`, err)
     }
   } else {
-    serializeAquaObject(aquaFilename, aquaObject)
+    let aquaObjectWithTree = createAquaTree(aquaObject)
+
+    serializeAquaObject(aquaFilename, aquaObjectWithTree)
   }
 }
 
