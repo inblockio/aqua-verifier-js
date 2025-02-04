@@ -428,16 +428,27 @@ async function verifyRevision(
   }
 
   if (isScalar) {
+    console.log("We should see me  input "+ JSON.stringify(input));
 
     result.scalar = true
-    const actualVH = "0x" + getHashSum(JSON.stringify(input))
-    ok = actualVH === verificationHash
+
+    if (input.witness_merkle_proof  && input.witness_merkle_proof.length > 1) {
+      console.log("@@@ Verifying merkle proof...");
+      [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)
+      if (!ok) {
+        return [ok, result]
+      }
+    } else {
+      const actualVH = "0x" + getHashSum(JSON.stringify(input))
+      ok = actualVH === verificationHash
+    }
+    console.log("\n Okay is ok " + ok)
   } else {
-    // console.log("Verifying merkle proof");
-    // [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)
-    // if (!ok) {
-    //   return [ok, result]
-    // }
+    console.log("###Verifying merkle proof...");
+    [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)
+    if (!ok) {
+      return [ok, result]
+    }
   }
 
   let typeOk: boolean, _
