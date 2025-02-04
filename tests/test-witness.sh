@@ -48,12 +48,12 @@ test_expect_success 'Create AQUA file for notarize.js' '
     test -f notarize.js.aqua.json
 '
 
-test_expect_success 'Witness notarize.js' '
-    $notarize notarize.js  --witness tsa &&
+test_expect_success 'Witness notarize.js TSA' '
+    $notarize notarize.js --witness tsa &&
     test -f notarize.js.aqua.json
 '
 
-test_expect_success 'Verify linked notarize.js' '
+test_expect_success 'Verify notarize.js' '
     $verify notarize.js
 '
 
