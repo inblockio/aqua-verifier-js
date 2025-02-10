@@ -876,6 +876,13 @@ const createNewRevision = async (
 }
 
 const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
+
+  if (enableRemoveRevision) {
+    // Don't serialize if you do --rm during genesis creation
+    console.log("There is nothing delete.")
+    return
+  }
+
   let revisionType = "file"
   if (form_file_name) {
     revisionType = "form"
@@ -888,28 +895,41 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     }
   }
 
-  const aquaObject = createNewAquaObject()
-  const revisions = aquaObject.revisions
-
-  const genesis = await createNewRevision(
-    fileNameOnly,
-    "",
-    timestamp,
-    revisionType,
-    enableScalar,
-    aquaObject,
-  )
-  if (enableRemoveRevision) {
-    // Don't serialize if you do --rm during genesis creation
-    console.log("There is nothing delete.")
-    return
+  const aquaProtocol = new AquaTree()
+  const fileContent = fs.readFileSync(aquaFilename.replace(".aqua.json", ""), { encoding: "utf-8" });
+  let fileObject = {
+    fileName: aquaFilename.replace(".aqua.json", ""),
+    fileContent: fileContent,
+    path: "./"
   }
-  revisions[genesis.verification_hash] = genesis.data
-  console.log(
-    `- Writing new ${revisionType} revision ${genesis.verification_hash} to ${filename}.aqua.json`,
-  )
-  maybeUpdateFileIndex(aquaObject, genesis, revisionType, fileNameOnly)
-  serializeAquaObject(aquaFilename, aquaObject)
+  const genesisRevision = await aquaProtocol.createGenesisRevision(fileObject, false, false, false)
+
+  if (genesisRevision.isOk()) {
+    let aquaObject = genesisRevision.data.aquaObject
+    console.log(
+      `- Writing new ${revisionType} revision ${Object.keys(aquaObject.revisions)[0]} to ${filename}.aqua.json`,
+    )
+    serializeAquaObject(aquaFilename, aquaObject)
+  }
+
+  // const aquaObject = createNewAquaObject()
+  // const revisions = aquaObject.revisions
+
+  // const genesis = await createNewRevision(
+  //   fileNameOnly,
+  //   "",
+  //   timestamp,
+  //   revisionType,
+  //   enableScalar,
+  //   aquaObject,
+  // )
+
+
+  // revisions[genesis.verification_hash] = genesis.data
+
+
+  // maybeUpdateFileIndex(aquaObject, genesis, revisionType, fileNameOnly)
+
 }
 
   // The main function
@@ -977,6 +997,9 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
       return
     }
 
+    // Instantiate the aquaProtocol class
+    const aquaProtocol = new AquaTree()
+
     const aquaObject = JSON.parse(fs.readFileSync(aquaFilename))
     const revisions = aquaObject.revisions
     const verificationHashes = Object.keys(revisions)
@@ -984,7 +1007,6 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
 
     if (enableRemoveRevision) {
       // console.log(aquaObject)
-      const aquaProtocol = new AquaTree()
       let result = aquaProtocol.removeLastRevision(aquaObject)
 
       if (result.isOk()) {
@@ -993,7 +1015,7 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
         if (resultData.aquaObject === null || !resultData.aquaObject) {
           try {
             fs.unlinkSync(aquaFilename)
-          } catch(e) {
+          } catch (e) {
             console.log(`❌ Unable to delete file. ${e}`)
           }
         }
@@ -1001,7 +1023,7 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
           serializeAquaObject(aquaFilename, resultData.aquaObject)
         }
       }
-      else{
+      else {
         console.log("❌ Unable to remove last revision")
       }
       return
@@ -1029,30 +1051,62 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
 
     console.log("➡️   Revision type: ", revisionType)
 
-    const verificationData = await createNewRevision(
-      fileNameOnly,
-      revisionHashSpecified,
-      timestamp,
-      revisionType,
-      enableScalar,
-      aquaObject,
-    )
-    const verificationHash = verificationData.verification_hash
-    revisions[verificationHash] = verificationData.data
-    console.log(`1. Writing new revision ${verificationHash} to ${aquaFilename}`)
+    // const verificationData = await createNewRevision(
+    //   fileNameOnly,
+    //   revisionHashSpecified,
+    //   timestamp,
+    //   revisionType,
+    //   enableScalar,
+    //   aquaObject,
+    // )
 
-    let theIndexFileName = fileNameOnly;
-    if (enableContent != undefined && enableContent.length > 0) {
-      theIndexFileName = enableContent
-      maybeUpdateFileIndex(aquaObject, verificationData, revisionType, enableContent)
-    } else {
-      maybeUpdateFileIndex(aquaObject, verificationData, revisionType, fileNameOnly)
+    const fileContent = fs.readFileSync(fileNameOnly, { encoding: "utf-8" });
+    const _aquaObject = fs.readFileSync(aquaFilename, { encoding: "utf-8" });
+
+    console.log("Enable content: ", enableContent)
+
+    if (enableContent) {
+
+      let fileObject = {
+        fileName: fileNameOnly,
+        fileContent: fileContent,
+        path: "./"
+      }
+
+      let aquaObjectWrapper = {
+        aquaObject: JSON.parse(_aquaObject),
+        fileObject: fileObject,
+        revision: "",
+      }
+
+      const aquaObjectResultForContent = await aquaProtocol.createContentRevision(aquaObjectWrapper, fileObject, enableScalar)
+      if (aquaObjectResultForContent.isOk()) {
+        serializeAquaObject(aquaFilename, aquaObjectResultForContent.data.aquaObject)
+      } else {
+        let logs = aquaObjectResultForContent.data
+        logs.map(log => console.log(log.log))
+
+      }
+
+      return
     }
 
-    serializeAquaObject(aquaFilename, aquaObject)
+    // const verificationHash = verificationData.verification_hash
+    // revisions[verificationHash] = verificationData.data
+    // console.log(`1. Writing new revision ${verificationHash} to ${aquaFilename}`)
 
-    // Tree creation
-    let aquaObjectWithTree = createAquaTree(aquaObject)
+    // let theIndexFileName = fileNameOnly;
+    // if (enableContent != undefined && enableContent.length > 0) {
+    //   theIndexFileName = enableContent
+    //   maybeUpdateFileIndex(aquaObject, verificationData, revisionType, enableContent)
+    // } else {
+    //   maybeUpdateFileIndex(aquaObject, verificationData, revisionType, fileNameOnly)
+    // }
 
-    serializeAquaObject(aquaFilename, aquaObjectWithTree)
+    // serializeAquaObject(aquaFilename, aquaObject)
+
+    // // Tree creation
+    // let aquaObjectWithTree = createAquaTree(aquaObject)
+
+    // serializeAquaObject(aquaFilename, aquaObjectWithTree)
   })()
