@@ -1063,10 +1063,7 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     const fileContent = fs.readFileSync(fileNameOnly, { encoding: "utf-8" });
     const _aquaObject = fs.readFileSync(aquaFilename, { encoding: "utf-8" });
 
-    console.log("Enable content: ", enableContent)
-
     if (enableContent) {
-
       let fileObject = {
         fileName: fileNameOnly,
         fileContent: fileContent,
@@ -1087,7 +1084,6 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
         logs.map(log => console.log(log.log))
 
       }
-
       return
     }
 
