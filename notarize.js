@@ -18,12 +18,17 @@ import * as witnessEth from "./witness_eth.js"
 import * as witnessTsa from "./witness_tsa.js"
 
 import { createAquaTree } from "./aquavhtree.js"
+import AquaTree from "aqua-protocol"
 
 import { fileURLToPath } from "url"
 import { dirname } from "path"
 
 // import { Wallet, Mnemonic } from 'ethers';
 import { readCredentials, getWallet, estimateWitnessGas } from "./utils.js"
+// import { isOk } from "rustic"
+
+import rusticPkg from 'rustic';
+const { isOk } = rusticPkg;
 
 const opts = {
   // This is required so that -v is position independent.
@@ -656,7 +661,7 @@ const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType, aquaFi
   //  return;
   //}
   let verificationHash = "";
- 
+
   switch (revisionType) {
     case "form":
       verificationHash = verificationData.verification_hash
@@ -978,8 +983,27 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
     if (enableRemoveRevision) {
-      removeRevision(aquaObject, lastRevisionHash, aquaFilename)
+      // console.log(aquaObject)
+      const aquaProtocol = new AquaTree()
+      let result = aquaProtocol.removeLastRevision(aquaObject)
 
+      if (result.isOk()) {
+        const resultData = result.data
+        console.log(JSON.stringify(resultData, null, 4))
+        if (resultData.aquaObject === null || !resultData.aquaObject) {
+          try {
+            fs.unlinkSync(aquaFilename)
+          } catch(e) {
+            console.log(`❌ Unable to delete file. ${e}`)
+          }
+        }
+        else {
+          serializeAquaObject(aquaFilename, resultData.aquaObject)
+        }
+      }
+      else{
+        console.log("❌ Unable to remove last revision")
+      }
       return
     }
 
