@@ -17,7 +17,7 @@ import * as witnessNostr from "./witness_nostr.js"
 import * as witnessEth from "./witness_eth.js"
 import * as witnessTsa from "./witness_tsa.js"
 
-import { createAquaTree } from "./aquavhtree.js"
+import { createAquaTree, logAquaTree } from "./aquavhtree.js"
 import AquaTree from "aqua-protocol"
 
 import { fileURLToPath } from "url"
@@ -1051,10 +1051,10 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
 
     console.log("➡️   Revision type: ", revisionType)
 
-    const fileContent = fs.readFileSync(fileNameOnly, { encoding: "utf-8" });
-    const _aquaObject = fs.readFileSync(aquaFilename, { encoding: "utf-8" });
 
     if (enableContent) {
+      const fileContent = fs.readFileSync(fileNameOnly, { encoding: "utf-8" });
+      const _aquaObject = fs.readFileSync(aquaFilename, { encoding: "utf-8" });
       let fileObject = {
         fileName: fileNameOnly,
         fileContent: fileContent,
@@ -1074,6 +1074,42 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
         let logs = aquaObjectResultForContent.data
         logs.map(log => console.log(log.log))
 
+      }
+      return
+    }
+
+    if (enableSignature) {
+      const creds = readCredentials()
+      const fileContent = fs.readFileSync(fileNameOnly, { encoding: "utf-8" });
+      const _aquaObject = fs.readFileSync(aquaFilename, { encoding: "utf-8" });
+      const parsedAquaObject = JSON.parse(_aquaObject)
+
+      let fileObject = {
+        fileName: fileNameOnly,
+        fileContent: fileContent,
+        path: "./"
+      }
+
+      console.log("revisionSpecified, ", revisionSpecified)
+      let lastRevisionHash = revisionSpecified ?? parsedAquaObject.treeMapping.latestHash
+      console.log("Revision hash: ", lastRevisionHash)
+
+      let aquaObjectWrapper = {
+        aquaObject: parsedAquaObject,
+        fileObject: fileObject,
+        revision: lastRevisionHash,
+      }
+      
+      const signatureResult = await aquaProtocol.signAquaObject(aquaObjectWrapper, signMethod, creds, true)
+
+      if (signatureResult.isOk()) {
+        serializeAquaObject(aquaFilename, signatureResult.data.aquaObject)
+        let logs = signatureResult.data.logData
+        logs.map(log => console.log(log.log))
+        // logAquaTree(signatureResult.data.aquaObject.tree)
+      } else {
+        let logs = signatureResult.data
+        logs.map(log => console.log(log.log))
       }
       return
     }

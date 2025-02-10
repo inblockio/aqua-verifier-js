@@ -415,8 +415,6 @@ async function verifyRevision(
   // We use fast scalar verification if input does not have leaves property
   const isScalar = !(input.hasOwnProperty('leaves'));
 
-  console.log("INPUT : ", input)
-
   let result: VerificationResult = {
     scalar: false,
     verification_hash: verificationHash,
@@ -444,9 +442,7 @@ async function verifyRevision(
       }
     } else {
       let stringifiedData = JSON.stringify(input)
-      console.log("Result of 112-----", stringifiedData)
       const actualVH = "0x" + getHashSum(stringifiedData)
-      console.log(`Expected: ${verificationHash}, our output ${actualVH}`)
       ok = actualVH === verificationHash
     }
     console.log("\n Okay is ok " + ok)
