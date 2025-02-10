@@ -20,7 +20,7 @@
     "rustic": "^1.2.2"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "npm link aqua-protocol && tsc",
     "prepare": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

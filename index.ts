@@ -413,7 +413,9 @@ async function verifyRevision(
   let ok: boolean = true
 
   // We use fast scalar verification if input does not have leaves property
-  const isScalar = !input.hasOwnProperty('leaves');
+  const isScalar = !(input.hasOwnProperty('leaves'));
+
+  console.log("INPUT : ", input)
 
   let result: VerificationResult = {
     scalar: false,
@@ -427,25 +429,29 @@ async function verifyRevision(
     data: input,
     revision_type: input.revision_type,
   }
-
+  console.log("We are going scalar", isScalar)
   if (isScalar) {
-    console.log("We should see me  input " + JSON.stringify(input));
+
+    // console.log("We should see me  input " + JSON.stringify(input));
 
     result.scalar = true
 
     if (input.witness_merkle_proof && input.witness_merkle_proof.length > 1) {
-      console.log("@@@ Verifying merkle proof...");
+      // console.log("@@@ Verifying merkle proof...");
       [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)
       if (!ok) {
         return [ok, result]
       }
     } else {
-      const actualVH = "0x" + getHashSum(JSON.stringify(input))
+      let stringifiedData = JSON.stringify(input)
+      console.log("Result of 112-----", stringifiedData)
+      const actualVH = "0x" + getHashSum(stringifiedData)
+      console.log(`Expected: ${verificationHash}, our output ${actualVH}`)
       ok = actualVH === verificationHash
     }
     console.log("\n Okay is ok " + ok)
   } else {
-    console.log("###Verifying merkle proof...");
+    // console.log("###Verifying merkle proof...");
     [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)
     if (!ok) {
       return [ok, result]

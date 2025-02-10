@@ -902,7 +902,7 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     fileContent: fileContent,
     path: "./"
   }
-  const genesisRevision = await aquaProtocol.createGenesisRevision(fileObject, false, false, false)
+  const genesisRevision = await aquaProtocol.createGenesisRevision(fileObject, false, false, enableScalar)
 
   if (genesisRevision.isOk()) {
     let aquaObject = genesisRevision.data.aquaObject
@@ -1050,15 +1050,6 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     }
 
     console.log("➡️   Revision type: ", revisionType)
-
-    // const verificationData = await createNewRevision(
-    //   fileNameOnly,
-    //   revisionHashSpecified,
-    //   timestamp,
-    //   revisionType,
-    //   enableScalar,
-    //   aquaObject,
-    // )
 
     const fileContent = fs.readFileSync(fileNameOnly, { encoding: "utf-8" });
     const _aquaObject = fs.readFileSync(aquaFilename, { encoding: "utf-8" });
