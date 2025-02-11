@@ -373,6 +373,41 @@ interface VerificationResult {
   revision_type: string;
 }
 
+function verifyFormRevision(input: any) {
+  if (input.revision_type === 'form') {
+    let contains_deleted_fields = false
+    let fieldsWithVerification = []
+    let fieldsWithPartialVerification = []
+
+    Object.keys(input).sort().forEach((field, i: number) => {
+      let new_hash = getHashSum(`${field}:${input[field]}`)
+
+      if (!field.endsWith('.deleted')) {
+        if (field.startsWith('forms_')) {
+          fieldsWithVerification.push(`${field}: ${input[field]}`)
+        }
+        if (new_hash !== leaves[i]) {
+          ok = false
+          console.log(`🚫 New hash does not match existing hash ${leaves[i]}:${new_hash} at index: ${i}`)
+        }
+      } else {
+        contains_deleted_fields = true
+        fieldsWithPartialVerification.push(field)
+      }
+    })
+
+    if (contains_deleted_fields) {
+      console.warn(`\n  🚨 Warning: The following fields cannot be verified:`)
+      fieldsWithPartialVerification.forEach((field, i: number) => console.log(`   ${i + 1}. ${field.replace('.deleted', '')}\n`))
+    }
+
+    console.log("\n  The following fields were verified successfully: ")
+    fieldsWithVerification.forEach(field => console.log(`   ✅${field}\n`))
+
+  }
+
+}
+
 /**
  * TODO THIS DOCSTRING IS OUTDATED!
  * Verifies a revision from a page.
