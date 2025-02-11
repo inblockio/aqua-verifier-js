@@ -260,7 +260,6 @@ const verifySignature = async (data: object, verificationHash: string) => {
 }
 
 function verifyRevisionMerkleTreeStructure(input, result: VerificationResult, verificationHash: string) {
-  console.log("verification hash: ", verificationHash)
   let ok: boolean = true
   let vhOk: boolean = true
 
@@ -288,68 +287,39 @@ function verifyRevisionMerkleTreeStructure(input, result: VerificationResult, ve
   let fieldsWithPartialVerification: string[] = []
   let fieldsWithVerification: string[] = []
 
-  if (input.revision_type === 'form') {
-    let contains_deleted_fields = false
-
-    Object.keys(input).sort().forEach((field, i: number) => {
-      let new_hash = getHashSum(`${field}:${input[field]}`)
-
-      if (!field.endsWith('.deleted')) {
-        if (field.startsWith('forms_')) {
-          fieldsWithVerification.push(`${field}: ${input[field]}`)
-        }
-        if (new_hash !== leaves[i]) {
-          ok = false
-          console.log(`🚫 New hash does not match existing hash ${leaves[i]}:${new_hash} at index: ${i}`)
-        }
-      } else {
-        contains_deleted_fields = true
-        fieldsWithPartialVerification.push(field)
-      }
-    })
-
-    if (contains_deleted_fields) {
-      console.warn(`\n  🚨 Warning: The following fields cannot be verified:`)
-      fieldsWithPartialVerification.forEach((field, i: number) => console.log(`   ${i + 1}. ${field.replace('.deleted', '')}\n`))
-    }
-
-    console.log("\n  The following fields were verified successfully: ")
-    fieldsWithVerification.forEach(field => console.log(`   ✅${field}\n`))
-
-  }
   // For witness, we verify the merkle root
-  else if (input.revision_type === "witness" && input.witness_merkle_proof.length > 1) {
-    let witnessMerkleProofLeaves = input.witness_merkle_proof
+  if (input.revision_type == 'form') {
+    vhOk = verifyFormRevision(input, leaves);
+  } else if (input.revision_type === "witness" && input.witness_merkle_proof.length > 1) {
+    let witnessMerkleProofLeaves = input.witness_merkle_proof;
     const tree = new MerkleTree(witnessMerkleProofLeaves, getHashSum, {
       duplicateOdd: false,
-    })
-    const hexRoot = tree.getHexRoot()
-    vhOk = hexRoot === input.witness_merkle_root
-  }
-
-  else {
-
+    });
+    const hexRoot = tree.getHexRoot();
+    vhOk = hexRoot === input.witness_merkle_root;
+  } else {
+    let leaves = input.leaves;
     // Verify leaves
     for (const [i, claim] of Object.keys(input).sort().entries()) {
-      const actual = getHashSum(`${claim}:${input[claim]}`)
-      const claimOk = leaves[i] === actual
-      result.status[claim] = claimOk
-      ok = ok && claimOk
-      actualLeaves.push(actual)
+      const actual = getHashSum(`${claim}:${input[claim]}`);
+      const claimOk = leaves[i] === actual;
+      result.status[claim] = claimOk;
+      ok = ok && claimOk;
+      actualLeaves.push(actual);
     }
 
     // Verify verification hash
     const tree = new MerkleTree(leaves, getHashSum, {
       duplicateOdd: false,
-    })
+    });
 
-    const hexRoot = tree.getHexRoot()
-    vhOk = hexRoot === verificationHash
+    const hexRoot = tree.getHexRoot();
+    vhOk = hexRoot === verificationHash;
   }
 
 
-  ok = ok && vhOk
-  return [ok, result]
+  ok = ok && vhOk;
+  return [ok, result];
 }
 
 
@@ -376,38 +346,40 @@ interface VerificationResult {
   revision_type: string;
 }
 
-function verifyFormRevision(input: any) {
-  if (input.revision_type === 'form') {
-    let contains_deleted_fields = false
-    let fieldsWithVerification = []
-    let fieldsWithPartialVerification = []
+function verifyFormRevision(input: any, leaves: any) {
+  let contains_deleted_fields = false;
+  let fieldsWithVerification = [];
+  let fieldsWithPartialVerification = [];
+  let ok = true;
 
-    Object.keys(input).sort().forEach((field, i: number) => {
-      let new_hash = getHashSum(`${field}:${input[field]}`)
+  Object.keys(input).sort().forEach((field, i: number) => {
+    let new_hash = getHashSum(`${field}:${input[field]}`);
 
-      if (!field.endsWith('.deleted')) {
-        if (field.startsWith('forms_')) {
-          fieldsWithVerification.push(`${field}: ${input[field]}`)
-        }
+    if (!field.endsWith('.deleted')) {
+      if (field.startsWith('forms_')) {
         if (new_hash !== leaves[i]) {
-          ok = false
-          console.log(`🚫 New hash does not match existing hash ${leaves[i]}:${new_hash} at index: ${i}`)
+          ok = false;
+          fieldsWithVerification.push(`🚫 ${field}: ${input[field]}`);
+        } else {
+          fieldsWithVerification.push(`✅ ${field}: ${input[field]}`);
         }
-      } else {
-        contains_deleted_fields = true
-        fieldsWithPartialVerification.push(field)
       }
-    })
-
-    if (contains_deleted_fields) {
-      console.warn(`\n  🚨 Warning: The following fields cannot be verified:`)
-      fieldsWithPartialVerification.forEach((field, i: number) => console.log(`   ${i + 1}. ${field.replace('.deleted', '')}\n`))
+    } else {
+      contains_deleted_fields = true;
+      fieldsWithPartialVerification.push(field);
     }
+  })
 
-    console.log("\n  The following fields were verified successfully: ")
-    fieldsWithVerification.forEach(field => console.log(`   ✅${field}\n`))
-
+  if (contains_deleted_fields) {
+    console.warn(`\n  🚨 Warning: The following fields cannot be verified:`);
+    fieldsWithPartialVerification.forEach((field, i: number) => console.log(`   ${i + 1}. ${field.replace('.deleted', '')}\n`));
   }
+
+  console.log("\n  The following fields were verified: ");
+  fieldsWithVerification.forEach(field => console.log(`  ${field}`));
+  console.log("\n")
+
+  return ok
 
 }
 
@@ -444,7 +416,6 @@ async function verifyRevision(
   doVerifyMerkleProof: boolean,
   aquaObject,
 ) {
-
   let ok: boolean = true
 
   // We use fast scalar verification if input does not have leaves property
@@ -464,12 +435,10 @@ async function verifyRevision(
   }
 
   if (isScalar) {
-    console.log("We should see me  input " + JSON.stringify(input));
 
     result.scalar = true
 
     if (input.witness_merkle_proof && input.witness_merkle_proof.length > 1) {
-      console.log("@@@ Verifying merkle proof...");
       [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)
       if (!ok) {
         return [ok, result]
@@ -478,9 +447,7 @@ async function verifyRevision(
       const actualVH = "0x" + getHashSum(JSON.stringify(input))
       ok = actualVH === verificationHash
     }
-    console.log("\n Okay is ok " + ok)
   } else {
-    console.log("###Verifying merkle proof...");
     [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)
     if (!ok) {
       return [ok, result]
@@ -490,7 +457,7 @@ async function verifyRevision(
   let typeOk: boolean, _
   switch (input.revision_type) {
     case "form":
-      typeOk = true;
+      typeOk = verifyFormRevision(input, input.leaves);
       break
     case "file":
       let fileContent: Buffer
