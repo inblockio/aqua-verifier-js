@@ -18,7 +18,7 @@ import * as witnessEth from "./witness_eth.js"
 import * as witnessTsa from "./witness_tsa.js"
 
 import { createAquaTree, logAquaTree } from "./aquavhtree.js"
-import AquaTree from "aqua-protocol"
+import Aquafier from "aqua-protocol"
 
 import { fileURLToPath } from "url"
 import { dirname } from "path"
@@ -61,6 +61,8 @@ Options:
     Use this flag to include the content file instead of just its hash and name
   --rm
     Remove the most recent revision of the AQUA file
+  --v
+    To print all the logs
   --form
     Use this flag to include the json file with form data
   --network
@@ -89,6 +91,7 @@ const witnessMethod = argv["witness"]
 const enableWitness = !!witnessMethod
 const enableContent = argv["content"]
 
+const enableVerbose = argv["v"]
 const enableRemoveRevision = argv["rm"]
 const linkURIs = argv["link"]
 const enableLink = !!linkURIs
@@ -100,103 +103,30 @@ const port = 8420
 const host = "localhost"
 const serverUrl = `http://${host}:${port}`
 
-const doSign = async (wallet, verificationHash) => {
-  const message = "I sign this revision: [" + verificationHash + "]"
-  const signature = await wallet.signMessage(message)
-  return signature
-}
 
-const signMetamaskHtml = `
-<html>
-  <script>
-const message = "MESSAGETOBESIGNED";
-const localServerUrl= window.location.href;
-const doSignProcess = async () => {
-  const wallet_address = window.ethereum.selectedAddress
-  const signature = await window.ethereum.request({
-    method: 'personal_sign',
-    params: [message, window.ethereum.selectedAddress],
-  })
-  document.getElementById("signature").innerHTML = \`Signature of your file: \${signature} (you may close this tab)\`
-  await fetch(localServerUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({signature, wallet_address})
-  })
-}
-if (window.ethereum && window.ethereum.isMetaMask) {
-  if (window.ethereum.isConnected() && window.ethereum.selectedAddress) {
-    doSignProcess()
-  } else {
-    window.ethereum.request({ method: 'eth_requestAccounts' })
-      .then(doSignProcess)
-      .catch((error) => {
-        console.error(error);
-        alert(error.message);
-      })
-  }
-} else {
-  alert("Metamask not detected")
-}
-  </script>
-<body>
-    <div id="signature"></div>
-</body>
-</html>
-`
 
-const sleep = (ms) => {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-const doSignMetamask = async (verificationHash) => {
-  const maxAttempts = 24; // 2 minute timeout (12 * 5 seconds)
-  let attempts = 0;
-
-  const messageToBeSigned = "I sign this revision: [" + verificationHash + "]"
-  const html = signMetamaskHtml.replace("MESSAGETOBESIGNED", messageToBeSigned)
-  const requestListener = witnessEth.commonPrepareListener(html)
-  const server = http.createServer(requestListener)
-  try {
-    server.listen(port, host, () => {
-      console.log(`Server is running on ${serverUrl}`)
-    })
-    let response, content
-    while (attempts < maxAttempts) {
-      response = await fetch(serverUrl + "/result")
-      content = await response.json()
-      if (content.signature) {
-        const signature = content.signature
-        const walletAddress = content.wallet_address
-        const publicKey = ethers.SigningKey.recoverPublicKey(
-          ethers.hashMessage(messageToBeSigned),
-          signature,
-        )
-        console.log(`The signature has been retrieved: ${signature}`)
-        server.close()
-        return [signature, walletAddress, publicKey]
-      }
-      console.log("Waiting for the signature...")
-      attempts++;
-      await sleep(5000);
-    }
-
-    console.error("Signature timeout: No response from MetaMask");
-    server.close();
-    process.exit(1);
-  } catch (error) {
-    server.close();
-    throw error;
-  }
-}
 
 const prepareNonce = () => {
   return randomBytes(32).toString('base64url');
 }
 
-const revisionWithMultipleAquaChain = async (timestamp, revisionType, aquaFileName) => {
+const printLogs = (logs) => {
+  if (enableVerbose) {
+    logs.forEach(element => {
+      console.log(element.log)
+    });
+  } else {
+
+    logs.forEach(element => {
+      if (element.logType == "error") {
+        console.log(element.log)
+      }
+    });
+
+  }
+}
+
+const revisionWithMultipleAquaChain = async (timestamp, revisionType, aquaFileName, aquafier) => {
 
 
   if (!filename.includes(",")) {
@@ -215,7 +145,7 @@ const revisionWithMultipleAquaChain = async (timestamp, revisionType, aquaFileNa
   // const revisionSPecifiedMap = new Map();
 
   let aquaObjectWrapperList = [];
-  let fileObjectList = [];
+  let logs = [];
 
   for (const file_item of all_aqua_files) {
 
@@ -267,15 +197,15 @@ const revisionWithMultipleAquaChain = async (timestamp, revisionType, aquaFileNa
 
     try {
       const fileContent = await fs.readFileSync(filePath, "utf-8");
-      const aquaObject = JSON.parse(fileContent);
+      const aquaTree = JSON.parse(fileContent);
       console.log(`Successfully read: ${filePath}`);
 
       if (revisionHashSpecified.length == 0) {
-        const revisions = aquaObject.revisions;
+        const revisions = aquaTree.revisions;
         const verificationHashes = Object.keys(revisions);
         revisionHashSpecified = verificationHashes[verificationHashes.length - 1];
       }
-      
+
       let fileObject = {
         fileName: fileNameOnly,
         fileContent: fileContentOfFileNameOnly,
@@ -283,7 +213,7 @@ const revisionWithMultipleAquaChain = async (timestamp, revisionType, aquaFileNa
       }
 
       let aquaObjectWrapper = {
-        aquaObject: aquaObject,
+        aquaTree: aquaTree,
         fileObject: fileObject,
         revision: revisionHashSpecified,
       }
@@ -300,13 +230,55 @@ const revisionWithMultipleAquaChain = async (timestamp, revisionType, aquaFileNa
   if (revisionType == "witness") {
 
 
-  }else if (revisionType == "signing") {
+    if (witness_platform_type == undefined) {
+      witness_platform_type = creds.witness_eth_platform
+      if (creds.witness_eth_platform.length == 0) {
+        witness_platform_type = "eth"
+      }
 
-  }else{
+    }
+    if (network == undefined) {
+      network = creds.witness_eth_network
+      if (creds.witness_eth_network.length == 0) {
+        network = "sepolia"
+      }
+    }
+    let witnessResult = aquafier.witnessMultipleAquaTrees(aquaObjectWrapperList, witnessMethod, network, witness_platform_type, creds, enableScalar);
+
+    if (witnessResult.isOk()) {
+      // serializeAquaTree(aquaFilename, witnessResult.data.aquaTree)
+      let logs = witnessResult.data.logData
+      logs.map(log => console.log(log.log))
+      // logAquaTree(signatureResult.data.aquaTree.tree)
+    } else {
+      let logs = witnessResult.data
+      logs.map(log => console.log(log.log))
+    }
+
+
+  } else if (revisionType == "signing") {
+
+    const signatureResult = await aquafier.signMultipleAquaTrees(aquaObjectWrapper, signMethod, creds, enableScalar)
+
+    if (signatureResult.isOk()) {
+      // serializeAquaTree(aquaFilename, signatureResult.data.aquaTree)
+      let logs_result = signatureResult.data.logData
+      logs.concat(logs_result)
+      // logs.map(log => console.log(log.log))
+      // logAquaTree(signatureResult.data.aquaTree.tree)
+    } else {
+      let logs_result = signatureResult.data
+      logs.concat(logs_result)
+      // logs.map(log => console.log(log.log))
+    }
+
+  } else {
     console.log(`Revision of type ${revisionType} not allowed`);
     process.exit(1)
   }
-  
+
+
+  printLogs(logs);
 
 }
 const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aquaFileName) => {
@@ -360,11 +332,11 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
 
     try {
       const fileContent = await fs.readFileSync(filePath, "utf-8");
-      const aquaObject = JSON.parse(fileContent);
+      const aquaTree = JSON.parse(fileContent);
       console.log(`Successfully read: ${filePath}`);
-      // all_file_aqua_objects.push(aquaObject);
-      all_file_aqua_objects_map.set(fileNameOnly, aquaObject);
-      all_file_aqua_objects_list.push(aquaObject)
+      // all_file_aqua_objects.push(aquaTree);
+      all_file_aqua_objects_map.set(fileNameOnly, aquaTree);
+      all_file_aqua_objects_list.push(aquaTree)
     } catch (error) {
       console.error(`Error reading ${filePath}:`, error);
       process.exit(1);
@@ -532,7 +504,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
       data: verificationData
     }, revisionType, fileNameOnly);
     const filePath = `${fileNameOnly}.aqua.json`;
-    serializeAquaObject(filePath, current_file_aqua_object)
+    serializeAquaTree(filePath, current_file_aqua_object)
   }
   return true;
 }
@@ -659,9 +631,7 @@ const prepareWitness = async (verificationHash) => {
   return witness
 }
 
-const createNewAquaObject = () => {
-  return { revisions: {}, file_index: {} }
-}
+
 
 function formatMwTimestamp(ts) {
   // Format timestamp into the timestamp format found in Mediawiki outputs
@@ -683,69 +653,17 @@ const getFileTimestamp = (filename) => {
 
 
 
-const prepareSignature = async (previousVerificationHash) => {
-  let signature, walletAddress, publicKey, signature_type
-  let options_array = ["metamask", "cli", "did"];
-  if (!options_array.includes(signMethod)) {
-    console.log(`❌ An invalid sign method provided ${signMethod}.\n💡 Hint use on of  ${options_array.join(",")}`);
-    process.exit(1);
-  }
-  switch (signMethod) {
-    case "metamask":
-      ;[signature, walletAddress, publicKey] = await doSignMetamask(
-        previousVerificationHash,
-      )
-      signature_type = "ethereum:eip-191"
-      break
-    case "cli":
-      try {
-        const credentials = readCredentials()
-        let wallet
-          ;[wallet, walletAddress, publicKey] = getWallet(credentials.mnemonic)
-        signature = await doSign(wallet, previousVerificationHash)
-      } catch (error) {
-        console.error("Failed to read mnemonic:", error)
-        process.exit(1)
-      }
-      signature_type = "ethereum:eip-191"
-      break
-    case "did":
-      const credentials = readCredentials()
-      if (credentials['did:key'].length === 0 || !credentials['did:key']) {
-
-        console.log("DID key is required.  Please get a key from https://hub.ebsi.eu/tools/did-generator")
-
-        process.exit(1)
-      }
-
-      const { jws, key } = await did.signature.sign(
-        previousVerificationHash,
-        Buffer.from(credentials["did:key"], "hex"),
-      )
-      signature = jws //jws.payload
-      walletAddress = key
-      publicKey = key
-      signature_type = "did:key"
-      break
-  }
-  return {
-    signature,
-    signature_public_key: publicKey,
-    signature_wallet_address: walletAddress,
-    signature_type,
-  }
-}
 
 const getLatestVH = (uri) => {
-  const aquaObject = JSON.parse(fs.readFileSync(uri))
-  const verificationHashes = Object.keys(aquaObject.revisions)
+  const aquaTree = JSON.parse(fs.readFileSync(uri))
+  const verificationHashes = Object.keys(aquaTree.revisions)
   return verificationHashes[verificationHashes.length - 1]
 }
 
-const serializeAquaObject = (aquaFilename, aquaObject) => {
+const serializeAquaTree = (aquaFilename, aquaTree) => {
   try {
     // Convert the object to a JSON string
-    const jsonString = JSON.stringify(aquaObject, null, 2);
+    const jsonString = JSON.stringify(aquaTree, null, 2);
     fs.writeFileSync(aquaFilename, jsonString, "utf8");
   } catch (error) {
     console.error("Error writing file:", error);
@@ -753,9 +671,9 @@ const serializeAquaObject = (aquaFilename, aquaObject) => {
   }
 }
 
-const checkFileHashAlreadyNotarized = (fileHash, aquaObject) => {
+const checkFileHashAlreadyNotarized = (fileHash, aquaTree) => {
   // Check if this file hash already exists in any revision
-  const existingRevision = Object.values(aquaObject.revisions).find(
+  const existingRevision = Object.values(aquaTree.revisions).find(
     (revision) => revision.file_hash && revision.file_hash === fileHash,
   )
 
@@ -767,7 +685,7 @@ const checkFileHashAlreadyNotarized = (fileHash, aquaObject) => {
   }
 }
 
-const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType, aquaFileName) => {
+const maybeUpdateFileIndex = (aquaTree, verificationData, revisionType, aquaFileName) => {
   const validRevisionTypes = ["file", "form", "link"];
   //if (!validRevisionTypes.includes(revisionType)) {
   //  console.error(`Invalid revision type for file index: ${revisionType}`);
@@ -779,40 +697,40 @@ const maybeUpdateFileIndex = (aquaObject, verificationData, revisionType, aquaFi
     case "form":
       verificationHash = verificationData.verification_hash
       // fileHash = verificationData.data.file_hash
-      aquaObject.file_index[verificationHash] = form_file_name
+      aquaTree.file_index[verificationHash] = form_file_name
       break
     case "file":
       verificationHash = verificationData.verification_hash
       // fileHash = verificationData.data.file_hash
-      aquaObject.file_index[verificationHash] = aquaFileName //filename
+      aquaTree.file_index[verificationHash] = aquaFileName //filename
       break
     case "link":
 
       const linkURIsArray = linkURIs.split(",")
       const linkVHs = verificationData.data.link_verification_hashes
       for (const [idx, vh] of linkVHs.entries()) {
-        aquaObject.file_index[vh] = `${linkURIsArray[idx]}`
+        aquaTree.file_index[vh] = `${linkURIsArray[idx]}`
       }
   }
 }
 
-const removeRevision = (aquaObject, lastRevisionHash, aquaFilename) => {
-  const lastRevision = aquaObject.revisions[lastRevisionHash]
+const removeRevision = (aquaTree, lastRevisionHash, aquaFilename) => {
+  const lastRevision = aquaTree.revisions[lastRevisionHash]
   switch (lastRevision.revision_type) {
     case "file":
-      delete aquaObject.file_index[lastRevision.file_hash]
+      delete aquaTree.file_index[lastRevision.file_hash]
       break
     case "link":
       for (const vh of lastRevision.link_verification_hashes) {
-        delete aquaObject.file_index[vh]
+        delete aquaTree.file_index[vh]
       }
   }
 
-  delete aquaObject.revisions[lastRevisionHash]
+  delete aquaTree.revisions[lastRevisionHash]
   console.log(`Most recent revision ${lastRevisionHash} has been removed`)
 
 
-  if (Object.keys(aquaObject.revisions).length === 0) {
+  if (Object.keys(aquaTree.revisions).length === 0) {
     // If there are no revisions left, delete the .aqua.json file
     try {
       fs.unlinkSync(aquaFilename)
@@ -824,9 +742,9 @@ const removeRevision = (aquaObject, lastRevisionHash, aquaFilename) => {
       console.error(`Failed to delete ${aquaFilename}:`, err)
     }
   } else {
-    let aquaObjectWithTree = createAquaTree(aquaObject)
+    let aquaObjectWithTree = createAquaTree(aquaTree)
 
-    serializeAquaObject(aquaFilename, aquaObjectWithTree)
+    serializeAquaTree(aquaFilename, aquaObjectWithTree)
   }
 }
 
@@ -836,7 +754,7 @@ const createNewRevision = async (
   timestamp,
   revision_type,
   enableScalar,
-  aquaObject,
+  aquaTree,
 ) => {
   const validRevisionTypes = ["file", "signature", "witness", "form", "link"];
   if (!validRevisionTypes.includes(revision_type)) {
@@ -860,7 +778,7 @@ const createNewRevision = async (
         const fileContent = fs.readFileSync(enableContent); //filename)
         fileHash = main.getHashSum(fileContent)
 
-        checkFileHashAlreadyNotarized(fileHash, aquaObject)
+        checkFileHashAlreadyNotarized(fileHash, aquaTree)
 
         verificationData["content"] = fileContent.toString("utf8")
 
@@ -869,7 +787,7 @@ const createNewRevision = async (
         const fileContent = fs.readFileSync(fileNameOnly); //filename)
         fileHash = main.getHashSum(fileContent)
 
-        checkFileHashAlreadyNotarized(fileHash, aquaObject)
+        checkFileHashAlreadyNotarized(fileHash, aquaTree)
       }
       verificationData["file_hash"] = fileHash
       verificationData["file_nonce"] = prepareNonce()
@@ -900,7 +818,7 @@ const createNewRevision = async (
 
       // Calculate the hash of the file
       fileHash = main.getHashSum(form_data)
-      checkFileHashAlreadyNotarized(fileHash, aquaObject)
+      checkFileHashAlreadyNotarized(fileHash, aquaTree)
       verificationData["file_hash"] = fileHash
       verificationData["file_nonce"] = prepareNonce()
 
@@ -946,7 +864,7 @@ const createNewRevision = async (
       const linkFileHashes = linkURIsArray.map(main.getFileHashSum)
       // Validation again
       linkFileHashes.map((fh) => {
-        if (!(fh in aquaObject.file_index)) return
+        if (!(fh in aquaTree.file_index)) return
         console.error(
           `${fh} detected in file index. You are not allowed to interlink Aqua files of the same file`,
         )
@@ -988,7 +906,7 @@ const createNewRevision = async (
 
 }
 
-const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
+const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly,aquafier ) => {
 
   if (enableRemoveRevision) {
     // Don't serialize if you do --rm during genesis creation
@@ -1008,25 +926,25 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     }
   }
 
-  const aquaProtocol = new AquaTree()
+ 
   const fileContent = fs.readFileSync(aquaFilename.replace(".aqua.json", ""), { encoding: "utf-8" });
   let fileObject = {
     fileName: aquaFilename.replace(".aqua.json", ""),
     fileContent: fileContent,
     path: "./"
   }
-  const genesisRevision = await aquaProtocol.createGenesisRevision(fileObject, false, false, enableScalar)
+  const genesisRevision = await aquafier.createGenesisRevision(fileObject, false, false, enableScalar)
 
   if (genesisRevision.isOk()) {
-    let aquaObject = genesisRevision.data.aquaObject
+    let aquaTree = genesisRevision.data.aquaTree
     console.log(
-      `- Writing new ${revisionType} revision ${Object.keys(aquaObject.revisions)[0]} to ${filename}.aqua.json`,
+      `- Writing new ${revisionType} revision ${Object.keys(aquaTree.revisions)[0]} to ${filename}.aqua.json`,
     )
-    serializeAquaObject(aquaFilename, aquaObject)
+    serializeAquaTree(aquaFilename, aquaTree)
   }
 
-  // const aquaObject = createNewAquaObject()
-  // const revisions = aquaObject.revisions
+  // const aquaTree = createNewAquaTree()
+  // const revisions = aquaTree.revisions
 
   // const genesis = await createNewRevision(
   //   fileNameOnly,
@@ -1034,14 +952,14 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
   //   timestamp,
   //   revisionType,
   //   enableScalar,
-  //   aquaObject,
+  //   aquaTree,
   // )
 
 
   // revisions[genesis.verification_hash] = genesis.data
 
 
-  // maybeUpdateFileIndex(aquaObject, genesis, revisionType, fileNameOnly)
+  // maybeUpdateFileIndex(aquaTree, genesis, revisionType, fileNameOnly)
 
 }
 
@@ -1095,10 +1013,13 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
       enableScalar = false
     }
 
+    // Instantiate the Aquafier class
+    const aquafier = new Aquafier()
+
     if (filename.includes(",")) {
       if (revisionType == "witness" || revisionType == "link") {
         // createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
-        revisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename);
+        revisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename, aquafier);
         return
       } else {
         console.log("❌ only revision type witness and link work with multiple aqua chain as the file name")
@@ -1107,26 +1028,25 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     }
 
     if (!fs.existsSync(aquaFilename)) {
-      createGenesisRevision(aquaFilename, timestamp, fileNameOnly)
+      createGenesisRevision(aquaFilename, timestamp, fileNameOnly, aquafier)
       return
     }
 
-    // Instantiate the aquaProtocol class
-    const aquaProtocol = new AquaTree()
 
-    const aquaObject = JSON.parse(fs.readFileSync(aquaFilename))
-    const revisions = aquaObject.revisions
+
+    const aquaTree = JSON.parse(fs.readFileSync(aquaFilename))
+    const revisions = aquaTree.revisions
     const verificationHashes = Object.keys(revisions)
     const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
     if (enableRemoveRevision) {
-      // console.log(aquaObject)
-      let result = aquaProtocol.removeLastRevision(aquaObject)
+      // console.log(aquaTree)
+      let result = aquafier.removeLastRevision(aquaTree)
 
       if (result.isOk()) {
         const resultData = result.data
         console.log(JSON.stringify(resultData, null, 4))
-        if (resultData.aquaObject === null || !resultData.aquaObject) {
+        if (resultData.aquaTree === null || !resultData.aquaTree) {
           try {
             fs.unlinkSync(aquaFilename)
           } catch (e) {
@@ -1134,7 +1054,7 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
           }
         }
         else {
-          serializeAquaObject(aquaFilename, resultData.aquaObject)
+          serializeAquaTree(aquaFilename, resultData.aquaTree)
         }
       }
       else {
@@ -1174,14 +1094,14 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
       }
 
       let aquaObjectWrapper = {
-        aquaObject: JSON.parse(_aquaObject),
+        aquaTree: JSON.parse(_aquaObject),
         fileObject: fileObject,
         revision: "",
       }
 
-      const aquaObjectResultForContent = await aquaProtocol.createContentRevision(aquaObjectWrapper, fileObject, enableScalar)
+      const aquaObjectResultForContent = await aquafier.createContentRevision(aquaObjectWrapper, fileObject, enableScalar)
       if (aquaObjectResultForContent.isOk()) {
-        serializeAquaObject(aquaFilename, aquaObjectResultForContent.data.aquaObject)
+        serializeAquaTree(aquaFilename, aquaObjectResultForContent.data.aquaTree)
       } else {
         let logs = aquaObjectResultForContent.data
         logs.map(log => console.log(log.log))
@@ -1190,11 +1110,12 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
       return
     }
 
+    let logs = [];
     const creds = readCredentials()
 
     const fileContent = fs.readFileSync(fileNameOnly, { encoding: "utf-8" });
     const _aquaObject = fs.readFileSync(aquaFilename, { encoding: "utf-8" });
-    const parsedAquaObject = JSON.parse(_aquaObject)
+    const parsedAquaTree = JSON.parse(_aquaObject)
 
     let fileObject = {
       fileName: fileNameOnly,
@@ -1208,27 +1129,32 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     }
 
     let aquaObjectWrapper = {
-      aquaObject: parsedAquaObject,
+      aquaTree: parsedAquaTree,
       fileObject: fileObject,
       revision: revisionHashSpecified,
     }
 
-    // console.log(`Revision data ${JSON.stringify(parsedAquaObject)}`)
+    // console.log(`Revision data ${JSON.stringify(parsedAquaTree)}`)
 
     if (enableSignature) {
 
 
-      const signatureResult = await aquaProtocol.signAquaObject(aquaObjectWrapper, signMethod, creds, enableScalar)
+      const signatureResult = await aquafier.signAquaTree(aquaObjectWrapper, signMethod, creds, enableScalar)
 
       if (signatureResult.isOk()) {
-        serializeAquaObject(aquaFilename, signatureResult.data.aquaObject)
-        let logs = signatureResult.data.logData
-        logs.map(log => console.log(log.log))
-        // logAquaTree(signatureResult.data.aquaObject.tree)
+        serializeAquaTree(aquaFilename, signatureResult.data.aquaTree)
+        let logs_result = signatureResult.data.logData
+        logs.concat(logs_result)
+        // logs.map(log => console.log(log.log))
+        // logAquaTree(signatureResult.data.aquaTree.tree)
       } else {
-        let logs = signatureResult.data
-        logs.map(log => console.log(log.log))
+        let logs_result = signatureResult.data
+        logs.concat(logs_result)
+        // logs.map(log => console.log(log.log))
       }
+
+
+      printLogs(logs);
       return
     }
 
@@ -1252,20 +1178,26 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
 
 
 
-      console.log(`Witness Aqua object  witness_platform_type : ${witness_platform_type}, network : ${network} , witnessMethod : ${witnessMethod}   , enableScalar : ${enableScalar} \n creds ${JSON.stringify(creds)} `)
-      const witnessResult = await aquaProtocol.witnessAquaObject(parsedAquaObject, witnessMethod, network, witness_platform_type, creds, enableScalar)
+      // console.log(`Witness Aqua object  witness_platform_type : ${witness_platform_type}, network : ${network} , witnessMethod : ${witnessMethod}   , enableScalar : ${enableScalar} \n creds ${JSON.stringify(creds)} `)
+      const witnessResult = await aquafier.witnessAquaTree(parsedAquaTree, witnessMethod, network, witness_platform_type, creds, enableScalar)
 
       if (witnessResult.isOk()) {
-        serializeAquaObject(aquaFilename, witnessResult.data.aquaObject)
-        let logs = witnessResult.data.logData
-        logs.map(log => console.log(log.log))
-        // logAquaTree(signatureResult.data.aquaObject.tree)
+        serializeAquaTree(aquaFilename, witnessResult.data.aquaTree)
+        let logs_result = witnessResult.data.logData
+        logs.concat(logs_result)
+        // logs.map(log => console.log(log.log))
+        // logAquaTree(signatureResult.data.aquaTree.tree)
       } else {
-        let logs = witnessResult.data
-        logs.map(log => console.log(log.log))
+        let logs_result = witnessResult.data
+        logs.concat(logs_result)
+        // logs.map(log => console.log(log.log))
       }
+
+      printLogs(logs);
+
       return
     }
+
 
     // const verificationHash = verificationData.verification_hash
     // revisions[verificationHash] = verificationData.data
@@ -1274,15 +1206,15 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
     // let theIndexFileName = fileNameOnly;
     // if (enableContent != undefined && enableContent.length > 0) {
     //   theIndexFileName = enableContent
-    //   maybeUpdateFileIndex(aquaObject, verificationData, revisionType, enableContent)
+    //   maybeUpdateFileIndex(aquaTree, verificationData, revisionType, enableContent)
     // } else {
-    //   maybeUpdateFileIndex(aquaObject, verificationData, revisionType, fileNameOnly)
+    //   maybeUpdateFileIndex(aquaTree, verificationData, revisionType, fileNameOnly)
     // }
 
-    // serializeAquaObject(aquaFilename, aquaObject)
+    // serializeAquaTree(aquaFilename, aquaTree)
 
     // // Tree creation
-    // let aquaObjectWithTree = createAquaTree(aquaObject)
+    // let aquaObjectWithTree = createAquaTree(aquaTree)
 
-    // serializeAquaObject(aquaFilename, aquaObjectWithTree)
+    // serializeAquaTree(aquaFilename, aquaObjectWithTree)
   })()
