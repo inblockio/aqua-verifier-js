@@ -18,7 +18,7 @@ import * as witnessEth from "./witness_eth.js"
 import * as witnessTsa from "./witness_tsa.js"
 
 import { createAquaTree, logAquaTree } from "./aquavhtree.js"
-import Aquafier from "aqua-protocol"
+import Aquafier from "aquafier-js-sdk"
 
 import { fileURLToPath } from "url"
 import { dirname } from "path"
@@ -258,7 +258,7 @@ const revisionWithMultipleAquaChain = async (timestamp, revisionType, aquaFileNa
 
   } else if (revisionType == "signing") {
 
-    const signatureResult = await aquafier.signMultipleAquaTrees(aquaObjectWrapper, signMethod, creds, enableScalar)
+    const signatureResult = await aquafier.signMultipleAquaTrees(aquaObjectWrapperList, signMethod, creds, enableScalar)
 
     if (signatureResult.isOk()) {
       // serializeAquaTree(aquaFilename, signatureResult.data.aquaTree)
