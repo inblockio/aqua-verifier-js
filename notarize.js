@@ -196,6 +196,119 @@ const prepareNonce = () => {
   return randomBytes(32).toString('base64url');
 }
 
+const revisionWithMultipleAquaChain = async (timestamp, revisionType, aquaFileName) => {
+
+
+  if (!filename.includes(",")) {
+    console.error("Multiple files must be separated by commas");
+    process.exit(1);
+  }
+
+  // read files
+  let all_aqua_files = filename.split(",");
+  // let all_file_aqua_objects = [];
+
+  // ie filename.aqua.json => "specified revision"
+  // if specified revision is empty use last revision
+  // const all_file_aqua_objects_map = new Map();
+  // let all_file_aqua_objects_list = [];
+  // const revisionSPecifiedMap = new Map();
+
+  let aquaObjectWrapperList = [];
+  let fileObjectList = [];
+
+  for (const file_item of all_aqua_files) {
+
+    let fileNameOnly = ""
+    let revisionHashSpecified = ""
+
+    console.log("File name loop ", file_item);
+    if (file_item.includes("@")) {
+
+      const filenameParts = file_item.split("@");
+      if (filenameParts.length > 2) {
+        console.error(`Invalid filename format.  Please use only one '@' symbol to separate the filename from the revision hash. file name ${filenameParts}`);
+        process.exit(1);
+      }
+      fileNameOnly = filenameParts[0];
+
+      revisionHashSpecified = filenameParts[1];
+
+      if (revisionHashSpecified.length == 0) {
+        console.error("Revision hash is empty.  Please provide a valid revision hash.");
+        process.exit(1);
+      }
+
+      // revisionSPecifiedMap.set(fileNameOnly, revisionSpecified);
+    } else {
+      fileNameOnly = file_item;
+
+    }
+
+    let fileContentOfFileNameOnly = "";
+
+    try {
+      fileContentOfFileNameOnly = await fs.readFileSync(fileNameOnly, "utf-8");
+
+
+    } catch (error) {
+      console.error(`Error reading ${fileNameOnly}:`, error);
+      process.exit(1);
+    }
+
+
+
+    const filePath = `${fileNameOnly}.aqua.json`;
+
+    if (!fs.existsSync(filePath)) {
+      console.error(`File does not exist: ${filePath}`);
+      process.exit(1);
+    }
+
+    try {
+      const fileContent = await fs.readFileSync(filePath, "utf-8");
+      const aquaObject = JSON.parse(fileContent);
+      console.log(`Successfully read: ${filePath}`);
+
+      if (revisionHashSpecified.length == 0) {
+        const revisions = aquaObject.revisions;
+        const verificationHashes = Object.keys(revisions);
+        revisionHashSpecified = verificationHashes[verificationHashes.length - 1];
+      }
+      
+      let fileObject = {
+        fileName: fileNameOnly,
+        fileContent: fileContentOfFileNameOnly,
+        path: "./"
+      }
+
+      let aquaObjectWrapper = {
+        aquaObject: aquaObject,
+        fileObject: fileObject,
+        revision: revisionHashSpecified,
+      }
+
+
+      aquaObjectWrapperList.push(aquaObjectWrapper)
+    } catch (error) {
+      console.error(`Error reading ${filePath}:`, error);
+      process.exit(1);
+    }
+  }
+  console.log("All files read successfully \n",);
+
+  if (revisionType == "witness") {
+
+
+  }else if (revisionType == "signing") {
+
+  }else{
+    console.log(`Revision of type ${revisionType} not allowed`);
+    process.exit(1)
+  }
+  
+
+}
 const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aquaFileName) => {
   if (!filename.includes(",")) {
     console.error("Multiple files must be separated by commas");
@@ -984,7 +1097,8 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
 
     if (filename.includes(",")) {
       if (revisionType == "witness" || revisionType == "link") {
-        createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
+        // createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
+        revisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename);
         return
       } else {
         console.log("❌ only revision type witness and link work with multiple aqua chain as the file name")
@@ -1139,7 +1253,7 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
 
 
       console.log(`Witness Aqua object  witness_platform_type : ${witness_platform_type}, network : ${network} , witnessMethod : ${witnessMethod}   , enableScalar : ${enableScalar} \n creds ${JSON.stringify(creds)} `)
-      const witnessResult = await aquaProtocol.witnessAquaObject(parsedAquaObject, witnessMethod , network, witness_platform_type , creds, enableScalar)
+      const witnessResult = await aquaProtocol.witnessAquaObject(parsedAquaObject, witnessMethod, network, witness_platform_type, creds, enableScalar)
 
       if (witnessResult.isOk()) {
         serializeAquaObject(aquaFilename, witnessResult.data.aquaObject)
