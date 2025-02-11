@@ -3,8 +3,9 @@ index.js
 credentials.json
 mnemonic.txt
 *.aqua.json
-test/trash*
-test/test-results*
-test/test-results
-test/form_testdata
+tests/trash*
+tests/test-results*
+tests/test-results
 _credentials.json
+tests/sharness/
+tests/sharness/sharness.sh

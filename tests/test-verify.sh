@@ -5,9 +5,7 @@ test_description='Test file verification functionality'
 notarize="repo/notarize.js"
 verify="repo/verify.js"
 
-## ensure to install sharness
-. ~/share/sharness/sharness.sh
-
+. ./tests/sharness/sharness.sh
 
 test_expect_success 'Setup test environment' '
     ln -s $(git rev-parse --show-toplevel) ./repo &&

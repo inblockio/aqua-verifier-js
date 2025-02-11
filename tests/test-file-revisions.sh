@@ -2,7 +2,8 @@
 
 test_description='Test file modifications and notarization with index updates'
 
-. ~/share/sharness/sharness.sh
+echo "Current Path: $(pwd)"
+. ./tests/sharness/sharness.sh
 
 notarize="repo/notarize.js"
 verify="repo/verify.js"

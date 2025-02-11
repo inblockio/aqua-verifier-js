@@ -1,4 +1,4 @@
-# data-accounting-external-verifier
+## data-accounting-external-verifier,
 JS Client,  scripts for signing , witnessiing and verifying revisiion <br/>
 
 ## Functional description
@@ -58,6 +58,22 @@ ie
 ./notarize.js  ./LICENSE --witness eth
 ```
 
+To witness multiple aqua chains 
+
+ie 
+```bash
+./notarize.js LICENSE,README.md --witness eth --vtree --type sepolia
+```
+
+
+
+To witness multiple file with specific revision 
+ie 
+```bash
+./notarize.js LICENSE@0x_specific_revision_,README.md@0x_specific_revision_ --witness eth  --type cli --vtree
+```
+
+
 ### 2. Aqua chain verification
 
 To verify an aqua chain use the following command
@@ -110,13 +126,13 @@ ie
 To link an Aqua chain to another use the `--link` option as follows
 
 ```bash
-./notarize.js --link <FILE_PATH.aqua.json> <FILE_PATH>
+./notarize.js  <FILE_PATH>  --link  <FILE_PATH.aqua.json>
 ```
 
 ie
 
 ```bash
-./notarize.js --link ./README.md.aqua.json ./LICENSE
+./notarize.js   --link ./LICENSE ./README.md.aqua.json
 ```
 
 This will link `README.md.aqua.json` to `LICENSE` file and it will be written into `LICENSE.aqua.json` file
@@ -148,7 +164,7 @@ please note for genesis the filane name should be the same with form name
 To create a form revision 
 `./notarize.js LICENCE --form example-form.json `
 
-### 8. Updat Aqua forms 
+### 8. Update Aqua forms 
 
 * To delete a form entry  `./form_updater.js example-form.json.aqua.json@abcd --delete age`
  
@@ -167,7 +183,7 @@ Handles deleted fields (e.g., forms-name.deleted)
 5. Non-destructive: Preserves the original structure while making changes
 
 ## How to run tests
-- ensure to install shareness in you local systems the sharenss path is set to `~/share/sharness/sharness.sh` check out [sharness](https://github.com/felipec/sharness) for more instructions
+- ensure to install shareness in you local systems the sharenss path is set to `~/share/sharness/sharness.sh` then copy the shareness directory to tests. Check out [sharness](https://github.com/felipec/sharness) for more instructions
 - run `make test`
 - the output will be  in test >  trash *(the last part is dynamic based on the test)
 - Hint : ensure your `tests/test-*.sh` file are excutable `chmod +x  tests/test-*`

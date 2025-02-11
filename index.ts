@@ -222,6 +222,7 @@ async function verifyWitness(
 }
 
 const verifySignature = async (data: object, verificationHash: string) => {
+
   // TODO enforce that the verificationHash is a correct SHA3 sum string
   // Specify signature correctness
   let signatureOk = false
@@ -231,6 +232,7 @@ const verifySignature = async (data: object, verificationHash: string) => {
     return [signatureOk, "INVALID"]
   }
 
+  console.log("did:key == " + data.signature_type);
   // Signature verification
   switch (data.signature_type) {
     case "did:key":
@@ -316,14 +318,15 @@ function verifyRevisionMerkleTreeStructure(input, result: VerificationResult, ve
 
   }
   // For witness, we verify the merkle root
-  // else if (input.revision_type === "witness") {
-  //   let witnessMerkleProofLeaves = input.witness_merkle_proof
-  //   const tree = new MerkleTree(witnessMerkleProofLeaves, getHashSum, {
-  //     duplicateOdd: false,
-  //   })
-  //   const hexRoot = tree.getHexRoot()
-  //   vhOk = hexRoot === input.witness_merkle_root
-  // }
+  else if (input.revision_type === "witness" && input.witness_merkle_proof.length > 1) {
+    let witnessMerkleProofLeaves = input.witness_merkle_proof
+    const tree = new MerkleTree(witnessMerkleProofLeaves, getHashSum, {
+      duplicateOdd: false,
+    })
+    const hexRoot = tree.getHexRoot()
+    vhOk = hexRoot === input.witness_merkle_root
+  }
+
   else {
 
     // Verify leaves
@@ -461,12 +464,23 @@ async function verifyRevision(
   }
 
   if (isScalar) {
+    console.log("We should see me  input " + JSON.stringify(input));
 
     result.scalar = true
-    const actualVH = "0x" + getHashSum(JSON.stringify(input))
-    ok = actualVH === verificationHash
+
+    if (input.witness_merkle_proof && input.witness_merkle_proof.length > 1) {
+      console.log("@@@ Verifying merkle proof...");
+      [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)
+      if (!ok) {
+        return [ok, result]
+      }
+    } else {
+      const actualVH = "0x" + getHashSum(JSON.stringify(input))
+      ok = actualVH === verificationHash
+    }
+    console.log("\n Okay is ok " + ok)
   } else {
-    console.log("Verifying merkle proof");
+    console.log("###Verifying merkle proof...");
     [ok, result] = verifyRevisionMerkleTreeStructure(input, result, verificationHash)
     if (!ok) {
       return [ok, result]
@@ -483,6 +497,8 @@ async function verifyRevision(
       if (!!input.content) {
         fileContent = Buffer.from(input.content, "utf8")
       } else {
+        console.log("File index", JSON.stringify(aquaObject.file_index));
+        console.log("Has needed  ", verificationHash);
         fileContent = fs.readFileSync(aquaObject.file_index[verificationHash])
       }
       const fileHash = getHashSum(fileContent)
