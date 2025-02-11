@@ -93,8 +93,8 @@ const enableRemoveRevision = argv["rm"]
 const linkURIs = argv["link"]
 const enableLink = !!linkURIs
 const form_file_name = argv["form"]
-const network = argv["network"]
-const witness_platform_type = argv["type"]
+let network = argv["network"]
+let witness_platform_type = argv["type"]
 
 const port = 8420
 const host = "localhost"
@@ -936,7 +936,7 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
   ; (async function () {
 
     let fileNameOnly = "";
-    let revisionSpecified = "";
+    let revisionHashSpecified = "";
 
 
     if (filename.includes("@") && !filename.includes(",")) {
@@ -947,9 +947,9 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
       }
       fileNameOnly = filenameParts[0];
 
-      revisionSpecified = filenameParts[1];
+      revisionHashSpecified = filenameParts[1];
 
-      if (revisionSpecified.length == 0) {
+      if (revisionHashSpecified.length == 0) {
         console.error("Revision hash is empty.  Please provide a valid revision hash.");
         process.exit(1);
       }
@@ -1029,16 +1029,14 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
       return
     }
 
-    let revisionHashSpecified = ""
 
-    if (revisionSpecified.length > 0) {
-      console.log("📍  Revision specified: ", revisionSpecified)
+    if (revisionHashSpecified.length > 0) {
+      console.log("📍  Revision specified: ", revisionHashSpecified)
 
-      if (!verificationHashes.includes(revisionSpecified)) {
-        console.error(`❌  Revision hash ${revisionSpecified} not found in ${aquaFilename}`);
+      if (!verificationHashes.includes(revisionHashSpecified)) {
+        console.error(`❌  Revision hash ${revisionHashSpecified} not found in ${aquaFilename}`);
         process.exit(1);
       }
-      revisionHashSpecified = revisionSpecified
     } else {
       revisionHashSpecified = verificationHashes[verificationHashes.length - 1]
     }
@@ -1078,29 +1076,35 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
       return
     }
 
+    const creds = readCredentials()
+
+    const fileContent = fs.readFileSync(fileNameOnly, { encoding: "utf-8" });
+    const _aquaObject = fs.readFileSync(aquaFilename, { encoding: "utf-8" });
+    const parsedAquaObject = JSON.parse(_aquaObject)
+
+    let fileObject = {
+      fileName: fileNameOnly,
+      fileContent: fileContent,
+      path: "./"
+    }
+
+    if (!revisionHashSpecified || revisionHashSpecified.length == 0) {
+      console.log(`Revision hash error ${revisionHashSpecified}`);
+      process.exit(1);
+    }
+
+    let aquaObjectWrapper = {
+      aquaObject: parsedAquaObject,
+      fileObject: fileObject,
+      revision: revisionHashSpecified,
+    }
+
+    // console.log(`Revision data ${JSON.stringify(parsedAquaObject)}`)
+
     if (enableSignature) {
-      const creds = readCredentials()
-      const fileContent = fs.readFileSync(fileNameOnly, { encoding: "utf-8" });
-      const _aquaObject = fs.readFileSync(aquaFilename, { encoding: "utf-8" });
-      const parsedAquaObject = JSON.parse(_aquaObject)
 
-      let fileObject = {
-        fileName: fileNameOnly,
-        fileContent: fileContent,
-        path: "./"
-      }
 
-      console.log("revisionSpecified, ", revisionSpecified)
-      let lastRevisionHash = revisionSpecified ?? parsedAquaObject.treeMapping.latestHash
-      console.log("Revision hash: ", lastRevisionHash)
-
-      let aquaObjectWrapper = {
-        aquaObject: parsedAquaObject,
-        fileObject: fileObject,
-        revision: lastRevisionHash,
-      }
-      
-      const signatureResult = await aquaProtocol.signAquaObject(aquaObjectWrapper, signMethod, creds, true)
+      const signatureResult = await aquaProtocol.signAquaObject(aquaObjectWrapper, signMethod, creds, enableScalar)
 
       if (signatureResult.isOk()) {
         serializeAquaObject(aquaFilename, signatureResult.data.aquaObject)
@@ -1109,6 +1113,41 @@ const createGenesisRevision = async (aquaFilename, timestamp, fileNameOnly) => {
         // logAquaTree(signatureResult.data.aquaObject.tree)
       } else {
         let logs = signatureResult.data
+        logs.map(log => console.log(log.log))
+      }
+      return
+    }
+
+    if (enableWitness) {
+
+
+
+      if (witness_platform_type == undefined) {
+        witness_platform_type = creds.witness_eth_platform
+        if (creds.witness_eth_platform.length == 0) {
+          witness_platform_type = "eth"
+        }
+
+      }
+      if (network == undefined) {
+        network = creds.witness_eth_network
+        if (creds.witness_eth_network.length == 0) {
+          network = "sepolia"
+        }
+      }
+
+
+
+      console.log(`Witness Aqua object  witness_platform_type : ${witness_platform_type}, network : ${network} , witnessMethod : ${witnessMethod}   , enableScalar : ${enableScalar} \n creds ${JSON.stringify(creds)} `)
+      const witnessResult = await aquaProtocol.witnessAquaObject(parsedAquaObject, witnessMethod , network, witness_platform_type , creds, enableScalar)
+
+      if (witnessResult.isOk()) {
+        serializeAquaObject(aquaFilename, witnessResult.data.aquaObject)
+        let logs = witnessResult.data.logData
+        logs.map(log => console.log(log.log))
+        // logAquaTree(signatureResult.data.aquaObject.tree)
+      } else {
+        let logs = witnessResult.data
         logs.map(log => console.log(log.log))
       }
       return
