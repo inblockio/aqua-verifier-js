@@ -5,6 +5,7 @@ import { fileURLToPath } from "url"
 import { dirname } from "path"
 import crypto from 'crypto';
 import { ethers } from "ethers";
+import * as fs from "fs"
 
 export function getWallet(mnemonic) {
     // Always trim the last new line
@@ -96,6 +97,82 @@ export const estimateWitnessGas = async (wallet_address, witness_event_verificat
     }
 };
 
+export function formatMwTimestamp(ts) {
+    // Format timestamp into the timestamp format found in Mediawiki outputs
+    return ts
+        .replace(/-/g, "")
+        .replace(/:/g, "")
+        .replace("T", "")
+        .replace("Z", "")
+}
+
+export const serializeAquaTree = (aquaFilename, aquaTree) => {
+    try {
+        // Convert the object to a JSON string
+        const jsonString = JSON.stringify(aquaTree, null, 2);
+        fs.writeFileSync(aquaFilename, jsonString, "utf8");
+    } catch (error) {
+        console.error("Error writing file:", error);
+        process.exit(1);
+    }
+}
+
+export const createGenesisRevision = async (aquaFilename, form_file_name, enableScalar, aquafier) => {
+
+    // if (enableRemoveRevision) {
+    //     // Don't serialize if you do --rm during genesis creation
+    //     console.log("There is nothing delete.")
+    //     return
+    // }
+
+    let revisionType = "file"
+    if (form_file_name) {
+        revisionType = "form"
+
+        if (form_file_name != aquaFilename.replace(/\.aqua\.json$/, "")) {
+            console.log(
+                `First Revision  : Form file name is not the same as the aqua file name \n  Form : ${form_file_name}  File : ${aquaFilename}`,
+            )
+            process.exit(1)
+        }
+    }
+
+
+    const fileContent = fs.readFileSync(aquaFilename.replace(".aqua.json", ""), { encoding: "utf-8" });
+    let fileObject = {
+        fileName: aquaFilename.replace(".aqua.json", ""),
+        fileContent: fileContent,
+        path: "./"
+    }
+    const genesisRevision = await aquafier.createGenesisRevision(fileObject, false, false, enableScalar)
+
+    if (genesisRevision.isOk()) {
+        let aquaTree = genesisRevision.data.aquaTree
+        console.log(
+            `- Writing new ${revisionType} revision ${Object.keys(aquaTree.revisions)[0]} to ${aquaFilename}`,
+        )
+        serializeAquaTree(aquaFilename, aquaTree)
+    }
+
+    // const aquaTree = createNewAquaTree()
+    // const revisions = aquaTree.revisions
+
+    // const genesis = await createNewRevision(
+    //   fileNameOnly,
+    //   "",
+    //   timestamp,
+    //   revisionType,
+    //   enableScalar,
+    //   aquaTree,
+    // )
+
+
+    // revisions[genesis.verification_hash] = genesis.data
+
+
+    // maybeUpdateFileIndex(aquaTree, genesis, revisionType, fileNameOnly)
+
+}
 // Example Usage
 // const wallet = "0xYourWalletAddress";
 // const verificationHash = "abcd1234"; // Replace with actual hash
@@ -103,3 +180,41 @@ export const estimateWitnessGas = async (wallet_address, witness_event_verificat
 
 // estimateWitnessGas(wallet, verificationHash, providerUrl).then(console.log);
 
+
+export function readAndCreateAquaTreeAndAquaTreeWrapper(fileName, revisionHashSpecified) {
+
+    if(!fileName){
+        console.log("Pass in filename")
+        process.exit(1)
+    }
+
+    let fileNameOnly = fileName.endsWith(".aqua.json") ? fileName.replace(".aqua.json", "") : fileName
+    let aquaFilename = fileName.endsWith(".aqua.json") ? fileName : `${fileName}.aqua.json`
+
+    const fileContent = fs.readFileSync(fileNameOnly, { encoding: "utf-8" });
+    const _aquaObject = fs.readFileSync(aquaFilename, { encoding: "utf-8" });
+    const parsedAquaTree = JSON.parse(_aquaObject)
+
+    let fileObject = {
+        fileName: fileNameOnly,
+        fileContent: fileContent,
+        path: "./"
+    }
+
+    if (!revisionHashSpecified || revisionHashSpecified.length == 0) {
+        console.log(`Revision hash error ${revisionHashSpecified}`);
+        process.exit(1);
+    }
+
+    let aquaTreeWrapper = {
+        aquaTree: parsedAquaTree,
+        fileObject: fileObject,
+        revision: revisionHashSpecified,
+    }
+
+    return {
+        aquaTree: parsedAquaTree,
+        aquaTreeWrapper: aquaTreeWrapper
+    }
+
+}

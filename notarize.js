@@ -24,7 +24,7 @@ import { fileURLToPath } from "url"
 import { dirname } from "path"
 
 // import { Wallet, Mnemonic } from 'ethers';
-import { readCredentials, getWallet, estimateWitnessGas } from "./utils.js"
+import { readCredentials, getWallet, estimateWitnessGas, formatMwTimestamp, createGenesisRevision, serializeAquaTree, readAndCreateAquaTreeAndAquaTreeWrapper } from "./utils.js"
 // import { isOk } from "rustic"
 
 import rusticPkg from 'rustic';
@@ -116,240 +116,299 @@ const printLogs = (logs) => {
 }
 
 
-  // The main function
+// The main function
 (async function () {
 
-    let fileNameOnly = "";
-    let revisionHashSpecified = "";
+  let fileNameOnly = "";
+  let revisionHashSpecified = "";
 
 
-    if (filename.includes("@") && !filename.includes(",")) {
-      const filenameParts = filename.split("@");
-      if (filenameParts.length > 2) {
-        console.error("-> Invalid filename format.  Please use only one '@' symbol to separate the filename from the revision hash.");
-        process.exit(1);
-      }
-      fileNameOnly = filenameParts[0];
-
-      revisionHashSpecified = filenameParts[1];
-
-      if (revisionHashSpecified.length == 0) {
-        console.error("Revision hash is empty.  Please provide a valid revision hash.");
-        process.exit(1);
-      }
-    } else {
-      fileNameOnly = filename;
+  if (filename.includes("@") && !filename.includes(",")) {
+    const filenameParts = filename.split("@");
+    if (filenameParts.length > 2) {
+      console.error("-> Invalid filename format.  Please use only one '@' symbol to separate the filename from the revision hash.");
+      process.exit(1);
     }
+    fileNameOnly = filenameParts[0];
 
-    const aquaFilename = fileNameOnly + ".aqua.json"
-    // const timestamp = getFileTimestamp(filename)
-    // We use "now" instead of the modified time of the file
-    const now = new Date().toISOString()
-    const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
-    if (!form_file_name) {
-      enableScalar = true
+    revisionHashSpecified = filenameParts[1];
+
+    if (revisionHashSpecified.length == 0) {
+      console.error("Revision hash is empty.  Please provide a valid revision hash.");
+      process.exit(1);
     }
-    if (vTree) {
-      enableScalar = false
-    }
+  } else {
+    fileNameOnly = filename;
+  }
+
+  const aquaFilename = fileNameOnly + ".aqua.json"
+  // const timestamp = getFileTimestamp(filename)
+  // We use "now" instead of the modified time of the file
+  const now = new Date().toISOString()
+  const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
+  if (!form_file_name) {
+    enableScalar = true
+  }
+  if (vTree) {
+    enableScalar = false
+  }
 
 
-    let revisionType = "file"
-    if (enableSignature) {
-      revisionType = "signature"
-    } else if (enableWitness) {
-      revisionType = "witness"
-    } else if (enableLink) {
-      revisionType = "link"
-    } else if (form_file_name) {
-      revisionType = "form"
-      enableScalar = false
-    }
+  let revisionType = "file"
+  if (enableSignature) {
+    revisionType = "signature"
+  } else if (enableWitness) {
+    revisionType = "witness"
+  } else if (enableLink) {
+    revisionType = "link"
+  } else if (form_file_name) {
+    revisionType = "form"
+    enableScalar = false
+  }
 
-    // Instantiate the Aquafier class
-    const aquafier = new Aquafier()
+  // Instantiate the Aquafier class
+  const aquafier = new Aquafier()
 
-    if (filename.includes(",")) {
-      if (revisionType == "witness" || revisionType == "link") {
-        // createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
-        revisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename, aquafier);
-        return
-      } else {
-        console.log("❌ only revision type witness and link work with multiple aqua chain as the file name")
-        process.exit(1)
-      }
-    }
-
-    if (!fs.existsSync(aquaFilename)) {
-      createGenesisRevision(aquaFilename, timestamp, fileNameOnly, aquafier)
+  if (filename.includes(",")) {
+    if (revisionType == "witness" || revisionType == "link") {
+      // createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
+      revisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename, aquafier);
       return
+    } else {
+      console.log("❌ only revision type witness and link work with multiple aqua chain as the file name")
+      process.exit(1)
     }
+  }
+
+  if (!fs.existsSync(aquaFilename)) {
+    createGenesisRevision(aquaFilename, form_file_name, enableScalar, aquafier)
+    return
+  }
 
 
 
-    const aquaTree = JSON.parse(fs.readFileSync(aquaFilename))
-    const revisions = aquaTree.revisions
-    const verificationHashes = Object.keys(revisions)
-    const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
+  const aquaTree = JSON.parse(fs.readFileSync(aquaFilename))
+  if (!aquaTree) {
+    console.error(`❌  Fatal Error! Aqua Tree does not exist`);
 
-    if (enableRemoveRevision) {
-      // console.log(aquaTree)
-      let result = aquafier.removeLastRevision(aquaTree)
+    // TODO: Check whether this procedure is okay
+    // We create a new object and proceed
+    createGenesisRevision(aquaFilename, form_file_name, enableScalar, aquafier)
+    // process.exit(1);
+  }
+  const revisions = aquaTree.revisions
+  const verificationHashes = Object.keys(revisions)
+  const lastRevisionHash = verificationHashes[verificationHashes.length - 1]
 
-      if (result.isOk()) {
-        const resultData = result.data
-        console.log(JSON.stringify(resultData, null, 4))
-        if (resultData.aquaTree === null || !resultData.aquaTree) {
-          try {
-            fs.unlinkSync(aquaFilename)
-          } catch (e) {
-            console.log(`❌ Unable to delete file. ${e}`)
-          }
-        }
-        else {
-          serializeAquaTree(aquaFilename, resultData.aquaTree)
+  if (enableRemoveRevision) {
+    // console.log(aquaTree)
+    let result = aquafier.removeLastRevision(aquaTree)
+
+    if (result.isOk()) {
+      const resultData = result.data
+      console.log(JSON.stringify(resultData, null, 4))
+      if (resultData.aquaTree === null || !resultData.aquaTree) {
+        try {
+          fs.unlinkSync(aquaFilename)
+        } catch (e) {
+          console.log(`❌ Unable to delete file. ${e}`)
         }
       }
       else {
-        console.log("❌ Unable to remove last revision")
+        serializeAquaTree(aquaFilename, resultData.aquaTree)
       }
-      return
     }
-
-
-    if (revisionHashSpecified.length > 0) {
-      console.log("📍  Revision specified: ", revisionHashSpecified)
-
-      if (!verificationHashes.includes(revisionHashSpecified)) {
-        console.error(`❌  Revision hash ${revisionHashSpecified} not found in ${aquaFilename}`);
-        process.exit(1);
-      }
-    } else {
-      revisionHashSpecified = verificationHashes[verificationHashes.length - 1]
+    else {
+      console.log("❌ Unable to remove last revision")
     }
+    return
+  }
 
 
-    if (enableSignature && enableWitness) {
-      formatter.log_red("❌ you cannot sign & witness at the same time")
-      process.exit(1)
+  if (revisionHashSpecified.length > 0) {
+    console.log("📍  Revision specified: ", revisionHashSpecified)
+
+    if (!verificationHashes.includes(revisionHashSpecified)) {
+      console.error(`❌  Revision hash ${revisionHashSpecified} not found in ${aquaFilename}`);
+      process.exit(1);
     }
+  } else {
+    revisionHashSpecified = verificationHashes[verificationHashes.length - 1]
+  }
 
-    console.log("➡️   Revision type: ", revisionType)
+
+  if (enableSignature && enableWitness) {
+    formatter.log_red("❌ you cannot sign & witness at the same time")
+    process.exit(1)
+  }
+
+  console.log("➡️   Revision type: ", revisionType)
 
 
-    if (enableContent) {
-      const fileContent = fs.readFileSync(fileNameOnly, { encoding: "utf-8" });
-      const _aquaObject = fs.readFileSync(aquaFilename, { encoding: "utf-8" });
-      let fileObject = {
-        fileName: fileNameOnly,
-        fileContent: fileContent,
-        path: "./"
-      }
-
-      let aquaObjectWrapper = {
-        aquaTree: JSON.parse(_aquaObject),
-        fileObject: fileObject,
-        revision: "",
-      }
-
-      const aquaObjectResultForContent = await aquafier.createContentRevision(aquaObjectWrapper, fileObject, enableScalar)
-      if (aquaObjectResultForContent.isOk()) {
-        serializeAquaTree(aquaFilename, aquaObjectResultForContent.data.aquaTree)
-      } else {
-        let logs = aquaObjectResultForContent.data
-        logs.map(log => console.log(log.log))
-
-      }
-      return
-    }
-
-    let logs = [];
-    const creds = readCredentials()
-
+  if (enableContent) {
     const fileContent = fs.readFileSync(fileNameOnly, { encoding: "utf-8" });
     const _aquaObject = fs.readFileSync(aquaFilename, { encoding: "utf-8" });
-    const parsedAquaTree = JSON.parse(_aquaObject)
-
     let fileObject = {
       fileName: fileNameOnly,
       fileContent: fileContent,
       path: "./"
     }
 
-    if (!revisionHashSpecified || revisionHashSpecified.length == 0) {
-      console.log(`Revision hash error ${revisionHashSpecified}`);
-      process.exit(1);
-    }
-
-    let aquaObjectWrapper = {
-      aquaTree: parsedAquaTree,
+    let aquaTreeWrapper = {
+      aquaTree: JSON.parse(_aquaObject),
       fileObject: fileObject,
-      revision: revisionHashSpecified,
+      revision: "",
     }
 
-    // console.log(`Revision data ${JSON.stringify(parsedAquaTree)}`)
+    const aquaObjectResultForContent = await aquafier.createContentRevision(aquaTreeWrapper, fileObject, enableScalar)
+    if (aquaObjectResultForContent.isOk()) {
+      serializeAquaTree(aquaFilename, aquaObjectResultForContent.data.aquaTree)
+    } else {
+      let logs = aquaObjectResultForContent.data
+      logs.map(log => console.log(log.log))
 
-    if (enableSignature) {
+    }
+    return
+  }
+
+  let logs = [];
+  const creds = readCredentials()
+
+  // const fileContent = fs.readFileSync(fileNameOnly, { encoding: "utf-8" });
+  // const _aquaObject = fs.readFileSync(aquaFilename, { encoding: "utf-8" });
+  // const parsedAquaTree = JSON.parse(_aquaObject)
+
+  // let fileObject = {
+  //   fileName: fileNameOnly,
+  //   fileContent: fileContent,
+  //   path: "./"
+  // }
+
+  // if (!revisionHashSpecified || revisionHashSpecified.length == 0) {
+  //   console.log(`Revision hash error ${revisionHashSpecified}`);
+  //   process.exit(1);
+  // }
+
+  // let aquaTreeWrapper = {
+  //   aquaTree: parsedAquaTree,
+  //   fileObject: fileObject,
+  //   revision: revisionHashSpecified,
+  // }
+
+  const aquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(fileNameOnly, revisionHashSpecified).aquaTreeWrapper
+
+  // console.log(`Revision data ${JSON.stringify(parsedAquaTree)}`)
+
+  if (enableSignature) {
 
 
-      const signatureResult = await aquafier.signAquaTree(aquaObjectWrapper, signMethod, creds, enableScalar)
+    const signatureResult = await aquafier.signAquaTree(aquaTreeWrapper, signMethod, creds, enableScalar)
 
-      if (signatureResult.isOk()) {
-        serializeAquaTree(aquaFilename, signatureResult.data.aquaTree)
-        let logs_result = signatureResult.data.logData
-        logs.concat(logs_result)
-        // logs.map(log => console.log(log.log))
-        // logAquaTree(signatureResult.data.aquaTree.tree)
-      } else {
-        let logs_result = signatureResult.data
-        logs.concat(logs_result)
-        // logs.map(log => console.log(log.log))
+    if (signatureResult.isOk()) {
+      console.log(JSON.stringify(signatureResult.data, null, 4))
+      serializeAquaTree(aquaFilename, signatureResult.data.aquaTree)
+      let logs_result = signatureResult.data.logData
+      logs.concat(logs_result)
+      // logs.map(log => console.log(log.log))
+      // logAquaTree(signatureResult.data.aquaTree.tree)
+    } else {
+      let logs_result = signatureResult.data
+      logs.concat(logs_result)
+      // logs.map(log => console.log(log.log))
+    }
+
+
+    printLogs(logs);
+    return
+  }
+
+  if (enableWitness) {
+
+    if (witness_platform_type == undefined) {
+      witness_platform_type = creds.witness_eth_platform
+      if (creds.witness_eth_platform.length == 0) {
+        witness_platform_type = "eth"
       }
 
-
-      printLogs(logs);
-      return
+    }
+    if (network == undefined) {
+      network = creds.witness_eth_network
+      if (creds.witness_eth_network.length == 0) {
+        network = "sepolia"
+      }
     }
 
-    if (enableWitness) {
 
 
+    // console.log(`Witness Aqua object  witness_platform_type : ${witness_platform_type}, network : ${network} , witnessMethod : ${witnessMethod}   , enableScalar : ${enableScalar} \n creds ${JSON.stringify(creds)} `)
+    const witnessResult = await aquafier.witnessAquaTree(parsedAquaTree, witnessMethod, network, witness_platform_type, creds, enableScalar)
 
-      if (witness_platform_type == undefined) {
-        witness_platform_type = creds.witness_eth_platform
-        if (creds.witness_eth_platform.length == 0) {
-          witness_platform_type = "eth"
+    if (witnessResult.isOk()) {
+      serializeAquaTree(aquaFilename, witnessResult.data.aquaTree)
+      let logs_result = witnessResult.data.logData
+      logs.concat(logs_result)
+      // logs.map(log => console.log(log.log))
+      // logAquaTree(signatureResult.data.aquaTree.tree)
+    } else {
+      let logs_result = witnessResult.data
+      logs.concat(logs_result)
+      // logs.map(log => console.log(log.log))
+    }
+
+    printLogs(logs);
+
+    return
+  }
+
+  if (enableLink) {
+    console.log("LInking")
+
+    let aquaTreeWrappers = []
+
+    if (fileNameOnly.includes(",")) {
+      fileNameOnly.split(",").map((file) => {
+        let _aquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(file, "").aquaTreeWrapper
+        aquaTreeWrappers.push(_aquaTreeWrapper)
+      })
+    } else {
+      let _singAquaTree = readAndCreateAquaTreeAndAquaTreeWrapper(fileNameOnly, revisionHashSpecified).aquaTreeWrapper
+      aquaTreeWrappers.push(_singAquaTree)
+    }
+
+
+    const linkAquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(linkURIs, revisionHashSpecified).aquaTreeWrapper
+
+    // // console.log(`Witness Aqua object  witness_platform_type : ${witness_platform_type}, network : ${network} , witnessMethod : ${witnessMethod}   , enableScalar : ${enableScalar} \n creds ${JSON.stringify(creds)} `)
+    const linkResult = await aquafier.linkMultipleAquaTrees(aquaTreeWrappers, linkAquaTreeWrapper, enableScalar)
+
+    if (linkResult.isOk()) {
+      const aquaTreesResults = linkResult.data
+      const aquaTrees = aquaTreesResults.aquaTrees
+
+      if (aquaTrees.length > 0) {
+        for (let i = 0; i < aquaTrees.length; i++) {
+          const aquaTree = aquaTrees[i];
+          const hashes = Object.keys(aquaTree.revisions)
+          const aquaTreeFilename = aquaTree.file_index[hashes[0]]
+          serializeAquaTree(`${aquaTreeFilename}.aqua.json`, aquaTree)
         }
-
-      }
-      if (network == undefined) {
-        network = creds.witness_eth_network
-        if (creds.witness_eth_network.length == 0) {
-          network = "sepolia"
-        }
       }
 
-
-
-      // console.log(`Witness Aqua object  witness_platform_type : ${witness_platform_type}, network : ${network} , witnessMethod : ${witnessMethod}   , enableScalar : ${enableScalar} \n creds ${JSON.stringify(creds)} `)
-      const witnessResult = await aquafier.witnessAquaTree(parsedAquaTree, witnessMethod, network, witness_platform_type, creds, enableScalar)
-
-      if (witnessResult.isOk()) {
-        serializeAquaTree(aquaFilename, witnessResult.data.aquaTree)
-        let logs_result = witnessResult.data.logData
-        logs.concat(logs_result)
-        // logs.map(log => console.log(log.log))
-        // logAquaTree(signatureResult.data.aquaTree.tree)
-      } else {
-        let logs_result = witnessResult.data
-        logs.concat(logs_result)
-        // logs.map(log => console.log(log.log))
-      }
-
-      printLogs(logs);
-
-      return
+      // serializeAquaTree(aquaFilename, linkResult.data.aquaTree)
+      let logs_result = aquaTreesResults.logData
+      logs.push([...logs_result])
+      // logs.map(log => console.log(log.log))
+      // logAquaTree(signatureResult.data.aquaTree.tree)
+    } else {
+      let logs_result = linkResult.data
+      logs.push([...logs_result])
+      // logs.map(log => console.log(log.log))
     }
 
+    printLogs(logs);
 
-  })()
+    return
+  }
+
+
+})()
