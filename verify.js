@@ -36,38 +36,46 @@ const verbose = argv.v
 const server = argv.server ?? "http://localhost:9352"
 
 
-// The main function
-;(async function () {
-  if (!argv.api) {
-    let filename = argv._[0]
-    // If the file is an AQUA file, we read it directly, otherwise, we read the AQUA
-    // file corresponding with the file
-    filename = filename.endsWith(".aqua.json") ? filename : filename + ".aqua.json"
-    const offlineData = await main.readExportFile(filename)
+  // The main function
+  ; (async function () {
+    if (!argv.api) {
+      let filename = argv._[0]
+      // If the file is an AQUA file, we read it directly, otherwise, we read the AQUA
+      // file corresponding with the file
+      filename = filename.endsWith(".aqua.json") ? filename : filename + ".aqua.json"
+      const offlineData = await main.readExportFile(filename)
 
-    await main.verifyPage(offlineData, verbose)
-    console.log()
-  } else {
-    const title = argv.api
-    console.log(`Verifying ${title}`)
-    let APIstatus, versionMatches, serverVersion
-    try {
-      ;[APIstatus, versionMatches, serverVersion] =
-        await main.checkAPIVersionCompatibility(server)
-    } catch (e) {
-      formatter.log_red("Error checking API version: " + e)
-      return
+      let pureFileName = filename.replace(".aqua.json", "")
+      let fileContents = main.readFile(pureFileName);
+      let fileObject = {
+        fileName: pureFileName,
+        fileContent: fileContents,
+        path: ""
+      }
+      await main.verifyAquaTreeData(offlineData, verbose, [fileObject]);
+      // await main.verifyPage(offlineData, verbose)
+      console.log()
+    } else {
+      const title = argv.api
+      console.log(`Verifying ${title}`)
+      let APIstatus, versionMatches, serverVersion
+      try {
+        ;[APIstatus, versionMatches, serverVersion] =
+          await main.checkAPIVersionCompatibility(server)
+      } catch (e) {
+        formatter.log_red("Error checking API version: " + e)
+        return
+      }
+      if (APIstatus !== "FOUND") {
+        formatter.log_red("Error checking API version: " + APIstatus)
+        return
+      }
+      if (!versionMatches) {
+        formatter.log_red("Incompatible API version:")
+        formatter.log_red(`Current supported version: ${main.apiVersion}`)
+        formatter.log_red(`Server version: ${serverVersion}`)
+        return
+      }
+      await main.verifyPageFromMwAPI(server, title, verbose)
     }
-    if (APIstatus !== "FOUND") {
-      formatter.log_red("Error checking API version: " + APIstatus)
-      return
-    }
-    if (!versionMatches) {
-      formatter.log_red("Incompatible API version:")
-      formatter.log_red(`Current supported version: ${main.apiVersion}`)
-      formatter.log_red(`Server version: ${serverVersion}`)
-      return
-    }
-    await main.verifyPageFromMwAPI(server, title, verbose)
-  }
-})()
+  })()

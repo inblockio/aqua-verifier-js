@@ -15,6 +15,7 @@ import * as witnessEth from "./witness_eth.js"
 import * as witnessTsa from "./witness_tsa.js"
 import * as did from "./did.js"
 import crypto from "crypto"
+import Aquafier, { printLogs, AquaTree, FileObject } from "aquafier-js-sdk"
 
 // Currently supported API version.
 const apiVersion = "0.3.0"
@@ -53,6 +54,13 @@ const getFileHashSum = (filename) => {
 }
 
 
+async function readFile(filename) : string{
+  if (!fs.existsSync(filename)) {
+    formatter.log_red(`ERROR: The file ${filename} does not exist.`)
+    process.exit(1)
+  }
+  return fs.readFileSync(filename);
+}
 
 async function readExportFile(filename) {
   if (!fs.existsSync(filename)) {
@@ -585,6 +593,18 @@ async function* generateVerifyPage(
   }
 }
 
+export async function verifyAquaTreeData(input: AquaTree, verbose: boolean,fileObject: Array<FileObject> ) {
+
+  const aquafier = new Aquafier();
+  let result = await aquafier.verifyAquaTree(input, fileObject);
+  if (result!.isOk()) {
+    printLogs(result.data.logData)
+  } else {
+    printLogs(result)
+  }
+}
+
+
 async function verifyPage(input, verbose, doVerifyMerkleProof) {
   let verificationHashes
   verificationHashes = Object.keys(input.revisions)
@@ -641,6 +661,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
       )
     }
   }
+
   verificationStatus = calculateStatus(count, verificationHashes.length)
   console.log(`Status: ${verificationStatus}`)
   return [verificationStatus, details]
