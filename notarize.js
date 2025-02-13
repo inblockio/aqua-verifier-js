@@ -104,6 +104,7 @@ let witness_platform_type = argv["type"];
 
   let fileNameOnly = "";
   let revisionHashSpecified = "";
+  let logs = [];
 
 
   if (filename.includes("@") && !filename.includes(",")) {
@@ -155,7 +156,7 @@ let witness_platform_type = argv["type"];
   if (filename.includes(",")) {
     if (revisionType == "witness" || revisionType == "link") {
       // createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
-      revisionWithMultipleAquaChain(revisionType, fileNameOnly, aquafier, linkURIs, enableVerbose, enableScalar);
+      revisionWithMultipleAquaChain(revisionType, fileNameOnly, aquafier, linkURIs, enableVerbose, enableScalar, witness_platform_type, network, witnessMethod);
       return
     } else {
       console.log("❌ only revision type witness and link work with multiple aqua chain as the file name")
@@ -246,40 +247,36 @@ let witness_platform_type = argv["type"];
     const aquaObjectResultForContent = await aquafier.createContentRevision(aquaTreeWrapper, fileObject, enableScalar)
     if (aquaObjectResultForContent.isOk()) {
       serializeAquaTree(aquaFilename, aquaObjectResultForContent.data.aquaTree)
+      logs.push(...aquaObjectResultForContent.data.logData)
     } else {
-      let logs = aquaObjectResultForContent.data
-      logs.map(log => console.log(log.log))
-
+      let enableContentlogs = aquaObjectResultForContent.data
+      logs.push(...enableContentlogs)
     }
+
+    printLogs(logs, enableVerbose);
     return
   }
 
-  let logs = [];
   const creds = readCredentials()
 
-  const aquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(fileNameOnly, revisionHashSpecified).aquaTreeWrapper
+  const aquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(fileNameOnly, revisionHashSpecified)
 
   // console.log(`Revision data ${JSON.stringify(parsedAquaTree)}`)
 
   if (enableSignature) {
 
 
-    const signatureResult = await aquafier.signAquaTree(aquaTreeWrapper, signMethod, creds, enableScalar)
+    const signatureResult = await aquafier.signAquaTree(aquaTreeWrapper.aquaTreeWrapper, signMethod, creds, enableScalar)
 
     if (signatureResult.isOk()) {
       console.log(JSON.stringify(signatureResult.data, null, 4))
       serializeAquaTree(aquaFilename, signatureResult.data.aquaTree)
       let logs_result = signatureResult.data.logData
-      logs.concat(logs_result)
-      // logs.map(log => console.log(log.log))
-      // logAquaTree(signatureResult.data.aquaTree.tree)
+      logs.push(...logs_result)
     } else {
       let logs_result = signatureResult.data
-      logs.concat(logs_result)
-      // logs.map(log => console.log(log.log))
+      logs.push(...logs_result)
     }
-
-
     printLogs(logs, enableVerbose);
     return
   }
@@ -303,17 +300,17 @@ let witness_platform_type = argv["type"];
 
 
     // console.log(`Witness Aqua object  witness_platform_type : ${witness_platform_type}, network : ${network} , witnessMethod : ${witnessMethod}   , enableScalar : ${enableScalar} \n creds ${JSON.stringify(creds)} `)
-    const witnessResult = await aquafier.witnessAquaTree(parsedAquaTree, witnessMethod, network, witness_platform_type, creds, enableScalar)
+    const witnessResult = await aquafier.witnessAquaTree(aquaTreeWrapper.aquaTree, witnessMethod, network, witness_platform_type, creds, enableScalar)
 
     if (witnessResult.isOk()) {
       serializeAquaTree(aquaFilename, witnessResult.data.aquaTree)
       let logs_result = witnessResult.data.logData
-      logs.concat(logs_result)
+      logs.push(...logs_result)
       // logs.map(log => console.log(log.log))
       // logAquaTree(signatureResult.data.aquaTree.tree)
     } else {
       let logs_result = witnessResult.data
-      logs.concat(logs_result)
+      logs.push(...logs_result)
       // logs.map(log => console.log(log.log))
     }
 

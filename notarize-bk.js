@@ -438,9 +438,10 @@ const prepareWitness = async (verificationHash) => {
 
       if (witness_platform_type === "cli") {
         let creds = readCredentials();
+
         let [wallet, walletAddress, publicKey] = getWallet(creds.mnemonic);
 
-        console.log("Wallet address: ", walletAddress)
+        // console.log("Wallet address: ", walletAddress)
 
         let gasEstimateResult = await estimateWitnessGas(walletAddress, merkle_root, witness_network, smart_contract_address, null);
 

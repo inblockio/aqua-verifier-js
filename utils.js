@@ -448,8 +448,7 @@ export const createRevisionWithMultipleAquaChain = async (timestamp, revisionTyp
     return true;
 }
 
-export const revisionWithMultipleAquaChain = async (revisionType, filename, aquafier, linkURIs, enableVerbose, enableScalar) => {
-
+export const revisionWithMultipleAquaChain = async (revisionType, filename, aquafier, linkURIs, enableVerbose, enableScalar, witness_platform_type, network, witnessMethod) => {
 
     if (!filename.includes(",")) {
         console.error("Multiple files must be separated by commas");
@@ -553,7 +552,7 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
     console.log("All files read successfully \n",);
 
     if (revisionType == "witness") {
-
+        let creds = readCredentials()
 
         if (witness_platform_type === undefined) {
             witness_platform_type = creds.witness_eth_platform
@@ -568,19 +567,29 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
                 network = "sepolia"
             }
         }
-        let witnessResult = aquafier.witnessMultipleAquaTrees(aquaObjectWrapperList, witnessMethod, network, witness_platform_type, creds, enableScalar);
+        let witnessResult = await aquafier.witnessMultipleAquaTrees(aquaObjectWrapperList, witnessMethod, network, witness_platform_type, creds, enableScalar);
 
         if (witnessResult.isOk()) {
             // serializeAquaTree(aquaFilename, witnessResult.data.aquaTree)
-            let logs = witnessResult.data.logData
-            logs.map(log => console.log(log.log))
+            const aquaTreesResults = witnessResult.data
+            const aquaTrees = aquaTreesResults.aquaTrees
+
+            if (aquaTrees.length > 0) {
+                for (let i = 0; i < aquaTrees.length; i++) {
+                    const aquaTree = aquaTrees[i];
+                    const hashes = Object.keys(aquaTree.revisions)
+                    const aquaTreeFilename = aquaTree.file_index[hashes[0]]
+                    serializeAquaTree(`${aquaTreeFilename}.aqua.json`, aquaTree)
+                }
+            }
+
+            let logs_result = witnessResult.data.logData
+            logs.push(...logs_result)
             // logAquaTree(signatureResult.data.aquaTree.tree)
         } else {
             let logs = witnessResult.data
             logs.map(log => console.log(log.log))
         }
-
-
     } else if (revisionType == "signing") {
 
         const signatureResult = await aquafier.signMultipleAquaTrees(aquaObjectWrapperList, signMethod, creds, enableScalar)
@@ -598,12 +607,9 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
         }
 
     } else {
-        console.log(`Revision of type ${revisionType} not allowed`);
-        // process.exit(1)
+        console.log("Linking")
 
-        console.log("LInking")
-
-        let aquaTreeWrappers = aquaObjectWrapperList // []
+        let aquaTreeWrappers = aquaObjectWrapperList
 
         // if (fileNameOnly.includes(",")) {
         //     fileNameOnly.split(",").map((file) => {
@@ -649,13 +655,13 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
         }
     }
 
-
     printLogs(logs, enableVerbose);
 
 }
 
 
 export function printLogs(logs, enableVerbose) {
+    console.log("Logs", logs)
     if (enableVerbose) {
         logs.forEach(element => {
             console.log(element.log)
@@ -669,8 +675,9 @@ export function printLogs(logs, enableVerbose) {
                 }
             });
         } else {
-            let lastLine = logs[logs.length - 1];
-            console.log(lastLine.log)
+            // if(logs.length > 0){}
+            let lastLog = logs[logs.length - 1];
+            console.log(lastLog.log)
         }
 
     }
