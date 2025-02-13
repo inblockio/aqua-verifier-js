@@ -6,17 +6,17 @@ import { dirname } from "path"
 import crypto from 'crypto';
 import { ethers } from "ethers";
 import * as fs from "fs"
+import { LogType, LogTypeEmojis } from "aquafier-js-sdk";
 
 export function getWallet(mnemonic) {
     // Always trim the last new line
     const wallet = Wallet.fromPhrase(mnemonic.trim())
     const walletAddress = wallet.address.toLowerCase()
-    console.log("Wallet address", wallet.privateKey)
     return [wallet, walletAddress, wallet.publicKey]
 }
 
 
-export function readCredentials() {
+export function readCredentials(createWallet = true) {
     const __filename = fileURLToPath(import.meta.url)
     const __dirname = dirname(__filename)
 
@@ -25,27 +25,31 @@ export function readCredentials() {
     if (existsSync(filePath)) {
         return JSON.parse(readFileSync(filePath, "utf8"))
     } else {
-        console.log('Credential file  does not exist.Creating wallet');
 
-        // Generate random entropy (128 bits for a 12-word mnemonic)
-        const entropy = crypto.randomBytes(16);
+        if (createWallet) {
 
-        // Convert entropy to a mnemonic phrase
-        const mnemonic = Mnemonic.fromEntropy(entropy);
+            // Generate random entropy (128 bits for a 12-word mnemonic)
+            const entropy = crypto.randomBytes(16);
 
-        let credentialsObject = {
-            mnemonic: mnemonic.phrase, nostr_sk: "", "did:key": "",
-            alchemy_key: "ZaQtnup49WhU7fxrujVpkFdRz4JaFRtZ",
-            witness_eth_network: "sepolia",
-            witness_eth_platform: "metamask"
-        };
-        try {
-            writeFileSync(filePath, JSON.stringify(credentialsObject, null, 4), "utf8")
-            return credentialsObject;
-        } catch (error) {
-            console.error("Failed to write mnemonic:", error)
+            // Convert entropy to a mnemonic phrase
+            const mnemonic = Mnemonic.fromEntropy(entropy);
+
+            let credentialsObject = {
+                mnemonic: mnemonic.phrase, nostr_sk: "", "did:key": "",
+                alchemy_key: "ZaQtnup49WhU7fxrujVpkFdRz4JaFRtZ",
+                witness_eth_network: "sepolia",
+                witness_eth_platform: "metamask"
+            };
+            try {
+                writeFileSync(filePath, JSON.stringify(credentialsObject, null, 4), "utf8")
+                return credentialsObject;
+            } catch (error) {
+                console.error("Failed to write mnemonic:", error)
+                process.exit(1)
+            }
+        } else {
+            console.error("An error occured")
             process.exit(1)
-
         }
 
     }
@@ -473,12 +477,19 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
         let fileNameOnly = ""
         let revisionHashSpecified = ""
 
-        console.log("File name loop ", file_item);
+        logs.push({
+            log: `File name: ${file_item}`,
+            logType: LogType.DEBUGDATA
+        })
+
         if (file_item.includes("@")) {
 
             const filenameParts = file_item.split("@");
             if (filenameParts.length > 2) {
-                console.error(`Invalid filename format.  Please use only one '@' symbol to separate the filename from the revision hash. file name ${filenameParts}`);
+                logs.push({
+                    log: `Invalid filename format.  Please use only one '@' symbol to separate the filename from the revision hash. file name ${filenameParts}`,
+                    logType: LogType.ERROR
+                })
                 process.exit(1);
             }
             fileNameOnly = filenameParts[0];
@@ -486,7 +497,10 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
             revisionHashSpecified = filenameParts[1];
 
             if (revisionHashSpecified.length == 0) {
-                console.error("Revision hash is empty.  Please provide a valid revision hash.");
+                logs.push({
+                    log: "Revision hash is empty.  Please provide a valid revision hash.",
+                    logType: LogType.DEBUGDATA
+                })
                 process.exit(1);
             }
 
@@ -503,7 +517,10 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
 
 
         } catch (error) {
-            console.error(`Error reading ${fileNameOnly}:`, error);
+            logs.push({
+                log: `Error reading ${fileNameOnly}: ${error}`,
+                logType: LogType.ERROR
+            })
             process.exit(1);
         }
 
@@ -511,17 +528,22 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
 
         const filePath = `${fileNameOnly}.aqua.json`;
 
-        console.log("File path: ", filePath)
-
         if (!fs.existsSync(filePath)) {
-            console.error(`File does not exist: ${filePath}`);
+            logs.push({
+                log: `File does not exist: ${filePath}`,
+                logType: LogType.ERROR
+            })
             process.exit(1);
         }
 
         try {
             const fileContent = fs.readFileSync(filePath, "utf-8");
             const aquaTree = JSON.parse(fileContent);
-            console.log(`Successfully read: ${filePath}`);
+
+            logs.push({
+                log: `Successfully read: ${filePath}`,
+                logType: LogType.SUCCESS
+            })
 
             if (revisionHashSpecified.length == 0) {
                 const revisions = aquaTree.revisions;
@@ -541,15 +563,21 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
                 revision: revisionHashSpecified,
             }
 
-
             aquaObjectWrapperList.push(aquaObjectWrapper)
         } catch (error) {
-            console.error(`Error reading ${filePath}:`, error);
+            logs.push({
+                log: `Error reading ${filePath}: ${error}`,
+                logType: LogType.ERROR
+            })
             process.exit(1);
         }
     }
 
-    console.log("All files read successfully \n",);
+    logs.push({
+        log: "All files read successfully \n",
+        logType: LogType.INFO
+    })
+
 
     if (revisionType == "witness") {
         let creds = readCredentials()
@@ -587,22 +615,19 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
             logs.push(...logs_result)
             // logAquaTree(signatureResult.data.aquaTree.tree)
         } else {
-            let logs = witnessResult.data
-            logs.map(log => console.log(log.log))
+            let witnesslogs = witnessResult.data
+            logs.push(...witnesslogs)
         }
     } else if (revisionType == "signing") {
 
         const signatureResult = await aquafier.signMultipleAquaTrees(aquaObjectWrapperList, signMethod, creds, enableScalar)
 
         if (signatureResult.isOk()) {
-            // serializeAquaTree(aquaFilename, signatureResult.data.aquaTree)
             let logs_result = signatureResult.data.logData
-            logs.concat(logs_result)
-            // logs.map(log => console.log(log.log))
-            // logAquaTree(signatureResult.data.aquaTree.tree)
+            logs.push(...logs_result)
         } else {
             let logs_result = signatureResult.data
-            logs.concat(logs_result)
+            logs.push(...logs_result)
             // logs.map(log => console.log(log.log))
         }
 
@@ -610,16 +635,6 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
         console.log("Linking")
 
         let aquaTreeWrappers = aquaObjectWrapperList
-
-        // if (fileNameOnly.includes(",")) {
-        //     fileNameOnly.split(",").map((file) => {
-        //         let _aquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(file, "").aquaTreeWrapper
-        //         aquaTreeWrappers.push(_aquaTreeWrapper)
-        //     })
-        // } else {
-        //     let _singAquaTree = readAndCreateAquaTreeAndAquaTreeWrapper(fileNameOnly, revisionHashSpecified).aquaTreeWrapper
-        //     aquaTreeWrappers.push(_singAquaTree)
-        // }
 
         const fileToLink = linkURIs;
         const revisionHashSpecified = ""
@@ -642,12 +657,8 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
                     serializeAquaTree(`${aquaTreeFilename}.aqua.json`, aquaTree)
                 }
             }
-
-            // serializeAquaTree(aquaFilename, linkResult.data.aquaTree)
             let logs_result = aquaTreesResults.logData
             logs.push(...logs_result)
-            // logs.map(log => console.log(log.log))
-            // logAquaTree(signatureResult.data.aquaTree.tree)
         } else {
             let logs_result = linkResult.data
             logs.push(...logs_result)
@@ -661,23 +672,23 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
 
 
 export function printLogs(logs, enableVerbose) {
-    console.log("Logs", logs)
     if (enableVerbose) {
         logs.forEach(element => {
-            console.log(element.log)
+            console.log(`${LogTypeEmojis[element.logType]} ${element.log}`)
         });
     } else {
         let containsError = logs.filter((element) => element.logType == "error");
         if (containsError.length > 0) {
             logs.forEach(element => {
                 if (element.logType == "error") {
-                    console.log(element.log)
+                    console.log(`${LogTypeEmojis[element.logType]} ${element.log}`)
                 }
             });
         } else {
-            // if(logs.length > 0){}
-            let lastLog = logs[logs.length - 1];
-            console.log(lastLog.log)
+            if (logs.length > 0) {
+                let lastLog = logs[logs.length - 1];
+                console.log(`${LogTypeEmojis[lastLog.logType]} ${lastLog.log}`)
+            }
         }
 
     }
