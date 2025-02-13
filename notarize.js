@@ -24,7 +24,7 @@ import { fileURLToPath } from "url"
 import { dirname } from "path"
 
 // import { Wallet, Mnemonic } from 'ethers';
-import { readCredentials, getWallet, estimateWitnessGas, formatMwTimestamp, createGenesisRevision, serializeAquaTree, readAndCreateAquaTreeAndAquaTreeWrapper } from "./utils.js"
+import { readCredentials, getWallet, estimateWitnessGas, formatMwTimestamp, createGenesisRevision, serializeAquaTree, readAndCreateAquaTreeAndAquaTreeWrapper, printLogs, revisionWithMultipleAquaChain } from "./utils.js"
 // import { isOk } from "rustic"
 
 import rusticPkg from 'rustic';
@@ -81,42 +81,25 @@ if (!filename) {
   process.exit(1)
 }
 
-const signMethod = argv["sign"]
-const enableSignature = !!signMethod
+const signMethod = argv["sign"];
+const enableSignature = !!signMethod;
 // all revisions are scalar by default other than the forms revisions
 // to reduce comput cost and time
-let enableScalar = argv["scalar"]
-let vTree = argv["vtree"]
-const witnessMethod = argv["witness"]
-const enableWitness = !!witnessMethod
-const enableContent = argv["content"]
+let enableScalar = argv["scalar"];
+let vTree = argv["vtree"];
+const witnessMethod = argv["witness"];
+const enableWitness = !!witnessMethod;
+const enableContent = argv["content"];
 
-const enableVerbose = argv["v"]
-const enableRemoveRevision = argv["rm"]
-const linkURIs = argv["link"]
-const enableLink = !!linkURIs
-const form_file_name = argv["form"]
-let network = argv["network"]
-let witness_platform_type = argv["type"]
-
-const printLogs = (logs) => {
-  if (enableVerbose) {
-    logs.forEach(element => {
-      console.log(element.log)
-    });
-  } else {
-
-    logs.forEach(element => {
-      if (element.logType == "error") {
-        console.log(element.log)
-      }
-    });
-
-  }
-}
+const enableVerbose = argv["v"];
+const enableRemoveRevision = argv["rm"];
+const linkURIs = argv["link"];
+const enableLink = !!linkURIs;
+const form_file_name = argv["form"];
+let network = argv["network"];
+let witness_platform_type = argv["type"];
 
 
-// The main function
 (async function () {
 
   let fileNameOnly = "";
@@ -172,7 +155,7 @@ const printLogs = (logs) => {
   if (filename.includes(",")) {
     if (revisionType == "witness" || revisionType == "link") {
       // createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
-      revisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename, aquafier);
+      revisionWithMultipleAquaChain(revisionType, fileNameOnly, aquafier, linkURIs, enableVerbose, enableScalar);
       return
     } else {
       console.log("❌ only revision type witness and link work with multiple aqua chain as the file name")
@@ -274,27 +257,6 @@ const printLogs = (logs) => {
   let logs = [];
   const creds = readCredentials()
 
-  // const fileContent = fs.readFileSync(fileNameOnly, { encoding: "utf-8" });
-  // const _aquaObject = fs.readFileSync(aquaFilename, { encoding: "utf-8" });
-  // const parsedAquaTree = JSON.parse(_aquaObject)
-
-  // let fileObject = {
-  //   fileName: fileNameOnly,
-  //   fileContent: fileContent,
-  //   path: "./"
-  // }
-
-  // if (!revisionHashSpecified || revisionHashSpecified.length == 0) {
-  //   console.log(`Revision hash error ${revisionHashSpecified}`);
-  //   process.exit(1);
-  // }
-
-  // let aquaTreeWrapper = {
-  //   aquaTree: parsedAquaTree,
-  //   fileObject: fileObject,
-  //   revision: revisionHashSpecified,
-  // }
-
   const aquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(fileNameOnly, revisionHashSpecified).aquaTreeWrapper
 
   // console.log(`Revision data ${JSON.stringify(parsedAquaTree)}`)
@@ -318,7 +280,7 @@ const printLogs = (logs) => {
     }
 
 
-    printLogs(logs);
+    printLogs(logs, enableVerbose);
     return
   }
 
@@ -355,7 +317,7 @@ const printLogs = (logs) => {
       // logs.map(log => console.log(log.log))
     }
 
-    printLogs(logs);
+    printLogs(logs, enableVerbose);
 
     return
   }
@@ -396,16 +358,16 @@ const printLogs = (logs) => {
 
       // serializeAquaTree(aquaFilename, linkResult.data.aquaTree)
       let logs_result = aquaTreesResults.logData
-      logs.push([...logs_result])
+      logs.push(...logs_result)
       // logs.map(log => console.log(log.log))
       // logAquaTree(signatureResult.data.aquaTree.tree)
     } else {
       let logs_result = linkResult.data
-      logs.push([...logs_result])
+      logs.push(...logs_result)
       // logs.map(log => console.log(log.log))
     }
 
-    printLogs(logs);
+    printLogs(logs, enableVerbose);
 
     return
   }
