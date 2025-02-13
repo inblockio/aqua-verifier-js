@@ -30,10 +30,7 @@ const signature = {
     const did = new DID({ provider, resolver })
     await did.authenticate()
 
-    console.log("DID Key ID: ", did.id);
-
     const jws = await did.createJWS(payload, { did: did.id })
-    console.log("Generated JWS: ", jws)  // Debugging line
 
     return { jws, key: did.id }
   }

@@ -89,7 +89,6 @@ function updateForm(filename_par, key, content) {
       }
     }
   } else {
-    console.log(`Using latest revision`);
     targetRevisionHash = Object.keys(revisions).pop();
   }
 

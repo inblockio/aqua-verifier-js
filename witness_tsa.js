@@ -19,11 +19,11 @@ const extractGenTimeFromResp = (resp) => {
 }
 
 const witness = async (hash, tsaUrl) => {
-  console.log("Hash before: ", hash)
+  // console.log("Hash before: ", hash)
   // DigiCert only supports up to SHA256
   const hashHex = createHash("sha256").update(hash).digest("hex")
   const hashBuffer = Uint8Array.from(Buffer.from(hashHex, "hex")) // Convert hex to ArrayBuffer
-  console.log("Hash buffer: ", hashBuffer)
+  // console.log("Hash buffer: ", hashBuffer)
   const tspReq = new pkijs.TimeStampReq({
     version: 1,
     messageImprint: new pkijs.MessageImprint({
@@ -36,14 +36,14 @@ const witness = async (hash, tsaUrl) => {
     certReq: true,
   })
 
-  console.log("TSA Request: ", tspReq)
+  // console.log("TSA Request: ", tspReq)
   
   // Encode the TimeStampReq to DER format
   const tspReqSchema = tspReq.toSchema()
   const tspReqBuffer = tspReqSchema.toBER(false)
   
-  console.log("TSA Request 1: ", tspReqSchema)
-  console.log("TSA Request 2: ", tspReqBuffer)
+  // console.log("TSA Request 1: ", tspReqSchema)
+  // console.log("TSA Request 2: ", tspReqBuffer)
 
   const response = await fetch(tsaUrl, {
     method: "POST",

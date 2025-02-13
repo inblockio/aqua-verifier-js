@@ -232,7 +232,6 @@ const verifySignature = async (data: object, verificationHash: string) => {
     return [signatureOk, "INVALID"]
   }
 
-  console.log("did:key == " + data.signature_type);
   // Signature verification
   switch (data.signature_type) {
     case "did:key":
@@ -464,8 +463,8 @@ async function verifyRevision(
       if (!!input.content) {
         fileContent = Buffer.from(input.content, "utf8")
       } else {
-        console.log("File index", JSON.stringify(aquaObject.file_index));
-        console.log("Has needed  ", verificationHash);
+        // console.log("File index", JSON.stringify(aquaObject.file_index));
+        // console.log("Has needed  ", verificationHash);
         fileContent = fs.readFileSync(aquaObject.file_index[verificationHash])
       }
       const fileHash = getHashSum(fileContent)
@@ -618,7 +617,7 @@ async function verifyPage(input, verbose, doVerifyMerkleProof) {
     const [isCorrect, detail] = value
 
     if (isCorrect === null) {
-      console.log("Exiting loop 1.")
+      // console.log("Exiting loop 1.")
       process.exit(1)
     }
 

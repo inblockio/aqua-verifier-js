@@ -212,7 +212,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
     let fileNameOnly = ""
     let revisionSpecified = ""
 
-    console.log("File name loop ", file_item);
+    // console.log("File name loop ", file_item);
     if (file_item.includes("@")) {
 
       const filenameParts = file_item.split("@");
@@ -243,7 +243,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
     try {
       const fileContent = await fs.readFileSync(filePath, "utf-8");
       const aquaObject = JSON.parse(fileContent);
-      console.log(`Successfully read: ${filePath}`);
+      // console.log(`Successfully read: ${filePath}`);
       // all_file_aqua_objects.push(aquaObject);
       all_file_aqua_objects_map.set(fileNameOnly, aquaObject);
       all_file_aqua_objects_list.push(aquaObject)
@@ -252,7 +252,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
       process.exit(1);
     }
   }
-  console.log("All files read successfully \n",);
+  // console.log("All files read successfully \n",);
   // get the last verification hash
   let lastRevisionOrSpecifiedHashes = [];
 
@@ -279,7 +279,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
     // 
   }
 
-  console.log("All last revision hashes  \n", lastRevisionOrSpecifiedHashes);
+  // console.log("All last revision hashes  \n", lastRevisionOrSpecifiedHashes);
 
 
   let revisionResult = {};
@@ -338,7 +338,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
     const revisionKeys = Object.keys(current_file_aqua_object.revisions);
     // if no specified revision use the last one 
     // if one is specified use the last one 
-    console.log("Current file ", current_file);
+    // console.log("Current file ", current_file);
     const filenameParts = current_file.split("@");
     if (filenameParts.length > 2) {
       console.error(`Invalid filename format.  Please use only one '@' symbol to separate the filename from the revision hash. file name ${filenameParts}`);
@@ -347,20 +347,20 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
     let fileNameOnly = filenameParts[0];
 
     let latestRevisionKey = ""
-    console.log("All revisions map ", JSON.stringify(revisionSPecifiedMap))
+    // console.log("All revisions map ", JSON.stringify(revisionSPecifiedMap))
     if (revisionSPecifiedMap.has(fileNameOnly)) {
-      console.log()
+      // console.log()
 
 
       latestRevisionKey = revisionSPecifiedMap.get(fileNameOnly);
 
-      console.log("Setting previous revision to a specific on ", latestRevisionKey);
+      // console.log("Setting previous revision to a specific on ", latestRevisionKey);
 
     } else {
       latestRevisionKey = revisionKeys.pop(); // Get the last key
 
     }
-    console.log("Latest revision key:", latestRevisionKey);
+    // console.log("Latest revision key:", latestRevisionKey);
 
     let verificationData = {};
 
@@ -392,7 +392,7 @@ const createRevisionWithMultipleAquaChain = async (timestamp, revisionType, aqua
         ...revisionResult
       }
     } else {
-      console.log("Create revision with multiple aqua chain.")
+      // console.log("Create revision with multiple aqua chain.")
       process.exit(1)
     }
 
@@ -466,7 +466,7 @@ const prepareWitness = async (verificationHash) => {
         let creds = readCredentials();
         let [wallet, walletAddress, publicKey] = getWallet(creds.mnemonic);
 
-        console.log("Wallet address: ", walletAddress)
+        // console.log("Wallet address: ", walletAddress)
 
         let gasEstimateResult = await estimateWitnessGas(walletAddress, merkle_root, witness_network, smart_contract_address, null);
 
@@ -493,7 +493,7 @@ const prepareWitness = async (verificationHash) => {
           null
         )
 
-        console.log("cli signing result: ", witnessCliResult)
+        // console.log("cli signing result: ", witnessCliResult)
 
         if (witnessCliResult.error !== null) {
           console.log(`Unable to witnesss: ${witnessCliResult.error}`,)

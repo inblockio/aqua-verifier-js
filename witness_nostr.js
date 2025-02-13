@@ -67,7 +67,7 @@ const witness = async (witnessEventVerificationHash) => {
   const sk = hexToBytes(skHex)
   const pk = getPublicKey(sk)
   const npub = nip19.npubEncode(pk)
-  console.log("npub: ", npub)
+  // console.log("npub: ", npub)
   console.log("Witness event verification hash: ", witnessEventVerificationHash)
   console.log(`https://snort.social/${npub}`)
 
