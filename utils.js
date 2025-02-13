@@ -661,11 +661,17 @@ export function printLogs(logs, enableVerbose) {
             console.log(element.log)
         });
     } else {
-        logs.forEach(element => {
-            if (element.logType == "error") {
-                console.log(element.log)
-            }
-        });
-        console.log(" Succe")
+        let containsError = logs.filter((element) => element.logType == "error");
+        if (containsError.length > 0) {
+            logs.forEach(element => {
+                if (element.logType == "error") {
+                    console.log(element.log)
+                }
+            });
+        } else {
+            let lastLine = logs[logs.length - 1];
+            console.log(lastLine.log)
+        }
+
     }
 }
