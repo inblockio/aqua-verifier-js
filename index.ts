@@ -54,7 +54,7 @@ const getFileHashSum = (filename) => {
 }
 
 
-async function readFile(filename) : string{
+async function readFile(filename): string {
   if (!fs.existsSync(filename)) {
     formatter.log_red(`ERROR: The file ${filename} does not exist.`)
     process.exit(1)
@@ -62,22 +62,28 @@ async function readFile(filename) : string{
   return fs.readFileSync(filename);
 }
 
-async function readExportFile(filename) {
+async function readExportFile(filename: string, parseContents: boolean = true): string | object {
   if (!fs.existsSync(filename)) {
     formatter.log_red(`ERROR: The file ${filename} does not exist.`)
     process.exit(1)
   }
   const fileContent = fs.readFileSync(filename)
+  if (!parseContents) {
+    return fileContent
+  }
+
   if (!filename.endsWith(".json")) {
     formatter.log_red("The file must have a .json extension")
     process.exit(1)
   }
+
   const offlineData = JSON.parse(fileContent)
   if (!("revisions" in offlineData)) {
     formatter.log_red("The json file doesn't contain 'revisions' key.")
     process.exit(1)
   }
   return offlineData
+
 }
 
 const getUnixPathFromAquaPath = (aquaPath: string) => {
@@ -593,15 +599,17 @@ async function* generateVerifyPage(
   }
 }
 
-export async function verifyAquaTreeData(input: AquaTree, verbose: boolean,fileObject: Array<FileObject> ) {
+export async function verifyAquaTreeData(input: AquaTree, verbose: boolean, fileObject: Array<FileObject>) {
 
   const aquafier = new Aquafier();
   let result = await aquafier.verifyAquaTree(input, fileObject);
-  if (result!.isOk()) {
-    printLogs(result.data.logData)
-  } else {
-    printLogs(result)
-  }
+
+  console.log("here == "+JSON.stringify(result))
+  // if (result!.isOk()) {
+  //   printLogs(result.data.logData)
+  // } else {
+  //   printLogs(result)
+  // }
 }
 
 

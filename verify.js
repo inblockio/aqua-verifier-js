@@ -43,10 +43,11 @@ const server = argv.server ?? "http://localhost:9352"
       // If the file is an AQUA file, we read it directly, otherwise, we read the AQUA
       // file corresponding with the file
       filename = filename.endsWith(".aqua.json") ? filename : filename + ".aqua.json"
+      console.log(`file name ${filename}`)
       const offlineData = await main.readExportFile(filename)
 
       let pureFileName = filename.replace(".aqua.json", "")
-      let fileContents = main.readFile(pureFileName);
+      let fileContents = await main.readExportFile(pureFileName, false);
       let fileObject = {
         fileName: pureFileName,
         fileContent: fileContents,

@@ -693,3 +693,18 @@ export function printLogs(logs, enableVerbose) {
 
     }
 }
+
+
+export function checkArrayIntersection(array1, array2) {
+    // Convert first array to Set for O(1) lookup
+    const set = new Set(array1);
+    
+    // Check if any element from array2 exists in the set
+    const commonElements = array2.filter(item => set.has(item));
+    
+    if (commonElements.length > 0) {
+        throw new Error(`Duplicate elements found: ${commonElements.join(', ')}`);
+    }
+    
+    return true; // No intersections found
+}

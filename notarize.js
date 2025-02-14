@@ -327,6 +327,13 @@ let witness_platform_type = argv["type"];
       process.exit(1)
 
     } else if (linkURIs.includes(",") && !fileNameOnly.includes(",")) {
+
+
+      let containsNameInLink = linkURIs.split(",").find((e) => e == fileNameOnly);
+      if (containsNameInLink) {
+        console.error("aqua file name also find in link, possible cyclic linking found");
+        process.exit(1)
+      }
       console.log("Linking an AquaTree to multiple AquaTrees")
       let linkAquaTreeWrappers = []
       linkURIs.split(",").map((file) => {
@@ -341,6 +348,12 @@ let witness_platform_type = argv["type"];
 
     } else {
 
+
+      let containsNameInLink = fileNameOnly.split(",").find((e) => e == linkURIs);
+      if (containsNameInLink) {
+        console.error("aqua file name also find in link, possible cyclic linking found");
+        process.exit(1)
+      }
       console.log("Linking multiple AquaTree to a single AquaTrees")
 
 
