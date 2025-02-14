@@ -142,7 +142,7 @@ let witness_platform_type = argv["type"];
   if (filename.includes("@") && !filename.includes(",")) {
     const filenameParts = filename.split("@");
     if (filenameParts.length > 2) {
-      console.error("-> Invalid filename format.  Please use only one '@' symbol to separate the filename from the revision hash.");
+      formatter.log_red("-> Invalid filename format.  Please use only one '@' symbol to separate the filename from the revision hash.");
       process.exit(1);
     }
     fileNameOnly = filenameParts[0];
@@ -150,7 +150,7 @@ let witness_platform_type = argv["type"];
     revisionHashSpecified = filenameParts[1];
 
     if (revisionHashSpecified.length == 0) {
-      console.error("Revision hash is empty.  Please provide a valid revision hash.");
+      formatter.log_red("Revision hash is empty.  Please provide a valid revision hash.");
       process.exit(1);
     }
   } else {
@@ -209,7 +209,7 @@ let witness_platform_type = argv["type"];
 
   const aquaTree = JSON.parse(fs.readFileSync(aquaFilename))
   if (!aquaTree) {
-    console.error(`❌  Fatal Error! Aqua Tree does not exist`);
+    formatter.log_red(`❌  Fatal Error! Aqua Tree does not exist`);
 
     // TODO: Check whether this procedure is okay
     // We create a new object and proceed
@@ -249,7 +249,7 @@ let witness_platform_type = argv["type"];
     console.log("📍  Revision specified: ", revisionHashSpecified)
 
     if (!verificationHashes.includes(revisionHashSpecified)) {
-      console.error(`❌  Revision hash ${revisionHashSpecified} not found in ${aquaFilename}`);
+      formatter.log_red(`❌  Revision hash ${revisionHashSpecified} not found in ${aquaFilename}`);
       process.exit(1);
     }
   } else {
@@ -410,7 +410,7 @@ let witness_platform_type = argv["type"];
 
       let containsNameInLink = linkURIs.split(",").find((e) => e == fileNameOnly);
       if (containsNameInLink) {
-        console.error("⛔   aqua file name also find in link, possible cyclic linking found");
+        formatter.log_red("⛔   aqua file name also find in link, possible cyclic linking found");
         process.exit(1)
       }
       console.log("➡️   Linking an AquaTree to multiple AquaTrees")
@@ -430,7 +430,7 @@ let witness_platform_type = argv["type"];
 
       let containsNameInLink = fileNameOnly.split(",").find((e) => e == linkURIs);
       if (containsNameInLink) {
-        console.error("aqua file name also find in link, possible cyclic linking found");
+        formatter.log_red("aqua file name also find in link, possible cyclic linking found");
         process.exit(1)
       }
       console.log("Linking multiple AquaTree to a single AquaTrees")
@@ -452,7 +452,7 @@ let witness_platform_type = argv["type"];
 
     }
     if (linkResult == null) {
-      console.error("A critical erroroccured linking aquatrees");
+      formatter.log_red("A critical erroroccured linking aquatrees");
       process.exit(1)
     }
 

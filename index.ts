@@ -622,15 +622,17 @@ export async function verifyAquaTreeData(fileName: string, verboseOption: boolea
       // console.log(` File ${item} has been read`)
     } else {
 
-      //aqua file
       let aquaFile = item.endsWith(".aqua.json") ? item : item + ".aqua.json"
-      console.log(`-> reading file  ${aquaFile}`)
-      let fileContentsAquaFile = await readExportFile(aquaFile, false);
-      fileObjectsArray.push({
-        fileName: aquaFile,
-        fileContent: fileContentsAquaFile,
-        path: ""
-      });
+      if (fs.existsSync(aquaFile)) {
+        //aqua file
+        console.log(`-> reading file  ${aquaFile}`)
+        let fileContentsAquaFile = await readExportFile(aquaFile, false);
+        fileObjectsArray.push({
+          fileName: aquaFile,
+          fileContent: fileContentsAquaFile,
+          path: ""
+        });
+      }
 
       // raw file
       let pureFileNameItem = item.replace(".aqua.json", "");

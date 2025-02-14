@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { ethers } from "ethers";
 import * as fs from "fs"
 import { LogType, LogTypeEmojis } from "aquafier-js-sdk";
+import * as formatter from "./formatter.js"
 
 export function getWallet(mnemonic) {
     // Always trim the last new line
@@ -131,13 +132,15 @@ export const createGenesisRevision = async (aquaFilename, form_file_name, enable
 
     let revisionType = "file"
     if (form_file_name) {
-        console.log("erre .... ")
+
         revisionType = "form"
 
         if (form_file_name != aquaFilename.replace(/\.aqua\.json$/, "")) {
-            console.log(
-                `First Revision  : Form file name is not the same as the aqua file name \n  Form : ${form_file_name}  File : ${aquaFilename}`,
+            formatter.log_red(
+                `⛔ First Revision  : Form file name is not the same as the aqua file name `);
+            console.log(`Form : ${form_file_name}  File : ${aquaFilename}`,
             )
+
             process.exit(1)
         }
     }
