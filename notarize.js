@@ -122,7 +122,11 @@ let witness_platform_type = argv["type"];
       process.exit(1);
     }
   } else {
-    fileNameOnly = filename;
+    if (filename.includes(".aqua.json")) {
+      fileNameOnly = filename.replace(".aqua.json", "")
+    } else {
+      fileNameOnly = filename;
+    }
   }
 
   const aquaFilename = fileNameOnly + ".aqua.json"
@@ -226,7 +230,20 @@ let witness_platform_type = argv["type"];
     process.exit(1)
   }
 
+  const creds = readCredentials()
+
+  const aquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(fileNameOnly, revisionHashSpecified)
+
+  if (revisionType == "file") {
+    let alreadyNotarized = aquafier.checkIfFileAlreadyNotarized(aquaTreeWrapper.aquaTree, aquaTreeWrapper.aquaTreeWrapper.fileObject)
+    if (alreadyNotarized) {
+      formatter.log_red(`❌ file ${fileNameOnly} has already been notarized`)
+      process.exit(1)
+    }
+  }
+
   console.log("➡️   Revision type: ", revisionType)
+
 
 
   if (enableContent) {
@@ -257,9 +274,6 @@ let witness_platform_type = argv["type"];
     return
   }
 
-  const creds = readCredentials()
-
-  const aquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(fileNameOnly, revisionHashSpecified)
 
   // console.log(`Revision data ${JSON.stringify(parsedAquaTree)}`)
 
@@ -323,7 +337,7 @@ let witness_platform_type = argv["type"];
 
     let linkResult = null //: Result<AquaOperationData, LogData[]> | null = null;
     if (linkURIs.includes(",") && fileNameOnly.includes(",")) {
-      console.log("Link many to many not allowed, specify either multiple link URI or multiple files but not both.");
+      console.log("➡️   Link many to many not allowed, specify either multiple link URI or multiple files but not both.");
       process.exit(1)
 
     } else if (linkURIs.includes(",") && !fileNameOnly.includes(",")) {
@@ -331,10 +345,10 @@ let witness_platform_type = argv["type"];
 
       let containsNameInLink = linkURIs.split(",").find((e) => e == fileNameOnly);
       if (containsNameInLink) {
-        console.error("aqua file name also find in link, possible cyclic linking found");
+        console.error("⛔   aqua file name also find in link, possible cyclic linking found");
         process.exit(1)
       }
-      console.log("Linking an AquaTree to multiple AquaTrees")
+      console.log("➡️   Linking an AquaTree to multiple AquaTrees")
       let linkAquaTreeWrappers = []
       linkURIs.split(",").map((file) => {
         let _aquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(file, "").aquaTreeWrapper

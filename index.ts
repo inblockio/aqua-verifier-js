@@ -15,7 +15,7 @@ import * as witnessEth from "./witness_eth.js"
 import * as witnessTsa from "./witness_tsa.js"
 import * as did from "./did.js"
 import crypto from "crypto"
-import Aquafier, { printLogs, AquaTree, FileObject } from "aquafier-js-sdk"
+import Aquafier, { printLogs, AquaTree, FileObject, LogType } from "aquafier-js-sdk"
 
 // Currently supported API version.
 const apiVersion = "0.3.0"
@@ -54,13 +54,7 @@ const getFileHashSum = (filename) => {
 }
 
 
-async function readFile(filename): string {
-  if (!fs.existsSync(filename)) {
-    formatter.log_red(`ERROR: The file ${filename} does not exist.`)
-    process.exit(1)
-  }
-  return fs.readFileSync(filename);
-}
+
 
 async function readExportFile(filename: string, parseContents: boolean = true): string | object {
   if (!fs.existsSync(filename)) {
@@ -69,7 +63,7 @@ async function readExportFile(filename: string, parseContents: boolean = true): 
   }
   const fileContent = fs.readFileSync(filename)
   if (!parseContents) {
-    return fileContent
+    return fileContent.toString()
   }
 
   if (!filename.endsWith(".json")) {
@@ -599,19 +593,82 @@ async function* generateVerifyPage(
   }
 }
 
-export async function verifyAquaTreeData(input: AquaTree, verbose: boolean, fileObject: Array<FileObject>) {
-
+// export async function verifyAquaTreeData(input: AquaTree,  fileObject: Array<FileObject>, verboseOption : boolean = false) {
+export async function verifyAquaTreeData(fileName: string, verboseOption: boolean = false) {
   const aquafier = new Aquafier();
-  let result = await aquafier.verifyAquaTree(input, fileObject);
 
-  console.log("here == "+JSON.stringify(result))
-  // if (result!.isOk()) {
-  //   printLogs(result.data.logData)
-  // } else {
-  //   printLogs(result)
-  // }
+  console.log(`-> reading file  ${fileName}`)
+  const aquaTree = await readExportFile(fileName)
+
+  let fileObjectsArray = []
+
+  // the file that has been aquafied
+
+  let pureFileName = fileName.replace(".aqua.json", "")
+  let fileContents = await readExportFile(pureFileName, false);
+  fileObjectsArray.push({
+    fileName: pureFileName,
+    fileContent: fileContents,
+    path: ""
+  });
+
+
+
+  // if aqua tree contains link all the linked aqua files must be read into the fileObjects Array
+  let filesToBeRead = aquafier.fetchFilesToBeRead(aquaTree);
+
+  for (let item of filesToBeRead) {
+    if (fileObjectsArray.find((e) => e.fileName == item)) {
+      // console.log(` File ${item} has been read`)
+    } else {
+
+      //aqua file
+      let aquaFile = item.endsWith(".aqua.json") ? item : item + ".aqua.json"
+      console.log(`-> reading file  ${aquaFile}`)
+      let fileContentsAquaFile = await readExportFile(aquaFile, false);
+      fileObjectsArray.push({
+        fileName: aquaFile,
+        fileContent: fileContentsAquaFile,
+        path: ""
+      });
+
+      // raw file
+      let pureFileNameItem = item.replace(".aqua.json", "");
+      console.log(`-> reading file  ${pureFileNameItem}`)
+      let fileContentsItem = await readExportFile(pureFileNameItem, false);
+      fileObjectsArray.push({
+        fileName: pureFileNameItem,
+        fileContent: fileContentsItem,
+        path: ""
+      });
+    }
+  }
+
+  let result = await aquafier.verifyAquaTree(aquaTree, fileObjectsArray);
+
+  // console.log("Data " + JSON.stringify(result, null, 4))
+  if (result!.isOk()) {
+    result.data.logData.push({
+      log: `\n`,
+      logType: LogType.EMPTY
+    });
+    result.data.logData.push({
+      log: "AquaTree verified successfully",
+      logType: LogType.SUCCESS
+    })
+    printLogs(result.data.logData, verboseOption)
+  } else {
+    result.data.push({
+      log: `\n`,
+      logType: LogType.EMPTY
+    });
+    result.data.push({
+      log: "AquaTree verification failed",
+      logType: LogType.FINAL_ERROR
+    })
+    printLogs(result.data, verboseOption)
+  }
 }
-
 
 async function verifyPage(input, verbose, doVerifyMerkleProof) {
   let verificationHashes

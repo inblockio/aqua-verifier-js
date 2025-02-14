@@ -20,6 +20,7 @@
     "rustic": "^1.2.2"
   },
   "scripts": {
+    "dev": " tsc",
     "build": "npm link aquafier-js-sdk && tsc",
     "prepare": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
