@@ -57,6 +57,9 @@ Options:
   --scalar
     Use this flag to use a more lightweight, "scalar" aquafication.
     This is the default option.
+  --tree
+    Use this flag to use to create a verification tree.
+    This option is slower than scalar but provides a better garantee.
   --content
     Use this flag to include the content file instead of just its hash and name
   --rm
@@ -69,6 +72,35 @@ Options:
     Use this flag to switch between 'mainnet' and 'sepolia' when witnessing
   --type 
     Use this flag to switch between metamask and cli wallet when witnessing 
+
+Example :
+  1. Notarize a file
+     -> using --tree option to have verification hash leaves
+      ./notarize.js README.md --tree
+     -> create a gensis revision tha is a form 
+       ./notarize.js README.md --form  README.md
+
+  2. verify an aqua tree 
+      ./verify README.md
+
+  3. Witness
+    -> multple aqua trees using eth option  
+      ./notarize.js LICENSE,README.md --witness eth --tree --type sepolia
+
+  4. Signing 
+    -> using metemask 
+      ./notarize.js --sign metamask <FILE_PATH>
+    -> using cli 
+      ./notarize.js --sign cli <FILE_PATH>
+
+  5. Linking 
+    -> Linking a single aqua tree to another single aqua tree 
+      ./notarize.js  <FILE_PATH>  --link  <FILE_PATH>
+    -> Linking a multiple aqua tree to another single aqua tree 
+      ./notarize.js  <FILE_PATH>,<FILE_PATH>  --link  <FILE_PATH>
+    -> Linking a single aqua tree to another multiple aqua tree 
+      ./notarize.js  <FILE_PATH> --link  <FILE_PATH>,<FILE_PATH> 
+   
 `)
 }
 
@@ -86,7 +118,7 @@ const enableSignature = !!signMethod;
 // all revisions are scalar by default other than the forms revisions
 // to reduce comput cost and time
 let enableScalar = argv["scalar"];
-let vTree = argv["vtree"];
+let vTree = argv["tree"];
 const witnessMethod = argv["witness"];
 const enableWitness = !!witnessMethod;
 const enableContent = argv["content"];
@@ -95,7 +127,7 @@ const enableVerbose = argv["v"];
 const enableRemoveRevision = argv["rm"];
 const linkURIs = argv["link"];
 const enableLink = !!linkURIs;
-const form_file_name = argv["form"];
+const enableForm = argv["form"];
 let network = argv["network"];
 let witness_platform_type = argv["type"];
 
@@ -134,7 +166,7 @@ let witness_platform_type = argv["type"];
   // We use "now" instead of the modified time of the file
   const now = new Date().toISOString()
   const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
-  if (!form_file_name) {
+  if (!enableForm) {
     enableScalar = true
   }
   if (vTree) {
@@ -149,7 +181,7 @@ let witness_platform_type = argv["type"];
     revisionType = "witness"
   } else if (enableLink) {
     revisionType = "link"
-  } else if (form_file_name) {
+  } else if (enableForm) {
     revisionType = "form"
     enableScalar = false
   }
@@ -169,7 +201,7 @@ let witness_platform_type = argv["type"];
   }
 
   if (!fs.existsSync(aquaFilename)) {
-    createGenesisRevision(aquaFilename, form_file_name, enableScalar, aquafier)
+    createGenesisRevision(aquaFilename, enableForm, enableScalar, aquafier)
     return
   }
 
@@ -181,7 +213,7 @@ let witness_platform_type = argv["type"];
 
     // TODO: Check whether this procedure is okay
     // We create a new object and proceed
-    createGenesisRevision(aquaFilename, form_file_name, enableScalar, aquafier)
+    createGenesisRevision(aquaFilename, enableForm, enableScalar, aquafier)
     // process.exit(1);
   }
   const revisions = aquaTree.revisions
@@ -275,7 +307,40 @@ let witness_platform_type = argv["type"];
   }
 
 
-  // console.log(`Revision data ${JSON.stringify(parsedAquaTree)}`)
+  if (enableForm) {
+
+    if (!fs.existsSync(enableForm)) {
+      formatter.log_red(`ERROR: The file ${enableForm} does not exist.`)
+      process.exit(1)
+    }
+
+    const fileContent = fs.readFileSync(enableForm, { encoding: "utf-8" });
+
+    try {
+      const offlineData = JSON.parse(fileContent)
+    } catch (e) {
+      formatter.log_red(`ERROR: The  form file ${enableForm} does not contain valid json.`)
+      process.exit(1)
+    }
+
+    let fileObject = {
+      fileName: enableForm,
+      fileContent: fileContent,
+      path: "./"
+    }
+
+    const aquaObjectResultForForm = await aquafier.createFormRevision(aquaTreeWrapper.aquaTreeWrapper, fileObject, enableScalar)
+    if (aquaObjectResultForForm.isOk()) {
+      serializeAquaTree(aquaFilename, aquaObjectResultForForm.data.aquaTree)
+      logs.push(...aquaObjectResultForForm.data.logData)
+    } else {
+      let enableContentlogs = aquaObjectResultForForm.data
+      logs.push(...enableContentlogs)
+    }
+
+    printLogs(logs, enableVerbose);
+    return
+  }
 
   if (enableSignature) {
 

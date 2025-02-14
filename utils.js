@@ -131,6 +131,7 @@ export const createGenesisRevision = async (aquaFilename, form_file_name, enable
 
     let revisionType = "file"
     if (form_file_name) {
+        console.log("erre .... ")
         revisionType = "form"
 
         if (form_file_name != aquaFilename.replace(/\.aqua\.json$/, "")) {
@@ -148,7 +149,7 @@ export const createGenesisRevision = async (aquaFilename, form_file_name, enable
         fileContent: fileContent,
         path: "./"
     }
-    const genesisRevision = await aquafier.createGenesisRevision(fileObject, false, false, enableScalar)
+    const genesisRevision = await aquafier.createGenesisRevision(fileObject, revisionType == "form" ? true : false, false, enableScalar)
 
     if (genesisRevision.isOk()) {
         let aquaTree = genesisRevision.data.aquaTree
@@ -698,13 +699,13 @@ export function printLogs(logs, enableVerbose) {
 export function checkArrayIntersection(array1, array2) {
     // Convert first array to Set for O(1) lookup
     const set = new Set(array1);
-    
+
     // Check if any element from array2 exists in the set
     const commonElements = array2.filter(item => set.has(item));
-    
+
     if (commonElements.length > 0) {
         throw new Error(`Duplicate elements found: ${commonElements.join(', ')}`);
     }
-    
+
     return true; // No intersections found
 }
