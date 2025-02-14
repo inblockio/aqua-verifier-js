@@ -320,30 +320,61 @@ let witness_platform_type = argv["type"];
   }
 
   if (enableLink) {
-    console.log("LInking")
 
-    let aquaTreeWrappers = []
+    let linkResult = null //: Result<AquaOperationData, LogData[]> | null = null;
+    if (linkURIs.includes(",") && fileNameOnly.includes(",")) {
+      console.log("Link many to many not allowed, specify either multiple link URI or multiple files but not both.");
+      process.exit(1)
 
-    if (fileNameOnly.includes(",")) {
-      fileNameOnly.split(",").map((file) => {
+    } else if (linkURIs.includes(",") && !fileNameOnly.includes(",")) {
+      console.log("Linking an AquaTree to multiple AquaTrees")
+      let linkAquaTreeWrappers = []
+      linkURIs.split(",").map((file) => {
         let _aquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(file, "").aquaTreeWrapper
-        aquaTreeWrappers.push(_aquaTreeWrapper)
+        linkAquaTreeWrappers.push(_aquaTreeWrapper)
       })
-    } else {
       let _singAquaTree = readAndCreateAquaTreeAndAquaTreeWrapper(fileNameOnly, revisionHashSpecified).aquaTreeWrapper
-      aquaTreeWrappers.push(_singAquaTree)
+
+
+      linkResult = await aquafier.linkAquaTreesToMultipleAquaTrees(_singAquaTree, linkAquaTreeWrappers, enableScalar)
+
+
+    } else {
+
+      console.log("Linking multiple AquaTree to a single AquaTrees")
+
+
+      let aquaTreeWrappers = []
+      if (fileNameOnly.includes(",")) {
+        fileNameOnly.split(",").map((file) => {
+          let _aquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(file, "").aquaTreeWrapper
+          aquaTreeWrappers.push(_aquaTreeWrapper)
+        })
+      } else {
+        let _singAquaTree = readAndCreateAquaTreeAndAquaTreeWrapper(fileNameOnly, revisionHashSpecified).aquaTreeWrapper
+        aquaTreeWrappers.push(_singAquaTree)
+      }
+
+      const linkAquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(linkURIs, revisionHashSpecified).aquaTreeWrapper
+      linkResult = await aquafier.linkMultipleAquaTrees(aquaTreeWrappers, linkAquaTreeWrapper, enableScalar)
+
     }
-
-
-    const linkAquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(linkURIs, revisionHashSpecified).aquaTreeWrapper
-
-    // // console.log(`Witness Aqua object  witness_platform_type : ${witness_platform_type}, network : ${network} , witnessMethod : ${witnessMethod}   , enableScalar : ${enableScalar} \n creds ${JSON.stringify(creds)} `)
-    const linkResult = await aquafier.linkMultipleAquaTrees(aquaTreeWrappers, linkAquaTreeWrapper, enableScalar)
+    if (linkResult == null) {
+      console.error("A critical erroroccured linking aquatrees");
+      process.exit(1)
+    }
 
     if (linkResult.isOk()) {
       const aquaTreesResults = linkResult.data
       const aquaTrees = aquaTreesResults.aquaTrees
 
+      if (aquaTreesResults.aquaTree != null && aquaTreesResults.aquaTree != undefined) {
+
+        let aquaTree = aquaTreesResults.aquaTree
+        const hashes = Object.keys(aquaTree.revisions)
+        const aquaTreeFilename = aquaTree.file_index[hashes[0]]
+        serializeAquaTree(`${aquaTreeFilename}.aqua.json`, aquaTree)
+      }
       if (aquaTrees.length > 0) {
         for (let i = 0; i < aquaTrees.length; i++) {
           const aquaTree = aquaTrees[i];
