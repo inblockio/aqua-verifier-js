@@ -353,7 +353,7 @@ let witness_platform_type = argv["type"];
     const signatureResult = await aquafier.signAquaTree(aquaTreeWrapper.aquaTreeWrapper, signMethod, creds, enableScalar)
 
     if (signatureResult.isOk()) {
-      console.log(JSON.stringify(signatureResult.data, null, 4))
+      // console.log(JSON.stringify(signatureResult.data, null, 4))
       serializeAquaTree(aquaFilename, signatureResult.data.aquaTree)
       let logs_result = signatureResult.data.logData
       logs.push(...logs_result)
