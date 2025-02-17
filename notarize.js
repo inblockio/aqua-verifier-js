@@ -344,6 +344,11 @@ let witness_platform_type = argv["type"];
 
   if (enableSignature) {
 
+    let options_array = ["metamask", "cli", "did"];
+    if (!options_array.includes(signMethod)) {
+      console.log(`❌ An invalid sign method provided ${signMethod}.\n💡 Hint use on of  ${options_array.join(",")}`);
+      process.exit(1);
+    }
 
     const signatureResult = await aquafier.signAquaTree(aquaTreeWrapper.aquaTreeWrapper, signMethod, creds, enableScalar)
 
