@@ -384,7 +384,7 @@ let witness_platform_type = argv["type"];
 
 
     // console.log(`Witness Aqua object  witness_platform_type : ${witness_platform_type}, network : ${network} , witnessMethod : ${witnessMethod}   , enableScalar : ${enableScalar} \n creds ${JSON.stringify(creds)} `)
-    const witnessResult = await aquafier.witnessAquaTree(aquaTreeWrapper.aquaTree, witnessMethod, network, witness_platform_type, creds, enableScalar)
+    const witnessResult = await aquafier.witnessAquaTree(aquaTreeWrapper.aquaTreeWrapper, witnessMethod, network, witness_platform_type, creds, enableScalar)
 
     if (witnessResult.isOk()) {
       serializeAquaTree(aquaFilename, witnessResult.data.aquaTree)
