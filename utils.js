@@ -39,7 +39,7 @@ export function readCredentials(createWallet = true) {
                 mnemonic: mnemonic.phrase, nostr_sk: "", "did:key": "",
                 alchemy_key: "ZaQtnup49WhU7fxrujVpkFdRz4JaFRtZ",
                 witness_eth_network: "sepolia",
-                witness_eth_platform: "metamask"
+                witness_meth: "metamask"
             };
             try {
                 writeFileSync(filePath, JSON.stringify(credentialsObject, null, 4), "utf8")
@@ -587,8 +587,8 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
         let creds = readCredentials()
 
         if (witness_platform_type === undefined) {
-            witness_platform_type = creds.witness_eth_platform
-            if (creds.witness_eth_platform.length == 0) {
+            witness_platform_type = creds.witness_meth
+            if (creds.witness_meth.length == 0) {
                 witness_platform_type = "eth"
             }
 
