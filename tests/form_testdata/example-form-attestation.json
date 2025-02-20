@@ -1,5 +1,7 @@
 {
- "type":"identity_attestation",
- "name":"kenn",
- "age":200
+    "type": "identity_attestation",
+    "name": "John Doe",
+    "date_of_birth": "1995-10-15",
+    "context": "I hereby attest that the above information is true and correct to the best of my knowledge.",
+    "wallet_address": "0x1234567890abcdef"
 }

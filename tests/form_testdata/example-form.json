@@ -1,4 +1,6 @@
 {
- "name":"kenn",
- "age":200
+    "type": "identity_claim",
+    "name": "John Doe",
+    "date_of_birth": "1995-10-15",
+    "wallet_address": "0x1234567890abcdef"
 }
