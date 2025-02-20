@@ -1,7 +1,4 @@
-import { RevisionTree } from "aquafier-js-sdk";
-
-
-function findNode(tree: RevisionTree, hash: string): RevisionTree | null {
+function findNode(tree, hash) {
     if (tree.hash === hash) {
         return tree;
     }
@@ -14,13 +11,13 @@ function findNode(tree: RevisionTree, hash: string): RevisionTree | null {
     }
     return null;
 }
-
-function findPaths(tree: RevisionTree, path: string[]): { [key: string]: string[] } {
-    let paths: { [key: string]: string[] } = {};
+function findPaths(tree, path) {
+    let paths = {};
     path.push(tree.hash);
     if (tree.children.length === 0) {
         paths[tree.hash] = path;
-    } else {
+    }
+    else {
         for (let i = 0; i < tree.children.length; i++) {
             const child = tree.children[i];
             const childPaths = findPaths(child, [...path]);
@@ -29,8 +26,7 @@ function findPaths(tree: RevisionTree, path: string[]): { [key: string]: string[
     }
     return paths;
 }
-
-export function findHashWithLongestPath(tree: RevisionTree) {
+export function findHashWithLongestPath(tree) {
     let paths = findPaths(tree, []);
     let hash = "";
     let longestPathLength = 0;
@@ -45,12 +41,10 @@ export function findHashWithLongestPath(tree: RevisionTree) {
         latestHash: hash,
     };
 }
-
-export function createAquaObjectTree(aquaObject: any) {
+export function createAquaObjectTree(aquaObject) {
     let obj = aquaObject;
     // Create a tree given such revision data
-    let revisionTree: RevisionTree = {} as RevisionTree;
-
+    let revisionTree = {};
     for (let revisionHash in obj.revisions) {
         const revision = obj.revisions[revisionHash];
         const parentHash = revision.previous_verification_hash;
@@ -58,7 +52,8 @@ export function createAquaObjectTree(aquaObject: any) {
             // This is the root node
             revisionTree.hash = revisionHash;
             revisionTree.children = [];
-        } else {
+        }
+        else {
             // Find the parent node
             const parentNode = findNode(revisionTree, parentHash);
             if (parentNode) {
@@ -70,29 +65,22 @@ export function createAquaObjectTree(aquaObject: any) {
             }
         }
     }
-
     return revisionTree;
-
 }
-
-export function createAquaTree(aquaObject: any) {
-    let tree = createAquaObjectTree(aquaObject)
-    let pathResult = findHashWithLongestPath(tree)
-
+export function createAquaTree(aquaObject) {
+    let tree = createAquaObjectTree(aquaObject);
+    let pathResult = findHashWithLongestPath(tree);
     return {
         ...aquaObject,
         tree,
         treeMapping: pathResult
-    }
+    };
 }
-
-export function logAquaTree(node: RevisionTree, prefix: string = "", isLast: boolean = true): void {
+export function logAquaTree(node, prefix = "", isLast = true) {
     // Log the current node's hash
     console.log(prefix + (isLast ? "└── " : "├── ") + node.hash);
-
     // Update the prefix for children
     const newPrefix = prefix + (isLast ? "    " : "│   ");
-
     // Recursively log each child
     node.children.forEach((child, index) => {
         const isChildLast = index === node.children.length - 1;

@@ -1,11 +1,15 @@
 {
-    "include": ["*.ts"],
+    "include": [
+        "*.ts"
+    ],
     "compilerOptions": {
-        "declaration": true,
-        "target": "ES6",
-        "module": "NodeNext",
-        "noEmit": false,
-        "noEmitOnError": false,
-        "moduleResolution" : "NodeNext",
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "outDir": "dist",
+        "strict": true,
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "skipLibCheck": true
     }
 }

@@ -2,7 +2,7 @@
 
 import * as main from "./index.js"
 import minimist from "minimist"
-import * as formatter from "./formatter.js"
+import * as formatter from "./formatter"
 
 const opts = {
   // This is required so that -v and -m are position independent.
@@ -50,26 +50,6 @@ const server = argv.server ?? "http://localhost:9352"
       // await main.verifyPage(offlineData, verbose)
       console.log()
     } else {
-      const title = argv.api
-      console.log(`Verifying ${title}`)
-      let APIstatus, versionMatches, serverVersion
-      try {
-        ;[APIstatus, versionMatches, serverVersion] =
-          await main.checkAPIVersionCompatibility(server)
-      } catch (e) {
-        formatter.log_red("Error checking API version: " + e)
-        return
-      }
-      if (APIstatus !== "FOUND") {
-        formatter.log_red("Error checking API version: " + APIstatus)
-        return
-      }
-      if (!versionMatches) {
-        formatter.log_red("Incompatible API version:")
-        formatter.log_red(`Current supported version: ${main.apiVersion}`)
-        formatter.log_red(`Server version: ${serverVersion}`)
-        return
-      }
-      await main.verifyPageFromMwAPI(server, title, verbose)
+      console.log("Please provide an argument.")
     }
   })()

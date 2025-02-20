@@ -1,4 +1,4 @@
-import { RevisionTree } from "./model.js";
+import { RevisionTree } from "aquafier-js-sdk";
 export declare function findHashWithLongestPath(tree: RevisionTree): {
     paths: {
         [key: string]: string[];
