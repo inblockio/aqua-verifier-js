@@ -25,7 +25,7 @@ Example:
 `);
 }
 
-function validateInput(filename_par) {
+function validateInput(filename_par: string) {
 
   let filename = "";
   let filename_with_revision_hash = filename_par.split('@');
@@ -47,13 +47,13 @@ function validateInput(filename_par) {
   }
 }
 
-function findFormKey(aquaData, key) {
+function findFormKey(aquaData: {}, key: string) {
   // Look for exact match or partial match with 'forms-' prefix
   const keys = Object.keys(aquaData);
   return keys.find(k => k === key || k === `forms_${key}` || k.startsWith(`forms_${key}`));
 }
 
-function updateForm(filename_par, key, content) {
+function updateForm(filename_par: string, key: any, content: string | undefined) {
 
   let filename = "";
   let file_revision_hash = "";
@@ -90,12 +90,8 @@ function updateForm(filename_par, key, content) {
     }
   } else {
     console.log(`Using latest revision`);
-    targetRevisionHash = Object.keys(revisions).pop();
+    targetRevisionHash = Object.keys(revisions).pop() ?? "";
   }
-
-
-
-
 
   const targetRevision = revisions[targetRevisionHash];
 
@@ -115,7 +111,7 @@ function updateForm(filename_par, key, content) {
     // Update in place by renaming the key and setting value to empty string
     const deletedKey = `${formKey}.deleted`;
 
-    let newRevision = {};
+    let newRevision: { [key: string]: any } = {};
     for (let key in targetRevision) {
       if (formKey == key) {
         newRevision[deletedKey] = null;
@@ -130,7 +126,7 @@ function updateForm(filename_par, key, content) {
       // Restore deleted field
       const originalKey = formKey.replace('.deleted', '');
 
-      let newRevision = {};
+      let newRevision: { [key: string]: any } = {};
       for (let key in targetRevision) {
         if (formKey == key) {
           newRevision[originalKey] = content;
@@ -163,7 +159,7 @@ function main() {
 
   if (argv.delete) {
     console.log('\n Deleting form key \n');
-    updateForm(filename, argv.delete);
+    updateForm(filename, argv.delete, undefined);
   } else if (argv.update) {
     console.log(' \n Updating form key \n');
     if (argv._.length < 2) {

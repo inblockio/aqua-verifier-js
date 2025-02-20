@@ -9,13 +9,8 @@ import * as http from "http"
 import { MerkleTree } from "merkletreejs"
 
 import * as main from "./index.js"
-import * as formatter from "./formatter.js"
+import * as formatter from "./formatter"
 
-import * as did from "./did.js"
-// Witness support for nostr network
-import * as witnessNostr from "./witness_nostr.js"
-import * as witnessEth from "./witness_eth.js"
-import * as witnessTsa from "./witness_tsa.js"
 
 import { createAquaTree, logAquaTree } from "./aquavhtree.js"
 import Aquafier from "aquafier-js-sdk"
@@ -23,12 +18,9 @@ import Aquafier from "aquafier-js-sdk"
 import { fileURLToPath } from "url"
 import { dirname } from "path"
 
-// import { Wallet, Mnemonic } from 'ethers';
-import { readCredentials, getWallet, estimateWitnessGas, formatMwTimestamp, createGenesisRevision, serializeAquaTree, readAndCreateAquaTreeAndAquaTreeWrapper, printLogs, revisionWithMultipleAquaChain } from "./utils.js"
-// import { isOk } from "rustic"
+import { readCredentials,  createGenesisRevision, serializeAquaTree, readAndCreateAquaTreeAndAquaTreeWrapper, printLogs, revisionWithMultipleAquaChain } from "./utils.js"
 
-import rusticPkg from 'rustic';
-const { isOk } = rusticPkg;
+
 
 const opts = {
   // This is required so that -v is position independent.
@@ -167,8 +159,8 @@ let showGraph = argv["graph"];
   const aquaFilename = fileNameOnly + ".aqua.json"
   // const timestamp = getFileTimestamp(filename)
   // We use "now" instead of the modified time of the file
-  const now = new Date().toISOString()
-  const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
+  // const now = new Date().toISOString()
+  // const timestamp = formatMwTimestamp(now.slice(0, now.indexOf(".")))
   if (!enableForm) {
     enableScalar = true
   }
@@ -210,7 +202,8 @@ let showGraph = argv["graph"];
 
 
 
-  const aquaTree = JSON.parse(fs.readFileSync(aquaFilename))
+  const aquaTree = JSON.parse(fs.readFileSync(aquaFilename, 'utf8'));
+  
   if (!aquaTree) {
     formatter.log_red(`❌  Fatal Error! Aqua Tree does not exist`);
 
@@ -420,14 +413,14 @@ let showGraph = argv["graph"];
     } else if (linkURIs.includes(",") && !fileNameOnly.includes(",")) {
 
 
-      let containsNameInLink = linkURIs.split(",").find((e) => e == fileNameOnly);
+      let containsNameInLink = linkURIs.split(",").find((e: string) => e == fileNameOnly);
       if (containsNameInLink) {
         formatter.log_red("⛔   aqua file name also find in link, possible cyclic linking found");
         process.exit(1)
       }
       console.log("➡️   Linking an AquaTree to multiple AquaTrees")
-      let linkAquaTreeWrappers = []
-      linkURIs.split(",").map((file) => {
+      let linkAquaTreeWrappers: { aquaTree: any; fileObject: { fileName: string; fileContent: string; path: string }; revision: string }[] = []
+      linkURIs.split(",").map((file: string) => {
         let _aquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(file, "").aquaTreeWrapper
         linkAquaTreeWrappers.push(_aquaTreeWrapper)
       })
