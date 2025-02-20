@@ -308,8 +308,8 @@ let showGraph = argv["graph"];
     }
     if (enableWitness) {
         if (witness_platform_type == undefined) {
-            witness_platform_type = creds.witness_meth;
-            if (creds.witness_meth.length == 0) {
+            witness_platform_type = creds.witness_method;
+            if (creds.witness_method.length == 0) {
                 witness_platform_type = "eth";
             }
         }
