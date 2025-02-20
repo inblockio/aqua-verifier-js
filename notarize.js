@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import * as fs from "fs";
 import minimist from "minimist";
-import * as formatter from "./formatter";
-import Aquafier from "aquafier-js-sdk";
-import { readCredentials, createGenesisRevision, serializeAquaTree, readAndCreateAquaTreeAndAquaTreeWrapper, printLogs, revisionWithMultipleAquaChain } from "./utils.js";
+import * as formatter from "./formatter.js";
+import Aquafier, { printLogs } from "aquafier-js-sdk";
+import { readCredentials, createGenesisRevision, serializeAquaTree, readAndCreateAquaTreeAndAquaTreeWrapper, revisionWithMultipleAquaChain } from "./utils.js";
 const opts = {
     // This is required so that -v is position independent.
-    boolean: ["v", "scalar", "rm"],
+    boolean: ["v", "scalar", "rm", "graph"],
     string: ["sign", "link", "witness", "content"],
 };
 const usage = () => {
@@ -45,6 +45,8 @@ Options:
     Use this flag to switch between 'mainnet' and 'sepolia' when witnessing
   --type 
     Use this flag to switch between metamask and cli wallet when witnessing 
+  --graph 
+    Use this flag to generate a graph of the aqua tree in the console/terminal
 
 Example :
   1. Notarize a file
@@ -99,6 +101,7 @@ const enableLink = !!linkURIs;
 const enableForm = argv["form"];
 let network = argv["network"];
 let witness_platform_type = argv["type"];
+let showGraph = argv["graph"];
 (async function () {
     let fileNameOnly = "";
     let revisionHashSpecified = "";
@@ -153,8 +156,7 @@ let witness_platform_type = argv["type"];
     const aquafier = new Aquafier();
     if (filename.includes(",")) {
         if (revisionType == "witness" || revisionType == "link") {
-            // createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
-            revisionWithMultipleAquaChain(revisionType, fileNameOnly, aquafier, linkURIs, enableVerbose, enableScalar, witness_platform_type, network, witnessMethod);
+            revisionWithMultipleAquaChain(revisionType, fileNameOnly, aquafier, linkURIs, enableVerbose, enableScalar, witness_platform_type, network, witnessMethod, signMethod);
             return;
         }
         else {
@@ -177,6 +179,11 @@ let witness_platform_type = argv["type"];
     const revisions = aquaTree.revisions;
     const verificationHashes = Object.keys(revisions);
     const lastRevisionHash = verificationHashes[verificationHashes.length - 1];
+    if (showGraph) {
+        console.log("Rendering the aqua tree\n");
+        aquafier.renderTree(aquaTree);
+        return;
+    }
     if (enableRemoveRevision) {
         // console.log(aquaTree)
         let result = aquafier.removeLastRevision(aquaTree);

@@ -2,7 +2,7 @@
 
 import * as main from "./index.js"
 import minimist from "minimist"
-import * as formatter from "./formatter"
+import * as formatter from "./formatter.js"
 
 const opts = {
   // This is required so that -v and -m are position independent.
@@ -33,7 +33,7 @@ if (argv._.length < 1) {
 
 const verbose = argv.v
 
-const server = argv.server ?? "http://localhost:9352"
+const server = argv.server ? argv.server : "http://localhost:9352"
 
 
   // The main function
@@ -43,10 +43,8 @@ const server = argv.server ?? "http://localhost:9352"
       // If the file is an AQUA file, we read it directly, otherwise, we read the AQUA
       // file corresponding with the file
       filename = filename.endsWith(".aqua.json") ? filename : filename + ".aqua.json"
-           
 
-     
-      await main.verifyAquaTreeData(filename,  verbose);
+      await main.verifyAquaTreeData(filename, verbose);
       // await main.verifyPage(offlineData, verbose)
       console.log()
     } else {

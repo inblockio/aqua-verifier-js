@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as main from "./index.js";
 import minimist from "minimist";
-import * as formatter from "./formatter";
+import * as formatter from "./formatter.js";
 const opts = {
     // This is required so that -v and -m are position independent.
     boolean: ["v", "m"],
@@ -27,7 +27,7 @@ if (argv._.length < 1) {
     process.exit(1);
 }
 const verbose = argv.v;
-const server = argv.server ?? "http://localhost:9352";
+const server = argv.server ? argv.server : "http://localhost:9352";
 (async function () {
     if (!argv.api) {
         let filename = argv._[0];

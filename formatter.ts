@@ -6,22 +6,22 @@ const FgYellow = "\x1b[33m"
 const FgWhite = "\x1b[37m"
 const BgGreen = "\x1b[42m"
 
-function cliRedify(content: string) {
-    return FgRed + content + Reset
-  }
-  
-  function cliYellowfy(content: string) {
-    return FgYellow + content + Reset
-  }
-  
-  function log_red(content: any) {
-    console.log(cliRedify(content))
-  }
-  
-  function log_yellow(content: any) {
-    console.log(cliYellowfy(content))
-  }
-  
-  function log_dim(content: string) {
-    console.log(Dim + content + Reset)
-  }
+export function cliRedify(content: string) {
+  return FgRed + content + Reset
+}
+
+export function cliYellowfy(content: string) {
+  return FgYellow + content + Reset
+}
+
+export function log_red(content: any) {
+  console.log(cliRedify(content))
+}
+
+export function log_yellow(content: any) {
+  console.log(cliYellowfy(content))
+}
+
+export function log_dim(content: string) {
+  console.log(Dim + content + Reset)
+}

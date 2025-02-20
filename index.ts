@@ -16,10 +16,11 @@ import * as witnessTsa from "./witness_tsa.js"
 import * as did from "./did.js"
 import crypto from "crypto"
 import Aquafier, { printLogs, AquaTree, FileObject, LogType } from "aquafier-js-sdk"
+import { readExportFile } from "./utils.js"
 
 export async function verifyAquaTreeData(fileName: string, verboseOption: boolean = false) {
   const aquafier = new Aquafier();
-
+  const filenameToRead = fileName.endsWith(".aqua.json") ? fileName : fileName + ".aqua.json"
   console.log(`-> reading file  ${fileName}`)
   const aquaTree = await readExportFile(fileName)
 

@@ -1,24 +1,21 @@
 #!/usr/bin/env node
 
 import * as fs from "fs"
-import { randomBytes } from "crypto"
 
-import * as ethers from "ethers"
 import minimist from "minimist"
-import * as http from "http"
-import { MerkleTree } from "merkletreejs"
 
-import * as main from "./index.js"
-import * as formatter from "./formatter"
+import * as formatter from "./formatter.js"
+
+import Aquafier, { printLogs } from "aquafier-js-sdk"
 
 
-import { createAquaTree, logAquaTree } from "./aquavhtree.js"
-import Aquafier from "aquafier-js-sdk"
-
-import { fileURLToPath } from "url"
-import { dirname } from "path"
-
-import { readCredentials,  createGenesisRevision, serializeAquaTree, readAndCreateAquaTreeAndAquaTreeWrapper, printLogs, revisionWithMultipleAquaChain } from "./utils.js"
+import {
+  readCredentials,
+  createGenesisRevision,
+  serializeAquaTree,
+  readAndCreateAquaTreeAndAquaTreeWrapper,
+  revisionWithMultipleAquaChain
+} from "./utils.js"
 
 
 
@@ -186,8 +183,7 @@ let showGraph = argv["graph"];
 
   if (filename.includes(",")) {
     if (revisionType == "witness" || revisionType == "link") {
-      // createRevisionWithMultipleAquaChain(timestamp, revisionType, aquaFilename)
-      revisionWithMultipleAquaChain(revisionType, fileNameOnly, aquafier, linkURIs, enableVerbose, enableScalar, witness_platform_type, network, witnessMethod);
+      revisionWithMultipleAquaChain(revisionType, fileNameOnly, aquafier, linkURIs, enableVerbose, enableScalar, witness_platform_type, network, witnessMethod, signMethod);
       return
     } else {
       console.log("❌ only revision type witness and link work with multiple aqua chain as the file name")
@@ -203,7 +199,7 @@ let showGraph = argv["graph"];
 
 
   const aquaTree = JSON.parse(fs.readFileSync(aquaFilename, 'utf8'));
-  
+
   if (!aquaTree) {
     formatter.log_red(`❌  Fatal Error! Aqua Tree does not exist`);
 
