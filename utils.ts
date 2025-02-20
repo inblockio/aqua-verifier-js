@@ -91,9 +91,9 @@ export const createGenesisRevision = async (aquaFilename: string, form_file_name
     if (genesisRevision.isOk()) {
         let aquaTree = genesisRevision.data.aquaTree
         console.log(
-            `- Writing new ${revisionType} revision ${Object.keys(aquaTree.revisions)[0]} to ${aquaFilename}`,
+            `- Writing new ${revisionType} revision ${Object.keys(aquaTree!.revisions)[0]} to ${aquaFilename}`,
         )
-        serializeAquaTree(aquaFilename, aquaTree)
+        serializeAquaTree(aquaFilename, aquaTree!)
     }
 }
 

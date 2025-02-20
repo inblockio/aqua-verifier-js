@@ -291,7 +291,7 @@ let showGraph = argv["graph"];
 
     const aquaObjectResultForContent = await aquafier.createContentRevision(aquaTreeWrapper, fileObject, enableScalar)
     if (aquaObjectResultForContent.isOk()) {
-      serializeAquaTree(aquaFilename, aquaObjectResultForContent.data.aquaTree)
+      serializeAquaTree(aquaFilename, aquaObjectResultForContent.data.aquaTree!)
       logs.push(...aquaObjectResultForContent.data.logData)
     } else {
       let enableContentlogs = aquaObjectResultForContent.data
@@ -327,7 +327,7 @@ let showGraph = argv["graph"];
 
     const aquaObjectResultForForm = await aquafier.createFormRevision(aquaTreeWrapper.aquaTreeWrapper, fileObject, enableScalar)
     if (aquaObjectResultForForm.isOk()) {
-      serializeAquaTree(aquaFilename, aquaObjectResultForForm.data.aquaTree)
+      serializeAquaTree(aquaFilename, aquaObjectResultForForm.data.aquaTree!)
       logs.push(...aquaObjectResultForForm.data.logData)
     } else {
       let enableContentlogs = aquaObjectResultForForm.data
@@ -350,7 +350,7 @@ let showGraph = argv["graph"];
 
     if (signatureResult.isOk()) {
       // console.log(JSON.stringify(signatureResult.data, null, 4))
-      serializeAquaTree(aquaFilename, signatureResult.data.aquaTree)
+      serializeAquaTree(aquaFilename, signatureResult.data.aquaTree!)
       let logs_result = signatureResult.data.logData
       logs.push(...logs_result)
     } else {
@@ -383,7 +383,7 @@ let showGraph = argv["graph"];
     const witnessResult = await aquafier.witnessAquaTree(aquaTreeWrapper.aquaTreeWrapper, witnessMethod, network, witness_platform_type, creds, enableScalar)
 
     if (witnessResult.isOk()) {
-      serializeAquaTree(aquaFilename, witnessResult.data.aquaTree)
+      serializeAquaTree(aquaFilename, witnessResult.data.aquaTree!)
       let logs_result = witnessResult.data.logData
       logs.push(...logs_result)
       // logs.map(log => console.log(log.log))
