@@ -36,18 +36,27 @@ const verbose = argv.v
 const server = argv.server ? argv.server : "http://localhost:9352"
 
 
-  // The main function
-  ; (async function () {
-    if (!argv.api) {
-      let filename = argv._[0]
-      // If the file is an AQUA file, we read it directly, otherwise, we read the AQUA
-      // file corresponding with the file
-      filename = filename.endsWith(".aqua.json") ? filename : filename + ".aqua.json"
 
-      await main.verifyAquaTreeData(filename, verbose);
-      // await main.verifyPage(offlineData, verbose)
-      console.log()
-    } else {
-      console.log("Please provide an argument.")
-    }
-  })()
+
+
+
+export async function run(argvData: minimist.ParsedArgs = argv) {
+  if (!argvData.api) {
+    let filename = argvData._[0]
+    // If the file is an AQUA file, we read it directly, otherwise, we read the AQUA
+    // file corresponding with the file
+    filename = filename.endsWith(".aqua.json") ? filename : filename + ".aqua.json"
+
+    await main.verifyAquaTreeData(filename, verbose);
+    // await main.verifyPage(offlineData, verbose)
+    console.log()
+  } else {
+    console.log("Please provide an argument.")
+  }
+}
+
+
+// The main function
+; (async function () {
+  await run()
+})()

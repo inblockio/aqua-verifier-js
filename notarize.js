@@ -103,6 +103,9 @@ let network = argv["network"];
 let witness_platform_type = argv["type"];
 let showGraph = argv["graph"];
 (async function () {
+    await run();
+})();
+export async function run(argvData = argv) {
     let fileNameOnly = "";
     let revisionHashSpecified = "";
     let logs = [];
@@ -309,13 +312,13 @@ let showGraph = argv["graph"];
     if (enableWitness) {
         if (witness_platform_type == undefined) {
             witness_platform_type = creds.witness_method;
-            if (creds.witness_method.length == 0) {
+            if (creds.witness_method == undefined || creds.witness_method.length == 0) {
                 witness_platform_type = "eth";
             }
         }
         if (network == undefined) {
             network = creds.witness_eth_network;
-            if (creds.witness_eth_network.length == 0) {
+            if (creds.witness_eth_network == undefined || creds.witness_eth_network.length == 0) {
                 network = "sepolia";
             }
         }
@@ -413,4 +416,4 @@ let showGraph = argv["graph"];
         printLogs(logs, enableVerbose);
         return;
     }
-})();
+}
