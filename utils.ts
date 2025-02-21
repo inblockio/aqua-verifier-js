@@ -79,6 +79,10 @@ export const createGenesisRevision = async (aquaFilename: string, form_file_name
         }
     }
 
+    if (!fs.existsSync(aquaFilename.replace(".aqua.json", ""))) {
+        formatter.log_red(`file ${aquaFilename.replace(".aqua.json", "")} does not exist`);
+        process.exit(1);
+    }
 
     const fileContent = fs.readFileSync(aquaFilename.replace(".aqua.json", ""), { encoding: "utf-8" });
     let fileObject = {
@@ -347,21 +351,21 @@ export const revisionWithMultipleAquaChain = async (revisionType: string, filena
 
 }
 
-export async function readExportFile(filename: string) {
+export async function readExportFile(filename: string) : Promise<string | AquaTree>{
     if (!fs.existsSync(filename)) {
-      formatter.log_red(`ERROR: The file ${filename} does not exist.`)
-      process.exit(1)
+        formatter.log_red(`ERROR: The file ${filename} does not exist.`)
+        process.exit(1)
     }
     const fileContent = fs.readFileSync(filename, "utf-8")
-    if (!filename.endsWith(".json")) {
-    //   formatter.log_red("The file must have a .json extension")
-    //   process.exit(1)
-    return fileContent
+    if (!filename.endsWith("aqua.json")) {
+        //   formatter.log_red("The file must have a .json extension")
+        //   process.exit(1)
+        return fileContent
     }
     const offlineData = JSON.parse(fileContent)
     if (!("revisions" in offlineData)) {
-      formatter.log_red("The json file doesn't contain 'revisions' key.")
-      process.exit(1)
+        formatter.log_red("The json file doesn't contain 'revisions' key.")
+        process.exit(1)
     }
     return offlineData
-  }
+}

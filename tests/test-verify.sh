@@ -26,12 +26,13 @@ test_expect_success 'Create AQUA file for README.md' '
 
 test_expect_success 'Verify the output of verify.js' '
     $verify README.md > actual_output &&
-    if tail -n 2 actual_output | grep -q "Status: VERIFIED"; then
-        echo "Last line is '\''Status: VERIFIED'\''";
+    if tail -n 2 actual_output | grep -q "successfully"; then
+        echo "Last or second-to-last line contains '\''successfully'\''";
     else
-        echo "Last line is NOT '\''Status: VERIFIED'\''" && false;
+        echo "Last or second-to-last line does NOT contain '\''successfully'\''" && false;
     fi
 '
+
 
 
 # Cleanup

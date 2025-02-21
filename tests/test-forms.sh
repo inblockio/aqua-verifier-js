@@ -39,16 +39,16 @@ test_expect_success 'Verify initial form' '
     ${verify} ${example_form}.aqua.json
 '
 
-test_expect_success 'Delete age field' '
-    ${form_updater} ${example_form}.aqua.json --delete age
+test_expect_success 'Delete date_of_birth field' '
+    ${form_updater} ${example_form}.aqua.json --delete date_of_birth
 '
 
 test_expect_success 'Verify after deletion' '
     ${verify} ${example_form}.aqua.json
 '
 
-test_expect_success 'Update age field' '
-    ${form_updater} ${example_form}.aqua.json --update age 200
+test_expect_success 'Update date_of_birth field' '
+    ${form_updater} ${example_form}.aqua.json --update date_of_birth 200
 '
 
 test_expect_success 'Final verification' '

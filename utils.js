@@ -61,6 +61,10 @@ export const createGenesisRevision = async (aquaFilename, form_file_name, enable
             process.exit(1);
         }
     }
+    if (!fs.existsSync(aquaFilename.replace(".aqua.json", ""))) {
+        formatter.log_red(`file ${aquaFilename.replace(".aqua.json", "")} does not exist`);
+        process.exit(1);
+    }
     const fileContent = fs.readFileSync(aquaFilename.replace(".aqua.json", ""), { encoding: "utf-8" });
     let fileObject = {
         fileName: aquaFilename.replace(".aqua.json", ""),
@@ -282,7 +286,7 @@ export async function readExportFile(filename) {
         process.exit(1);
     }
     const fileContent = fs.readFileSync(filename, "utf-8");
-    if (!filename.endsWith(".json")) {
+    if (!filename.endsWith("aqua.json")) {
         //   formatter.log_red("The file must have a .json extension")
         //   process.exit(1)
         return fileContent;

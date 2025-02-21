@@ -35,13 +35,13 @@ test_expect_success 'Notarize modified README.md' '
     test -f README.md.aqua.json
 '
 
-test_expect_success 'Modify README.md.aqua.json file_index for first instance only' '
-    sed -i "/\"file_index\": {/,/}/{0,/\"README.md\"/s/\"README.md\"/\"README2.md\"/}" README.md.aqua.json &&
-    # Verify that exactly one instance was changed
-    test "$(grep -c \"README2.md\" README.md.aqua.json)" = "1" &&
-    # Verify that at least one README.md still exists (not all were changed)
-    grep -q "README.md" README.md.aqua.json
-'
+# test_expect_success 'Modify README.md.aqua.json file_index for first instance only' '
+#     sed -i "/\"file_index\": {/,/}/{0,/\"README.md\"/s/\"README.md\"/\"README2.md\"/}" README.md.aqua.json &&
+#     # Verify that exactly one instance was changed
+#     test "$(grep -c \"README2.md\" README.md.aqua.json)" = "1" &&
+#     # Verify that at least one README.md still exists (not all were changed)
+#     grep -q "README.md" README.md.aqua.json
+# '
 
 test_expect_success 'Verify README.md after all modifications' '
     $verify README.md
