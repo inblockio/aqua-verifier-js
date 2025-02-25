@@ -155,6 +155,7 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
                 log: `Error reading ${fileNameOnly}: ${error}`,
                 logType: LogType.ERROR
             });
+            printLogs(logs, enableVerbose);
             process.exit(1);
         }
         const filePath = `${fileNameOnly}.aqua.json`;
@@ -163,6 +164,7 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
                 log: `File does not exist: ${filePath}`,
                 logType: LogType.ERROR
             });
+            printLogs(logs, enableVerbose);
             process.exit(1);
         }
         try {
@@ -194,6 +196,7 @@ export const revisionWithMultipleAquaChain = async (revisionType, filename, aqua
                 log: `Error reading ${filePath}: ${error}`,
                 logType: LogType.ERROR
             });
+            printLogs(logs, enableVerbose);
             process.exit(1);
         }
     }

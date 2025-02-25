@@ -202,6 +202,7 @@ export const revisionWithMultipleAquaChain = async (revisionType: string, filena
                 log: `Error reading ${fileNameOnly}: ${error}`,
                 logType: LogType.ERROR
             })
+            printLogs(logs, enableVerbose);
             process.exit(1);
         }
 
@@ -214,6 +215,7 @@ export const revisionWithMultipleAquaChain = async (revisionType: string, filena
                 log: `File does not exist: ${filePath}`,
                 logType: LogType.ERROR
             })
+            printLogs(logs, enableVerbose);
             process.exit(1);
         }
 
@@ -250,6 +252,7 @@ export const revisionWithMultipleAquaChain = async (revisionType: string, filena
                 log: `Error reading ${filePath}: ${error}`,
                 logType: LogType.ERROR
             })
+            printLogs(logs, enableVerbose);
             process.exit(1);
         }
     }
