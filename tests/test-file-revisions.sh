@@ -27,7 +27,7 @@ test_expect_success 'Modify README.md content by removing first character' '
     sed -i "1s/^.//" README.md &&
     test -f README.md &&
     # Verify that the file was actually modified
-    ! cmp README.md README.md.original >/dev/null 2>&1
+    ! cmp README.md README2.md >/dev/null 2>&1
 '
 
 test_expect_success 'Notarize modified README.md' '

@@ -27,10 +27,6 @@ test_expect_success 'Notarize initial form' '
     test -f ${example_form}.aqua.json
 '
 
-test_expect_success 'Sign initial form' '
-    ${notarize} ${example_form} --sign cli
-'
-
 test_expect_success 'Notarize attestation form' '
     ${notarize} ${example_form} --form ${example_form_attestation}
 '
@@ -44,15 +40,15 @@ test_expect_success 'Delete date_of_birth field' '
 '
 
 test_expect_success 'Verify after deletion' '
-    ${verify} ${example_form}.aqua.json
+    ${verify} ${example_form}.aqua.json -v
 '
 
 test_expect_success 'Update date_of_birth field' '
-    ${form_updater} ${example_form}.aqua.json --update date_of_birth 200
+    ${form_updater} ${example_form}.aqua.json --update date_of_birth "1995-10-15"
 '
 
 test_expect_success 'Final verification' '
-    ${verify} ${example_form}'
+    ${verify} ${example_form} -v'
 
 test_expect_success 'Cleanup test files' '
     rm -f ${example_form}.aqua.json

@@ -1,4 +1,4 @@
-## data-accounting-external-verifier, 
+# data-accounting-external-verifier, 
 JS Client,  scripts for signing , witnessiing and verifying revisiion <br/>
 
 ## Functional description
@@ -187,3 +187,12 @@ Handles deleted fields (e.g., forms-name.deleted)
 - run `make test`
 - the output will be  in test >  trash *(the last part is dynamic based on the test)
 - Hint : ensure your `tests/test-*.sh` file are excutable `chmod +x  tests/test-*`
+
+
+
+
+Here’s a more polished version with a clear and structured documentation style:  
+
+---
+
+ 
