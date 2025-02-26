@@ -60,7 +60,7 @@ export const serializeAquaTree = (aquaFilename: fs.PathOrFileDescriptor, aquaTre
     }
 }
 
-export const createGenesisRevision = async (aquaFilename: string, form_file_name: any, enableScalar: any, aquafier: Aquafier) => {
+export const createGenesisRevision = async (aquaFilename: string, form_file_name: any, enableScalar: boolean, enableContent: boolean, aquafier: Aquafier) => {
 
 
 
@@ -90,7 +90,7 @@ export const createGenesisRevision = async (aquaFilename: string, form_file_name
         fileContent: fileContent,
         path: "./"
     }
-    const genesisRevision = await aquafier.createGenesisRevision(fileObject, revisionType == "form" ? true : false, false, enableScalar)
+    const genesisRevision = await aquafier.createGenesisRevision(fileObject, revisionType == "form" ? true : false, enableContent, enableScalar)
 
     if (genesisRevision.isOk()) {
         let aquaTree = genesisRevision.data.aquaTree

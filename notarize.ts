@@ -201,7 +201,7 @@ export async function run(argvData: minimist.ParsedArgs = argv) {
   }
 
   if (!fs.existsSync(aquaFilename)) {
-    createGenesisRevision(aquaFilename, enableForm, enableScalar, aquafier)
+    createGenesisRevision(aquaFilename, enableForm, enableScalar, enableContent, aquafier)
     return
   }
 
@@ -214,7 +214,7 @@ export async function run(argvData: minimist.ParsedArgs = argv) {
 
     // TODO: Check whether this procedure is okay
     // We create a new object and proceed
-    createGenesisRevision(aquaFilename, enableForm, enableScalar, aquafier)
+    createGenesisRevision(aquaFilename, enableForm, enableScalar, enableContent, aquafier)
     // process.exit(1);
   }
   const revisions = aquaTree.revisions

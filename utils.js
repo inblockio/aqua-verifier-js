@@ -51,7 +51,7 @@ export const serializeAquaTree = (aquaFilename, aquaTree) => {
         process.exit(1);
     }
 };
-export const createGenesisRevision = async (aquaFilename, form_file_name, enableScalar, aquafier) => {
+export const createGenesisRevision = async (aquaFilename, form_file_name, enableScalar, enableContent, aquafier) => {
     let revisionType = "file";
     if (form_file_name) {
         revisionType = "form";
@@ -71,7 +71,7 @@ export const createGenesisRevision = async (aquaFilename, form_file_name, enable
         fileContent: fileContent,
         path: "./"
     };
-    const genesisRevision = await aquafier.createGenesisRevision(fileObject, revisionType == "form" ? true : false, false, enableScalar);
+    const genesisRevision = await aquafier.createGenesisRevision(fileObject, revisionType == "form" ? true : false, enableContent, enableScalar);
     if (genesisRevision.isOk()) {
         let aquaTree = genesisRevision.data.aquaTree;
         console.log(`- Writing new ${revisionType} revision ${Object.keys(aquaTree.revisions)[0]} to ${aquaFilename}`);
