@@ -15,7 +15,7 @@ import * as witnessEth from "./witness_eth.js"
 import * as witnessTsa from "./witness_tsa.js"
 import * as did from "./did.js"
 import crypto from "crypto"
-import Aquafier, { printLogs, AquaTree, FileObject, LogType } from "aquafier-js-sdk"
+import Aquafier, { printLogs, AquaTree, FileObject, LogType, printGraphData } from "aquafier-js-sdk"
 import { readExportFile } from "./utils.js"
 
 export async function verifyAquaTreeData(fileName: string, verboseOption: boolean = false) {
@@ -93,3 +93,76 @@ export async function verifyAquaTreeData(fileName: string, verboseOption: boolea
     printLogs(result.data, verboseOption)
   }
 }
+
+async function readAllNecessaryFiles(filesToBeRead: string[], aquafier: Aquafier, fileObjectsArray: FileObject[]): FileObject[] {
+  // if aqua tree contains link all the linked aqua files must be read into the fileObjects Array
+
+  for (let item of filesToBeRead) {
+    if (fileObjectsArray.find((e) => e.fileName == item)) {
+      // console.log(` File ${item} has been read`)
+    } else {
+      let aquaFile = item.endsWith(".aqua.json") ? item : item + ".aqua.json"
+      if (fs.existsSync(aquaFile)) {
+        //aqua file
+        console.log(`-> reading aqua file  ${aquaFile}`)
+        let fileContentsAquaFile = await readExportFile(aquaFile, false);
+        fileObjectsArray.push({
+          fileName: aquaFile,
+          fileContent: fileContentsAquaFile,
+          path: ""
+        });
+        let _filesToBeRead =  aquafier.fetchFilesToBeRead(fileContentsAquaFile);
+        readAllNecessaryFiles(_filesToBeRead, aquafier, fileObjectsArray)
+      }
+
+      // raw file
+      let pureFileNameItem = item.replace(".aqua.json", "");
+      console.log(`-> reading pure file  ${pureFileNameItem}`)
+      let fileContentsItem = await readExportFile(pureFileNameItem, false);
+      fileObjectsArray.push({
+        fileName: pureFileNameItem,
+        fileContent: fileContentsItem,
+        path: ""
+      });
+    }
+  }
+}
+
+export async function verifyAndGetGraphData(fileName: string, verboseOption: boolean = false) {
+  const aquafier = new Aquafier();
+  const filenameToRead = fileName.endsWith(".aqua.json") ? fileName : fileName + ".aqua.json"
+  // console.log(`-> reading file  ${fileName}`)
+  const aquaTree = await readExportFile(fileName)
+
+  let fileObjectsArray = []
+
+  // the file that has been aquafied
+
+  let pureFileName = fileName.replace(".aqua.json", "")
+  let fileContents = await readExportFile(pureFileName, false);
+  fileObjectsArray.push({
+    fileName: pureFileName,
+    fileContent: fileContents,
+    path: ""
+  });
+
+  let filesToBeRead = aquafier.fetchFilesToBeRead(aquaTree)
+
+  let fileObjectsArraySecondary = readAllNecessaryFiles(filesToBeRead, aquafier, fileObjectsArray)
+  // fileObjectsArray.push(...fileObjectsArraySecondary)
+
+  let result = await aquafier.verifyAndGetGraphData(aquaTree, fileObjectsArray);
+
+  console.log("Data " + JSON.stringify(result, null, 4))
+  if (result!.isOk()) {
+    printGraphData(result.data, "", verboseOption)
+  } else {
+    result.data.push({
+      log: "AquaTree verification failed",
+      logType: LogType.FINAL_ERROR
+    })
+    printLogs(result.data, verboseOption)
+  }
+
+}
+
