@@ -44,7 +44,6 @@ export async function verifyAquaTreeData(fileName: string, verboseOption: boolea
     if (fileObjectsArray.find((e) => e.fileName == item)) {
       // console.log(` File ${item} has been read`)
     } else {
-      console.log("file to be read "+item);
       let aquaFile = item.endsWith(".aqua.json") ? item : item + ".aqua.json"
       if (fs.existsSync(aquaFile)) {
         //aqua file
