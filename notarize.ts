@@ -444,11 +444,12 @@ export async function run(argvData: minimist.ParsedArgs = argv) {
         formatter.log_red("aqua file name also find in link, possible cyclic linking found");
         process.exit(1)
       }
-      console.log("Linking multiple AquaTree to a single AquaTrees")
+    
 
 
       let aquaTreeWrappers = []
       if (fileNameOnly.includes(",")) {
+        console.log("✨ Linking multiple AquaTree to a single AquaTrees")
         fileNameOnly.split(",").map((file) => {
           let _aquaTreeWrapper = readAndCreateAquaTreeAndAquaTreeWrapper(file, "").aquaTreeWrapper
           aquaTreeWrappers.push(_aquaTreeWrapper)
