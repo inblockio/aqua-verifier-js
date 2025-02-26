@@ -28,7 +28,7 @@ export function readCredentials(createWallet = true) {
             const mnemonic = Mnemonic.fromEntropy(entropy);
 
             let credentialsObject = {
-                mnemonic: mnemonic.phrase, nostr_sk: "", "did:key": "",
+                mnemonic: mnemonic.phrase, nostr_sk: "", "did_key": "",
                 alchemy_key: "ZaQtnup49WhU7fxrujVpkFdRz4JaFRtZ",
                 witness_eth_network: "sepolia",
                 witness_meth: "metamask"
