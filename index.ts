@@ -73,20 +73,20 @@ export async function verifyAquaTreeData(fileName: string, verboseOption: boolea
 
   // console.log("Data " + JSON.stringify(result, null, 4))
   if (result!.isOk()) {
-    result.data.logData.push({
-      log: `\n`,
-      logType: LogType.EMPTY
-    });
+    // result.data.logData.push({
+    //   log: `\n`,
+    //   logType: LogType.EMPTY
+    // });
     result.data.logData.push({
       log: "AquaTree verified successfully",
       logType: LogType.SUCCESS
     })
     printLogs(result.data.logData, verboseOption)
   } else {
-    result.data.push({
-      log: `\n`,
-      logType: LogType.EMPTY
-    });
+    // result.data.push({
+    //   log: `\n`,
+    //   logType: LogType.EMPTY
+    // });
     result.data.push({
       log: "AquaTree verification failed",
       logType: LogType.FINAL_ERROR
