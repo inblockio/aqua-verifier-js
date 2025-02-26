@@ -21,7 +21,7 @@ import { readExportFile } from "./utils.js"
 export async function verifyAquaTreeData(fileName: string, verboseOption: boolean = false) {
   const aquafier = new Aquafier();
   const filenameToRead = fileName.endsWith(".aqua.json") ? fileName : fileName + ".aqua.json"
-  console.log(`-> reading file  ${fileName}`)
+  // console.log(`-> reading file  ${fileName}`)
   const aquaTree = await readExportFile(fileName)
 
   let fileObjectsArray = []
@@ -48,7 +48,7 @@ export async function verifyAquaTreeData(fileName: string, verboseOption: boolea
       let aquaFile = item.endsWith(".aqua.json") ? item : item + ".aqua.json"
       if (fs.existsSync(aquaFile)) {
         //aqua file
-        console.log(`-> reading file  ${aquaFile}`)
+        // console.log(`-> reading file  ${aquaFile}`)
         let fileContentsAquaFile = await readExportFile(aquaFile, false);
         fileObjectsArray.push({
           fileName: aquaFile,
@@ -59,7 +59,7 @@ export async function verifyAquaTreeData(fileName: string, verboseOption: boolea
 
       // raw file
       let pureFileNameItem = item.replace(".aqua.json", "");
-      console.log(`-> reading file  ${pureFileNameItem}`)
+      // console.log(`-> reading file  ${pureFileNameItem}`)
       let fileContentsItem = await readExportFile(pureFileNameItem, false);
       fileObjectsArray.push({
         fileName: pureFileNameItem,
