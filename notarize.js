@@ -168,7 +168,7 @@ export async function run(argvData = argv) {
         }
     }
     if (!fs.existsSync(aquaFilename)) {
-        createGenesisRevision(aquaFilename, enableForm, enableScalar, aquafier);
+        createGenesisRevision(aquaFilename, enableForm, enableScalar, enableContent, aquafier);
         return;
     }
     const aquaTree = JSON.parse(fs.readFileSync(aquaFilename, 'utf8'));
@@ -176,7 +176,7 @@ export async function run(argvData = argv) {
         formatter.log_red(`❌  Fatal Error! Aqua Tree does not exist`);
         // TODO: Check whether this procedure is okay
         // We create a new object and proceed
-        createGenesisRevision(aquaFilename, enableForm, enableScalar, aquafier);
+        createGenesisRevision(aquaFilename, enableForm, enableScalar, enableContent, aquafier);
         // process.exit(1);
     }
     const revisions = aquaTree.revisions;
