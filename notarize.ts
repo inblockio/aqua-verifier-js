@@ -16,14 +16,13 @@ import {
   readAndCreateAquaTreeAndAquaTreeWrapper,
   revisionWithMultipleAquaChain
 } from "./utils.js"
-import exp from "constants"
 
 
 
 const opts = {
   // This is required so that -v is position independent.
-  boolean: ["v", "scalar", "rm", "graph"],
-  string: ["sign", "link", "witness", "content"],
+  boolean: ["v", "scalar", "rm", "graph", "content"],
+  string: ["sign", "link", "witness" ],
 }
 
 const usage = () => {
@@ -201,6 +200,7 @@ export async function run(argvData: minimist.ParsedArgs = argv) {
   }
 
   if (!fs.existsSync(aquaFilename)) {
+    console.log("🔥  Creating a new Aqua Tree --"+enableContent)
     createGenesisRevision(aquaFilename, enableForm, enableScalar, enableContent, aquafier)
     return
   }

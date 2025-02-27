@@ -70,24 +70,17 @@ export async function verifyAquaTreeData(fileName: string, verboseOption: boolea
 
   let result = await aquafier.verifyAquaTree(aquaTree, fileObjectsArray);
 
-  // console.log("Data " + JSON.stringify(result, null, 4))
   if (result!.isOk()) {
-    // result.data.logData.push({
-    //   log: `\n`,
-    //   logType: LogType.EMPTY
-    // });
+
     result.data.logData.push({
-      log: "AquaTree verified successfully",
+      log: "All revisions verified successfully",
       logType: LogType.SUCCESS
     })
     printLogs(result.data.logData, verboseOption)
   } else {
-    // result.data.push({
-    //   log: `\n`,
-    //   logType: LogType.EMPTY
-    // });
+ 
     result.data.push({
-      log: "AquaTree verification failed",
+      log: "One or more revision verification failed",
       logType: LogType.FINAL_ERROR
     })
     printLogs(result.data, verboseOption)

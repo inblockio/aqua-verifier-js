@@ -6,8 +6,8 @@ import Aquafier, { printLogs } from "aquafier-js-sdk";
 import { readCredentials, createGenesisRevision, serializeAquaTree, readAndCreateAquaTreeAndAquaTreeWrapper, revisionWithMultipleAquaChain } from "./utils.js";
 const opts = {
     // This is required so that -v is position independent.
-    boolean: ["v", "scalar", "rm", "graph"],
-    string: ["sign", "link", "witness", "content"],
+    boolean: ["v", "scalar", "rm", "graph", "content"],
+    string: ["sign", "link", "witness"],
 };
 const usage = () => {
     console.log(`Usage:
@@ -168,6 +168,7 @@ export async function run(argvData = argv) {
         }
     }
     if (!fs.existsSync(aquaFilename)) {
+        console.log("🔥  Creating a new Aqua Tree --" + enableContent);
         createGenesisRevision(aquaFilename, enableForm, enableScalar, enableContent, aquafier);
         return;
     }
