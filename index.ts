@@ -154,7 +154,7 @@ export async function verifyAndGetGraphData(fileName: string, verboseOption: boo
 
   let result = await aquafier.verifyAndGetGraphData(aquaTree, fileObjectsArray);
 
-  // console.log("Data " + JSON.stringify(result, null, 4))
+  console.log("Graph Data \n" + JSON.stringify(result, null, 4) + "\n")
   if (result!.isOk()) {
     printGraphData(result.data, "", verboseOption)
   } else {
