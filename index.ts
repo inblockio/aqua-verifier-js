@@ -104,7 +104,7 @@ async function readAllNecessaryFiles(filesToBeRead: string[], aquafier: Aquafier
       let aquaFile = item.endsWith(".aqua.json") ? item : item + ".aqua.json"
       if (fs.existsSync(aquaFile)) {
         //aqua file
-        console.log(`-> reading aqua file  ${aquaFile}`)
+        // console.log(`-> reading aqua file  ${aquaFile}`)
         let fileContentsAquaFile = await readExportFile(aquaFile, false);
         fileObjectsArray.push({
           fileName: aquaFile,
@@ -117,7 +117,7 @@ async function readAllNecessaryFiles(filesToBeRead: string[], aquafier: Aquafier
 
       // raw file
       let pureFileNameItem = item.replace(".aqua.json", "");
-      console.log(`-> reading pure file  ${pureFileNameItem}`)
+      // console.log(`-> reading pure file  ${pureFileNameItem}`)
       let fileContentsItem = await readExportFile(pureFileNameItem, false);
       fileObjectsArray.push({
         fileName: pureFileNameItem,
