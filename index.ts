@@ -102,18 +102,7 @@ async function readAllNecessaryFiles(filesToBeRead: string[], aquafier: Aquafier
       // console.log(` File ${item} has been read`)
     } else {
       let aquaFile = item.endsWith(".aqua.json") ? item : item + ".aqua.json"
-      if (fs.existsSync(aquaFile)) {
-        //aqua file
-        // console.log(`-> reading aqua file  ${aquaFile}`)
-        let fileContentsAquaFile = await readExportFile(aquaFile, false);
-        fileObjectsArray.push({
-          fileName: aquaFile,
-          fileContent: fileContentsAquaFile,
-          path: ""
-        });
-        let _filesToBeRead =  aquafier.fetchFilesToBeRead(fileContentsAquaFile);
-        readAllNecessaryFiles(_filesToBeRead, aquafier, fileObjectsArray)
-      }
+      
 
       // raw file
       let pureFileNameItem = item.replace(".aqua.json", "");
@@ -124,8 +113,26 @@ async function readAllNecessaryFiles(filesToBeRead: string[], aquafier: Aquafier
         fileContent: fileContentsItem,
         path: ""
       });
+
+
+      if (fs.existsSync(aquaFile)) {
+        //aqua file
+        // console.log(`-> reading aqua file  ${aquaFile}`)
+        let fileContentsAquaFile = await readExportFile(aquaFile, false);
+        fileObjectsArray.push({
+          fileName: aquaFile,
+          fileContent: fileContentsAquaFile,
+          path: ""
+        });
+        let _filesToBeRead =  aquafier.fetchFilesToBeRead(fileContentsAquaFile);
+        let res = await readAllNecessaryFiles(_filesToBeRead, aquafier, fileObjectsArray)
+
+        fileObjectsArray.push(...res)
+
+      }
     }
   }
+  return fileObjectsArray;
 }
 
 export async function verifyAndGetGraphData(fileName: string, verboseOption: boolean = false) {
@@ -148,7 +155,8 @@ export async function verifyAndGetGraphData(fileName: string, verboseOption: boo
 
   let filesToBeRead = aquafier.fetchFilesToBeRead(aquaTree)
 
-  let fileObjectsArraySecondary = readAllNecessaryFiles(filesToBeRead, aquafier, fileObjectsArray)
+ 
+  let fileObjectsArraySecondary = await readAllNecessaryFiles(filesToBeRead, aquafier, fileObjectsArray)
   // fileObjectsArray.push(...fileObjectsArraySecondary)
 
   let result = await aquafier.verifyAndGetGraphData(aquaTree, fileObjectsArray);
