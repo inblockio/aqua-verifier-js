@@ -233,6 +233,7 @@ export async function run(argvData: minimist.ParsedArgs = argv) {
 
     if (result.isOk()) {
       const resultData = result.data
+      console.log(JSON.stringify(resultData, null, 4))
       if (resultData.aquaTree === null || !resultData.aquaTree) {
         try {
           fs.unlinkSync(aquaFilename)
