@@ -168,7 +168,7 @@ export async function run(argvData = argv) {
         }
     }
     if (!fs.existsSync(aquaFilename)) {
-        console.log("🔥  Creating a new Aqua Tree --" + enableContent);
+        // console.log("🔥  Creating a new Aqua Tree")
         createGenesisRevision(aquaFilename, enableForm, enableScalar, enableContent, aquafier);
         return;
     }

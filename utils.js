@@ -20,7 +20,8 @@ export function readCredentials(createWallet = true) {
             // Convert entropy to a mnemonic phrase
             const mnemonic = Mnemonic.fromEntropy(entropy);
             let credentialsObject = {
-                mnemonic: mnemonic.phrase, nostr_sk: "", "did_key": "",
+                mnemonic: mnemonic.phrase, nostr_sk: "",
+                did_key: "",
                 alchemy_key: "ZaQtnup49WhU7fxrujVpkFdRz4JaFRtZ",
                 witness_eth_network: "sepolia",
                 witness_meth: "metamask"
