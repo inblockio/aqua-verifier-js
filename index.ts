@@ -36,37 +36,38 @@ export async function verifyAquaTreeData(fileName: string, verboseOption: boolea
     path: ""
   });
 
-
+  let filesToBeRead = aquafier.fetchFilesToBeRead(aquaTree)
+  let fileObjectsArraySecondary = await readAllNecessaryFiles(filesToBeRead, aquafier, fileObjectsArray)
   // if aqua tree contains link all the linked aqua files must be read into the fileObjects Array
-  let filesToBeRead = aquafier.fetchFilesToBeRead(aquaTree);
+  // let filesToBeRead = aquafier.fetchFilesToBeRead(aquaTree);
 
-  for (let item of filesToBeRead) {
-    if (fileObjectsArray.find((e) => e.fileName == item)) {
-      // console.log(` File ${item} has been read`)
-    } else {
-      let aquaFile = item.endsWith(".aqua.json") ? item : item + ".aqua.json"
-      if (fs.existsSync(aquaFile)) {
-        //aqua file
-        // console.log(`-> reading file  ${aquaFile}`)
-        let fileContentsAquaFile = await readExportFile(aquaFile, false);
-        fileObjectsArray.push({
-          fileName: aquaFile,
-          fileContent: fileContentsAquaFile,
-          path: ""
-        });
-      }
+  // for (let item of filesToBeRead) {
+  //   if (fileObjectsArray.find((e) => e.fileName == item)) {
+  //     // console.log(` File ${item} has been read`)
+  //   } else {
+  //     let aquaFile = item.endsWith(".aqua.json") ? item : item + ".aqua.json"
+  //     if (fs.existsSync(aquaFile)) {
+  //       //aqua file
+  //       // console.log(`-> reading file  ${aquaFile}`)
+  //       let fileContentsAquaFile = await readExportFile(aquaFile, false);
+  //       fileObjectsArray.push({
+  //         fileName: aquaFile,
+  //         fileContent: fileContentsAquaFile,
+  //         path: ""
+  //       });
+  //     }
 
-      // raw file
-      let pureFileNameItem = item.replace(".aqua.json", "");
-      // console.log(`-> reading file  ${pureFileNameItem}`)
-      let fileContentsItem = await readExportFile(pureFileNameItem, false);
-      fileObjectsArray.push({
-        fileName: pureFileNameItem,
-        fileContent: fileContentsItem,
-        path: ""
-      });
-    }
-  }
+  //     // raw file
+  //     let pureFileNameItem = item.replace(".aqua.json", "");
+  //     // console.log(`-> reading file  ${pureFileNameItem}`)
+  //     let fileContentsItem = await readExportFile(pureFileNameItem, false);
+  //     fileObjectsArray.push({
+  //       fileName: pureFileNameItem,
+  //       fileContent: fileContentsItem,
+  //       path: ""
+  //     });
+  //   }
+  // }
 
   let result = await aquafier.verifyAquaTree(aquaTree, fileObjectsArray);
 
