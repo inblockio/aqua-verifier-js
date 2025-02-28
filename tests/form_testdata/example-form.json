@@ -1,6 +1,8 @@
 {
     "type": "identity_claim",
-    "name": "John Doe",
+    "name": "John",
+    "surname": "Doe",
+    "email": "john.doe@example.com",
     "date_of_birth": "1995-10-15",
     "wallet_address": "0x1234567890abcdef"
 }
