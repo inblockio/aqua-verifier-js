@@ -157,18 +157,18 @@ To generate a `content` revision you run the following command
 
 ### 7.  Forms 
 To create a genesis form revision 
-`/notarize.js example_form.json --form example_form.json `
+`./notarize.js example-form.json --form example-form.json `
 
 please note for genesis the filane name should be the same with form name
 
 To create a form revision 
-`/notarize.js LICENCE --form example_form.json `
+`./notarize.js LICENCE --form example-form.json `
 
 ### 8. Update Aqua forms 
 
-* To delete a form entry  `./form_updater.js example_form.json.aqua.json@abcd --delete age`
+* To delete a form entry  `./form_updater.js example-form.json.aqua.json@abcd --delete age`
  
-*  to update a form entry ie undelete it `./form_updater.js example_form.json.aqua.json --update forms_age 200`
+*  to update a form entry ie undelete it `./form_updater.js example-form.json.aqua.json --update forms_age 200`
  
 
 1. File Validation: Ensures the input file is a .aqua.json file and exists

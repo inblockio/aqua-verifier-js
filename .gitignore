@@ -9,3 +9,4 @@ tests/test-results
 _credentials.json
 tests/sharness/
 tests/sharness/sharness.sh
+*/sharness.sh

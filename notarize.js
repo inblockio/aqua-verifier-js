@@ -193,7 +193,7 @@ export async function run(argvData = argv) {
         let result = aquafier.removeLastRevision(aquaTree);
         if (result.isOk()) {
             const resultData = result.data;
-            console.log(JSON.stringify(resultData, null, 4));
+            // console.log(JSON.stringify(resultData, null, 4))
             if (resultData.aquaTree === null || !resultData.aquaTree) {
                 try {
                     fs.unlinkSync(aquaFilename);
