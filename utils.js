@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import crypto from 'crypto';
 import * as fs from "fs";
-import { LogType, printLogs } from "aquafier-js-sdk";
+import { LogType, printLogs } from "aqua-js-sdk";
 import * as formatter from "./formatter.js";
 export function readCredentials(createWallet = true) {
     const __filename = fileURLToPath(import.meta.url);

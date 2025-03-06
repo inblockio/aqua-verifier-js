@@ -15,7 +15,7 @@ import * as witnessEth from "./witness_eth.js"
 import * as witnessTsa from "./witness_tsa.js"
 import * as did from "./did.js"
 import crypto from "crypto"
-import Aquafier, { printLogs, AquaTree, FileObject, LogType, printGraphData } from "aquafier-js-sdk"
+import Aquafier, { printLogs, AquaTree, FileObject, LogType, printGraphData } from "aqua-js-sdk"
 import { readExportFile } from "./utils.js"
 
 export async function verifyAquaTreeData(fileName: string, verboseOption: boolean = false) {

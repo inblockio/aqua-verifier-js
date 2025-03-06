@@ -5,7 +5,7 @@ import { fileURLToPath } from "url"
 import { dirname } from "path"
 import crypto from 'crypto';
 import * as fs from "fs"
-import Aquafier, { AquaTree, LogType, printLogs, SignType, WitnessNetwork, WitnessPlatformType } from "aquafier-js-sdk";
+import Aquafier, { AquaTree, LogType, printLogs, SignType, WitnessNetwork, WitnessPlatformType } from "aqua-js-sdk";
 import * as formatter from "./formatter.js"
 
 

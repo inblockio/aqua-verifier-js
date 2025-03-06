@@ -2,7 +2,7 @@
 import * as fs from "fs";
 import minimist from "minimist";
 import * as formatter from "./formatter.js";
-import Aquafier, { printLogs } from "aquafier-js-sdk";
+import Aquafier, { printLogs } from "aqua-js-sdk";
 import { readCredentials, createGenesisRevision, serializeAquaTree, readAndCreateAquaTreeAndAquaTreeWrapper, revisionWithMultipleAquaChain } from "./utils.js";
 const opts = {
     // This is required so that -v is position independent.

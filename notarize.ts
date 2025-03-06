@@ -6,7 +6,7 @@ import minimist from "minimist"
 
 import * as formatter from "./formatter.js"
 
-import Aquafier, { printLogs } from "aquafier-js-sdk"
+import Aquafier, { printLogs } from "aqua-js-sdk"
 
 
 import {
