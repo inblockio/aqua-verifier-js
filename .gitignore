@@ -1,5 +1,5 @@
 node_modules
-index.js
+*.js
 credentials.json
 mnemonic.txt
 *.aqua.json

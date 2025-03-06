@@ -14,7 +14,7 @@ install node [here](https://nodejs.org/en/download)
 ## Getting started 
 1. `npm install`
 2. `npm run build`
-3. follow usage command below 
+3. follow usage command  
 
 
 ## Usage
