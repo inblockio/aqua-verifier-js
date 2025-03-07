@@ -28,13 +28,13 @@ export async function verifyAquaTreeData(fileName: string, verboseOption: boolea
 
   // the file that has been aquafied
 
-  let pureFileName = fileName.replace(".aqua.json", "")
-  let fileContents = await readExportFile(pureFileName, false);
-  fileObjectsArray.push({
-    fileName: pureFileName,
-    fileContent: fileContents,
-    path: ""
-  });
+  // let pureFileName = fileName.replace(".aqua.json", "")
+  // let fileContents = await readExportFile(pureFileName, false);
+  // fileObjectsArray.push({
+  //   fileName: pureFileName,
+  //   fileContent: fileContents,
+  //   path: ""
+  // });
 
   let filesToBeRead = aquafier.fetchFilesToBeRead(aquaTree)
   let fileObjectsArraySecondary = await readAllNecessaryFiles(filesToBeRead, aquafier, fileObjectsArray)
@@ -100,7 +100,7 @@ async function readAllNecessaryFiles(filesToBeRead: string[], aquafier: Aquafier
 
       // raw file
       let pureFileNameItem = item.replace(".aqua.json", "");
-      // console.log(`-> reading pure file  ${pureFileNameItem}`)
+      console.log(`-> reading pure file  ${pureFileNameItem}`)
       let fileContentsItem = await readExportFile(pureFileNameItem, false);
       fileObjectsArray.push({
         fileName: pureFileNameItem,
@@ -111,7 +111,7 @@ async function readAllNecessaryFiles(filesToBeRead: string[], aquafier: Aquafier
 
       if (fs.existsSync(aquaFile)) {
         //aqua file
-        // console.log(`-> reading aqua file  ${aquaFile}`)
+        console.log(`-> reading aqua file  ${aquaFile}`)
         let fileContentsAquaFile = await readExportFile(aquaFile, false);
         fileObjectsArray.push({
           fileName: aquaFile,

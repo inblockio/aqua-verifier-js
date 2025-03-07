@@ -3,6 +3,7 @@ node_modules
 credentials.json
 mnemonic.txt
 *.aqua.json
+sample.txt
 tests/trash*
 tests/test-results*
 tests/test-results
